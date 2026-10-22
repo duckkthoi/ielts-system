@@ -1,3 +1,4 @@
+@../CLAUDE.md
 @AI-CODING-RULES.md
 
 ## Lệnh thường dùng
@@ -5,6 +6,7 @@
 ```bash
 mvn spring-boot:run                 # chạy với profile dev (DB ielts trên localhost:5432)
 mvn test                            # test, dùng DB ielts_test (profile test)
+mvn clean test                      # khi gặp NoClassDefFoundError lạ (IDE và Maven cùng ghi target/)
 mvn -q compile                      # kiểm tra biên dịch nhanh
 ```
 
