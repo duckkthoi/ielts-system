@@ -3,7 +3,7 @@ package com.ltmtu.ielts.grading;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Sự kiện domain của module chấm bài. Module thông báo (B7) nghe sau khi commit để báo cho sinh viên. */
+/** Sự kiện domain của module chấm bài. Module thông báo nghe (BEFORE_COMMIT) để báo cho sinh viên. */
 public final class GradingEvents {
 
 	private GradingEvents() {
