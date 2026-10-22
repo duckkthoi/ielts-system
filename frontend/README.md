@@ -41,4 +41,4 @@ Mỗi trang nghiệp vụ gồm: `page.tsx`, `const.tsx` (cột bảng, form, ma
 và `<Entity>DetailDrawer.tsx` nếu có drawer chi tiết.
 
 Các trang hiện là khung tạm (`PagePlaceholder`); giao diện sẽ làm theo bản thiết kế Figma.
-Quy tắc code chi tiết: xem `docs/coding-rules` (sẽ bổ sung).
+Quy tắc code chi tiết: [AI-CODING-RULES.md](AI-CODING-RULES.md).

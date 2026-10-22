@@ -12,12 +12,12 @@ Ký hiệu: ✅ xong · 🟡 đang làm / xong một phần · ⬜ chưa làm
 ### Chuẩn bị (tài liệu, thiết kế, quy tắc)
 | # | Hạng mục | Trạng thái |
 |---|---|---|
-| A1 | Kế hoạch tổng (`PLAN.md`) | ✅ |
+| A1 | Kế hoạch tổng (`PLAN.md`) | ✅ viết lại theo hiện trạng sau B7b |
 | A2 | Khung frontend Next.js (chỉ cấu trúc, theo cbs-fe) | ✅ |
 | A3 | Tài liệu: use case, sequence, ERD, đặc tả API (Markdown + Mermaid, xuất thêm `.docx`) | ✅ 6 tài liệu + file Word gộp |
 | A4 | Design system | ✅ tài liệu + token trong code |
 | A5 | Prompt chi tiết cho Figma Make | ✅ 11 prompt |
-| A6 | Coding rules cho AI agent (FE + BE) | 🟡 xong backend, còn frontend + file gốc |
+| A6 | Coding rules cho AI agent (FE + BE) | ✅ backend + frontend + `CLAUDE.md` / `AGENTS.md` gốc (viết lại 22/10) |
 
 ### Mức 1 — Lõi nghiệp vụ
 | # | Hạng mục | Trạng thái |
@@ -1016,15 +1016,44 @@ B6 chia 3 phần:
 
 **Lỗi gặp khi chạy test (không phải lỗi code):** một lượt `mvn test` báo `NoClassDefFoundError: GradingEnums$1` (lớp phụ do `switch` trên enum sinh ra). Lỗi này xảy ra khi IDE (VS Code Java) và Maven cùng biên dịch vào `target/classes`. Chạy `mvn clean test` thì hết. Nếu gặp lại thì chạy `mvn clean` trước.
 
+### 2026-10-22 · A1 + A6 — Viết lại kế hoạch và quy tắc cho AI agent
+**Đã làm**
+- **[PLAN.md](PLAN.md) viết lại** theo đúng hiện trạng. Bản cũ còn ghi Spring Boot 3.5, React + Vite, bảng `login_sessions`, chưa có nghiệp vụ chấm IELTS. Bản mới gồm:
+  - mục tiêu và 3 mức;
+  - cách làm việc đã thống nhất;
+  - công nghệ thực tế và sơ đồ phụ thuộc module;
+  - bảng trạng thái;
+  - **lộ trình còn lại**, mỗi bước có "làm gì" và "xong khi nào": B8a–c; F1–F6 (frontend khi có Figma); Mức 2 bước 9–14; Mức 3;
+  - thứ tự đề xuất, kịch bản demo cuối, các quyết định đã chốt.
+  - Chi tiết bảng / API không chép lại nữa mà trỏ sang `docs/`, để không lệch nhau.
+- **[CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md) ở thư mục gốc** (mới): quy trình bắt buộc 6 bước cho mỗi bước làm; 6 ràng buộc không được vi phạm; bản đồ thư mục; thứ tự ưu tiên khi các nguồn lệch nhau; lệnh thường dùng; checklist "xong một bước".
+- **[backend/AI-CODING-RULES.md](backend/AI-CODING-RULES.md) viết lại cho rõ hơn**:
+  - quy ước PHẢI / KHÔNG;
+  - **hướng phụ thuộc module** + bảng **service "cửa"** cần dùng khi gọi sang module khác;
+  - bảng **chọn mã HTTP** (400 / 403 / 404 / 409 / 422) kèm ví dụ thật;
+  - bảng **mẫu chống trùng khi đồng thời** (`FOR UPDATE` khoá trước rồi đọc, UPDATE có điều kiện, `ON CONFLICT`, bắt lỗi UNIQUE, transaction từng dòng);
+  - luồng **sự kiện → thông báo** (`BEFORE_COMMIT`, `afterCommit`); quy tắc job định kỳ;
+  - mẹo truy vấn (`ESCAPE '!'`, `CAST(:x AS Instant)`, projection);
+  - cách viết test với DB dùng chung; bảng **lỗi đã gặp → quy tắc**.
+  - Sửa các chỗ đã cũ: `CurrentUser`, MapStruct (chưa dùng), `UNPROCESSABLE_ENTITY` → `UNPROCESSABLE_CONTENT`, thông báo `AFTER_COMMIT`.
+- **[frontend/AI-CODING-RULES.md](frontend/AI-CODING-RULES.md)** (mới, phần còn thiếu của A6):
+  - nguồn sự thật; cấu trúc thư mục và mẫu một trang (`page.tsx` / `index.tsx` / `const.tsx` / `type.ts`);
+  - gọi API qua `lib/api` + bảng cờ của `axiosClient`; xử lý lỗi; phân quyền và điều hướng; state;
+  - màu qua token / `status.ts`, ngày giờ qua `date.ts`;
+  - bảng **nghiệp vụ phía client phải dùng hàm có sẵn** (đếm từ chung với server, band / giới hạn điểm lấy từ server, giờ server, `expectedVersion`, offset UTF-16);
+  - realtime (một STOMP client, backoff, `?after=` khi kết nối lại); phong cách; test; checklist.
+- `frontend/CLAUDE.md` (mới), `frontend/AGENTS.md` (thêm phần trỏ tới quy tắc, giữ khối do `next dev` sinh), `frontend/README.md`, `backend/AGENTS.md`, `backend/CLAUDE.md` (trỏ tới file gốc, thêm `mvn clean test`).
+- Sửa comment cũ trong `GradingEvents` ("sau khi commit" → `BEFORE_COMMIT`).
+
+**Kiểm tra:** chỉ sửa tài liệu và một dòng comment; `mvn compile` qua. Đã đối chiếu từng tên class, hàm, file được nhắc trong quy tắc với code hiện có (`AccessTokenVerifier`, `TeacherSubmissionAccess`, `ReminderLogRepository`, `lib/api/base.ts`, `lib/theme/status.ts`, `lib/utils/date.ts`…).
+
 ---
 
 ## Tồn đọng / việc cần làm tiếp
 - [ ] Docker: chưa cần khi phát triển (đã có PostgreSQL trên máy). `docker-compose.yml` + `.env.example` làm ở bước 13 (Docker hoá).
-- [ ] Chưa commit git, chờ người dùng đồng ý.
-- [ ] `PLAN.md` vẫn ghi bảng `login_sessions` và các endpoint cũ. **Tài liệu trong `docs/` là bản chuẩn**; PLAN chỉ là kế hoạch ban đầu.
+- [x] Git: commit đầu tiên `bd9c7cf` (bước 1 → B7b) đã push lên https://github.com/duckkthoi/ielts-system (nhánh `main`). Từ nay commit khi người dùng yêu cầu.
 - [ ] (tuỳ chọn) File mẫu `tools/docs-export/reference.docx` theo định dạng báo cáo của trường.
 - [ ] Người dùng chạy các prompt trên Figma Make, gửi lại link Figma để code giao diện theo thiết kế.
-- [ ] A6 phần còn lại: rules frontend + `CLAUDE.md` gốc. Làm khi bắt đầu code frontend.
 - [ ] Audit log cho import (IP, số dòng) — làm cùng bảng `audit_logs` ở Mức 2.
 - [ ] Trường `grades.updated_at` dùng auditing của Spring Data (giờ hệ thống), không qua bean `Clock` (giống mọi bảng khác từ B1). Chưa ảnh hưởng nghiệp vụ; nếu cần test theo giờ thì cấu hình `DateTimeProvider` dùng `Clock`.
 - [ ] Frontend (khi có thiết kế Figma): so sánh 2 version (diff) ở màn chấm và màn kết quả, dùng nội dung từ `…/submissions/{id}?versionNo` và `…/versions/{n}`.
