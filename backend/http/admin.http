@@ -1,0 +1,53 @@
+### API quản trị viên — cần tài khoản ADMIN đã đổi mật khẩu (dev: admin / Admin@2026)
+
+@baseUrl = http://localhost:8080
+@adminPassword = Admin@2026
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "admin", "password": "{{adminPassword}}" }
+
+### Thống kê hệ thống
+GET {{baseUrl}}/api/admin/stats
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Tạo giáo viên → nhận mật khẩu tạm (chỉ hiện một lần)
+# @name created
+POST {{baseUrl}}/api/admin/teachers
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "username": "gv.hanh", "fullName": "ThS. Nguyễn Thị Hạnh", "email": "hanh@truong.edu.vn" }
+
+### Danh sách giáo viên (lọc, phân trang, sắp xếp theo username|fullName|createdAt|lastLoginAt)
+GET {{baseUrl}}/api/admin/teachers?keyword=hanh&page=0&size=20&sort=fullName,asc
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Sửa giáo viên
+PUT {{baseUrl}}/api/admin/teachers/{{created.response.body.data.teacher.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "fullName": "TS. Nguyễn Thị Hạnh", "email": "hanh@truong.edu.vn" }
+
+### Tra cứu người dùng
+GET {{baseUrl}}/api/admin/users?role=TEACHER&active=true
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chi tiết người dùng
+GET {{baseUrl}}/api/admin/users/{{created.response.body.data.teacher.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Khoá / mở khoá
+POST {{baseUrl}}/api/admin/users/{{created.response.body.data.teacher.id}}/lock
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+###
+POST {{baseUrl}}/api/admin/users/{{created.response.body.data.teacher.id}}/unlock
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Đặt lại mật khẩu
+POST {{baseUrl}}/api/admin/users/{{created.response.body.data.teacher.id}}/reset-password
+Authorization: Bearer {{login.response.body.data.accessToken}}

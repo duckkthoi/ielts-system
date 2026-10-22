@@ -1,0 +1,89 @@
+{
+  "source": {
+    "title": "IELTS Writing Band Descriptors (Updated May 2023)",
+    "url": "https://ielts.org/cdn/ielts-downloadable-assets/ielts-guidance-and-support/ielts-guides/ielts-writing-band-descriptors.pdf"
+  },
+  "note": "Bản diễn giải tóm tắt bằng tiếng Việt để giáo viên tham khảo nhanh khi chấm, không thay thế bản chính thức. Muốn đạt một mức, bài phải đáp ứng đủ đặc điểm tích cực của mức đó; đặc điểm tiêu cực sẽ giới hạn band.",
+  "criteria": {
+    "TA": {
+      "name": "Task Achievement",
+      "taskTypes": ["WRITING_TASK1"],
+      "bands": {
+        "9": "Đáp ứng đầy đủ, phù hợp mọi yêu cầu; hầu như không có sơ suất về nội dung.",
+        "8": "Đáp ứng đủ yêu cầu; đặc điểm chính được chọn khéo, trình bày và minh hoạ rõ; đôi chỗ thiếu sót nhỏ.",
+        "7": "Đáp ứng yêu cầu; có tổng quan rõ, số liệu được phân nhóm, nêu được xu hướng / khác biệt chính; minh hoạ có thể đầy đủ hơn.",
+        "6": "Tập trung vào yêu cầu; có cố gắng viết tổng quan; đặc điểm chính có nêu nhưng chưa sâu; vài chi tiết thiếu, thừa hoặc sai.",
+        "5": "Nhìn chung có trả lời đề; mô tả máy móc, sa vào chi tiết; có thể không có số liệu minh hoạ (giới hạn ở 5).",
+        "4": "Có cố gắng làm bài nhưng chọn được ít đặc điểm chính; nội dung có thể lặp, sai hoặc không phù hợp; định dạng có thể không phù hợp (giới hạn ở 4).",
+        "3": "Không đáp ứng yêu cầu (có thể do hiểu sai biểu đồ / tình huống); thông tin ít và lặp.",
+        "2": "Nội dung gần như không liên quan tới đề.",
+        "1": "Bài ≤ 20 từ, hoặc hoàn toàn không liên quan tới đề. Phần chép lại đề không được tính.",
+        "0": "Không làm bài, không viết bằng tiếng Anh, hoặc có bằng chứng học thuộc hoàn toàn."
+      }
+    },
+    "TR": {
+      "name": "Task Response",
+      "taskTypes": ["WRITING_TASK2"],
+      "bands": {
+        "9": "Trả lời đề sâu sắc; quan điểm rõ, phát triển đầy đủ; ý liên quan, được mở rộng và chứng minh tốt.",
+        "8": "Trả lời đề đầy đủ; quan điểm rõ và được phát triển tốt; ý liên quan, mở rộng tốt; đôi chỗ sơ suất nhỏ.",
+        "7": "Trả lời các phần chính của đề; quan điểm rõ; ý được mở rộng nhưng đôi khi khái quát quá hoặc thiếu tập trung.",
+        "6": "Trả lời các phần chính (có phần chưa đều); có quan điểm nhưng kết luận có thể chưa rõ hoặc lặp; một số ý phát triển chưa đủ.",
+        "5": "Các phần chính trả lời chưa đầy đủ (giới hạn ở 5); có quan điểm nhưng phát triển chưa rõ; ý ít, có chi tiết không liên quan.",
+        "4": "Trả lời rất sơ sài hoặc lệch đề; khó tìm thấy quan điểm; ý chính khó nhận ra; định dạng có thể không phù hợp (giới hạn ở 4).",
+        "3": "Không phần nào của đề được trả lời đạt, hoặc hiểu sai đề; không xác định được quan điểm.",
+        "2": "Nội dung gần như không liên quan tới đề; không có quan điểm.",
+        "1": "Bài ≤ 20 từ, hoặc hoàn toàn không liên quan tới đề. Phần chép lại đề không được tính.",
+        "0": "Không làm bài, không viết bằng tiếng Anh, hoặc có bằng chứng học thuộc hoàn toàn."
+      }
+    },
+    "CC": {
+      "name": "Coherence and Cohesion",
+      "taskTypes": ["WRITING_TASK1", "WRITING_TASK2"],
+      "bands": {
+        "9": "Đọc theo rất dễ dàng; liên kết tự nhiên tới mức gần như không gây chú ý; chia đoạn khéo léo.",
+        "8": "Đọc theo dễ; ý sắp xếp logic, liên kết tốt; chia đoạn đủ và hợp lý.",
+        "7": "Ý sắp xếp logic, có tiến triển rõ; dùng linh hoạt các phương tiện liên kết, thay thế, quy chiếu nhưng còn vài lỗi hoặc dùng thừa / thiếu.",
+        "6": "Ý nhìn chung mạch lạc; từ nối có tác dụng nhưng đôi khi máy móc, sai hoặc lạm dụng; quy chiếu chưa linh hoạt; (Task 2) chia đoạn đôi khi chưa logic.",
+        "5": "Có tổ chức nhưng chưa hoàn toàn logic; câu nối với nhau chưa trôi chảy; lạm dụng hoặc thiếu từ nối; (Task 2) không chia đoạn hoặc chia đoạn không đạt (giới hạn ở 5).",
+        "4": "Ý không được sắp xếp mạch lạc, không có tiến triển rõ; từ nối cơ bản, lặp hoặc sai; có thể không chia đoạn.",
+        "3": "Không có tổ chức logic; rất ít từ nối; khó xác định quy chiếu.",
+        "2": "Hầu như không kiểm soát được tổ chức bài; có thể lạc đề hoàn toàn (giới hạn ở 2).",
+        "1": "Bài ≤ 20 từ, hoặc không truyền đạt được thông điệp nào.",
+        "0": "Không làm bài, không viết bằng tiếng Anh, hoặc có bằng chứng học thuộc hoàn toàn."
+      }
+    },
+    "LR": {
+      "name": "Lexical Resource",
+      "taskTypes": ["WRITING_TASK1", "WRITING_TASK2"],
+      "bands": {
+        "9": "Từ vựng rộng, chính xác, tự nhiên và tinh tế; lỗi chính tả / cấu tạo từ cực hiếm.",
+        "8": "Vốn từ rộng, dùng trôi chảy và chính xác; dùng khéo từ ít phổ biến, thành ngữ; thỉnh thoảng sai chọn từ hoặc collocation.",
+        "7": "Vốn từ đủ để diễn đạt linh hoạt, chính xác ở mức nào đó; có dùng từ ít phổ biến; có ý thức về văn phong và collocation; vài lỗi chính tả không ảnh hưởng.",
+        "6": "Vốn từ nhìn chung đủ dùng; nghĩa rõ dù phạm vi hẹp hoặc chọn từ chưa chính xác; có lỗi chính tả / cấu tạo từ nhưng không cản trở hiểu.",
+        "5": "Vốn từ hạn chế nhưng tối thiểu đủ dùng; lặp và đơn giản hoá nhiều; lỗi chính tả có thể gây khó hiểu.",
+        "4": "Vốn từ hạn chế, cơ bản và lặp; dùng cụm học thuộc không phù hợp; từ vựng có thể không liên quan đề (giới hạn ở 4); lỗi có thể cản trở nghĩa.",
+        "3": "Vốn từ không đủ (có thể do bài quá ngắn); phụ thuộc vào ngôn ngữ của đề hoặc học thuộc; lỗi chiếm ưu thế.",
+        "2": "Vốn từ cực kỳ hạn chế, ngoài vài cụm học thuộc; không kiểm soát được chính tả.",
+        "1": "Bài ≤ 20 từ, hoặc chỉ có vài từ rời rạc.",
+        "0": "Không làm bài, không viết bằng tiếng Anh, hoặc có bằng chứng học thuộc hoàn toàn."
+      }
+    },
+    "GRA": {
+      "name": "Grammatical Range and Accuracy",
+      "taskTypes": ["WRITING_TASK1", "WRITING_TASK2"],
+      "bands": {
+        "9": "Cấu trúc đa dạng, hoàn toàn linh hoạt và chính xác; ngữ pháp, dấu câu đúng xuyên suốt.",
+        "8": "Cấu trúc đa dạng, linh hoạt và chính xác; phần lớn câu không lỗi; lỗi chỉ thỉnh thoảng, không mang tính hệ thống.",
+        "7": "Dùng nhiều cấu trúc phức với độ linh hoạt và chính xác nhất định; câu không lỗi xuất hiện thường xuyên; vài lỗi không cản trở giao tiếp.",
+        "6": "Kết hợp câu đơn và câu phức nhưng chưa linh hoạt; câu phức kém chính xác hơn câu đơn; lỗi có nhưng hiếm khi cản trở hiểu.",
+        "5": "Cấu trúc hạn chế, lặp; câu phức hay sai, chính xác nhất ở câu đơn; lỗi thường xuyên gây khó cho người đọc.",
+        "4": "Cấu trúc rất hạn chế; hiếm mệnh đề phụ, câu đơn chiếm ưu thế (giới hạn ở 4); lỗi thường xuyên, có thể cản trở nghĩa.",
+        "3": "Lỗi ngữ pháp và dấu câu chiếm ưu thế (trừ cụm học thuộc); bài có thể quá ngắn để đánh giá (giới hạn ở 3).",
+        "2": "Hầu như không có câu hoàn chỉnh (trừ cụm học thuộc).",
+        "1": "Bài ≤ 20 từ, hoặc không có ngôn ngữ nào để đánh giá.",
+        "0": "Không làm bài, không viết bằng tiếng Anh, hoặc có bằng chứng học thuộc hoàn toàn."
+      }
+    }
+  }
+}

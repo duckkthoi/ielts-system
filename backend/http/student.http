@@ -1,0 +1,55 @@
+### API làm bài và xem kết quả của sinh viên (B5, B6c) — đăng nhập bằng mã SV của một sinh viên được giao bài
+
+@baseUrl = http://localhost:8080
+@partId = 1
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "2151000101", "password": "MatKhauMoi123" }
+
+### Bài được giao (tab: TODO | DUE_SOON | OVERDUE | SUBMITTED | REVISION; bỏ trống = tất cả)
+GET {{baseUrl}}/api/student/assignments?tab=TODO
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chi tiết một bài (đề, hạn từng phần, rubric)
+GET {{baseUrl}}/api/student/assignments/1
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Nạp bản nháp (source: DRAFT | LAST_VERSION | EMPTY)
+GET {{baseUrl}}/api/student/parts/{{partId}}/draft
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Lưu nháp
+PUT {{baseUrl}}/api/student/parts/{{partId}}/draft
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "content": "In recent years, the question of whether university education should be free has become controversial." }
+
+### Nộp phần này (expectedVersion = currentVersion lấy từ GET draft; lần đầu là 0)
+POST {{baseUrl}}/api/student/parts/{{partId}}/submit
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "content": "In recent years, the question of whether university education should be free has become controversial. I strongly believe…", "expectedVersion": 0 }
+
+### Nộp lại với cùng expectedVersion → 409 (VERSION_CONFLICT hoặc ALREADY_SUBMITTED)
+POST {{baseUrl}}/api/student/parts/{{partId}}/submit
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "content": "bấm đúp", "expectedVersion": 0 }
+
+### Lịch sử nộp (có band ở các version đã được trả bài)
+GET {{baseUrl}}/api/student/parts/{{partId}}/versions
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Một version + kết quả chấm (result = null khi chưa trả bài)
+GET {{baseUrl}}/api/student/parts/{{partId}}/versions/1
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Band từng phần và band cả bài
+GET {{baseUrl}}/api/student/assignments/1/result
+Authorization: Bearer {{login.response.body.data.accessToken}}

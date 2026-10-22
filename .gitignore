@@ -1,0 +1,21 @@
+# Môi trường
+.env
+.env.local
+!.env.example
+
+# Thư viện cài đặt / công cụ tải về
+node_modules/
+tools/mailpit/
+
+# Dữ liệu chạy
+uploads/
+*.log
+
+# Tài liệu tham khảo của dự án khác — KHÔNG commit
+cbs-fe.zip
+cbs-fe/
+
+# Hệ điều hành / IDE
+.DS_Store
+Thumbs.db
+.idea/

@@ -1,0 +1,8 @@
+{
+  "name": "docs-export",
+  "private": true,
+  "description": "Render sơ đồ Mermaid trong docs/ thành ảnh để xuất .docx",
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.12.0"
+  }
+}

@@ -1,0 +1,116 @@
+### API bài tập của giáo viên (B4a) — cần tài khoản TEACHER đã đổi mật khẩu
+
+@baseUrl = http://localhost:8080
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.hanh", "password": "MatKhauMoi123" }
+
+### Rubric mẫu IELTS Task 2 (tiêu chí có code, step = 1, checklist CHECK / LIMIT)
+GET {{baseUrl}}/api/teacher/rubric-templates?taskType=WRITING_TASK2
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Bảng mô tả band thu gọn (tiếng Việt)
+GET {{baseUrl}}/api/teacher/rubric-templates/descriptors?taskType=WRITING_TASK2
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Tạo bài tập nháp
+# @name created
+POST {{baseUrl}}/api/teacher/assignments
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "title": "Tuần 5 – Writing practice",
+  "description": "Làm đủ 2 phần, chú ý paraphrase.",
+  "dueAt": "2026-11-07T16:59:00Z",
+  "allowLate": true,
+  "parts": [
+    {
+      "title": "Task 2 – Opinion essay",
+      "taskType": "WRITING_TASK2",
+      "prompt": "<p>Some people believe that university education should be <strong>free</strong> for everyone. To what extent do you agree or disagree?</p>",
+      "minWords": 250,
+      "suggestedMinutes": 40,
+      "criteria": [
+        {
+          "code": "CC", "name": "Coherence and Cohesion",
+          "checklist": [
+            { "content": "Mỗi đoạn có câu chủ đề", "kind": "CHECK" },
+            { "content": "Không chia đoạn hoặc chia đoạn không đạt", "kind": "LIMIT", "maxBand": 5 }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+### Danh sách bài tập (status: DRAFT|PUBLISHED|CLOSED; sort: title|dueAt|createdAt|updatedAt)
+GET {{baseUrl}}/api/teacher/assignments?status=DRAFT&keyword=tuần
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chi tiết
+GET {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Sửa thông tin chung (dùng được cả khi đã phát hành)
+PATCH {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/settings
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "dueAt": "2026-11-10T16:59:00Z", "maxRevisions": 3 }
+
+### Upload ảnh biểu đồ cho đề Task 1 (PNG / JPG / WEBP ≤ 5 MB) — đặt file bieu-do.png cạnh file .http này
+POST {{baseUrl}}/api/files
+Authorization: Bearer {{login.response.body.data.accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="bieu-do.png"
+Content-Type: image/png
+
+< ./bieu-do.png
+--WebAppBoundary--
+
+### Phát hành: giao cho lớp + từng sinh viên (thay id cho đúng dữ liệu của bạn)
+POST {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/publish
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "classIds": [1], "studentIds": [] }
+
+### Xem đã giao cho ai
+GET {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/targets
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Giao thêm
+PUT {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/targets
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "studentIds": [42] }
+
+### Đóng / mở lại
+POST {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/close
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+###
+POST {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/reopen
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Nhân bản thành bài nháp mới
+POST {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}/duplicate
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Xoá bài nháp
+DELETE {{baseUrl}}/api/teacher/assignments/{{created.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Nhắc thủ công (B7b) — partId bỏ trống = nhắc cả bài
+POST {{baseUrl}}/api/teacher/assignments/1/remind
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "studentIds": [5, 6], "partId": null }

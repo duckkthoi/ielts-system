@@ -1,0 +1,125 @@
+### API chấm bài của giáo viên (B6) — đăng nhập bằng tài khoản giáo viên
+
+@baseUrl = http://localhost:8080
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.hanh", "password": "MatKhauMoi123" }
+
+@submissionId = 1
+
+### ─── Chấm bài (B6b) ─────────────────────────────────────────────────────
+
+### Hàng đợi chấm (status: SUBMITTED mặc định | GRADED | RETURNED | REVISION_REQUESTED)
+GET {{baseUrl}}/api/teacher/submissions?status=SUBMITTED&keyword=2151
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Màn chấm (bỏ versionNo = version mới nhất)
+# @name screen
+GET {{baseUrl}}/api/teacher/submissions/{{submissionId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Các version kèm band
+GET {{baseUrl}}/api/teacher/submissions/{{submissionId}}/versions
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Lưu nháp chấm (thay toàn bộ). Lấy criterionId / checklistItemId từ màn chấm.
+PUT {{baseUrl}}/api/teacher/submissions/{{submissionId}}/grade
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "versionNo": 1,
+  "scores": [
+    { "criterionId": {{screen.response.body.data.criteria[0].id}}, "score": 6, "comment": "Ý 2 chưa có ví dụ." },
+    { "criterionId": {{screen.response.body.data.criteria[1].id}}, "score": 5 },
+    { "criterionId": {{screen.response.body.data.criteria[2].id}}, "score": 6 },
+    { "criterionId": {{screen.response.body.data.criteria[3].id}}, "score": 6 }
+  ],
+  "checklist": [],
+  "inlineComments": [
+    { "startOffset": 0, "endOffset": 8, "errorCode": "ART", "suggestion": "The recent" }
+  ],
+  "generalComment": "Bài khá, cần phát triển ý sâu hơn."
+}
+
+### "Chấm 0" có lý do (NO_ATTEMPT | NOT_ENGLISH | MEMORISED)
+PUT {{baseUrl}}/api/teacher/submissions/{{submissionId}}/grade
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "versionNo": 1, "scores": [], "checklist": [], "inlineComments": [], "zeroReason": "NO_ATTEMPT" }
+
+### Trả bài (cần đã chấm đủ mọi tiêu chí)
+POST {{baseUrl}}/api/teacher/submissions/{{submissionId}}/return
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Yêu cầu sửa (còn lượt sửa, hạn ở tương lai, bài chưa đóng)
+POST {{baseUrl}}/api/teacher/submissions/{{submissionId}}/request-revision
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "note": "Phát triển thêm ý 2, thêm ví dụ cụ thể.", "dueAt": "2026-12-01T16:59:00Z" }
+
+### ─── Mã lỗi (B6a) ───────────────────────────────────────────────────────
+
+### Mã lỗi dùng được (hệ thống + của tôi)
+GET {{baseUrl}}/api/teacher/error-codes
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thêm mã riêng (criterion: TASK | CC | LR | GRA, bỏ trống = không gắn)
+# @name newCode
+POST {{baseUrl}}/api/teacher/error-codes
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "code": "tone", "name": "Giọng văn chưa phù hợp", "criterion": "TASK", "description": "Quá thân mật với bài học thuật" }
+
+### Trùng mã hệ thống → 409 DUPLICATE
+POST {{baseUrl}}/api/teacher/error-codes
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "code": "sp", "name": "Chính tả" }
+
+### Sửa mã riêng
+PUT {{baseUrl}}/api/teacher/error-codes/{{newCode.response.body.data.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "code": "TONE", "name": "Giọng văn", "criterion": "TASK" }
+
+### Xoá mã riêng
+DELETE {{baseUrl}}/api/teacher/error-codes/{{newCode.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### ─── Ngân hàng nhận xét (B6a) ───────────────────────────────────────────
+
+### Danh sách (lọc theo tiêu chí vẫn kèm nhận xét dùng chung)
+GET {{baseUrl}}/api/teacher/comment-bank?criterion=CC&keyword=đoạn
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thêm nhận xét
+# @name newComment
+POST {{baseUrl}}/api/teacher/comment-bank
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "criterion": "CC", "content": "Đoạn 2 thiếu câu chủ đề; hãy nêu ý chính ngay câu đầu." }
+
+### Ghi nhận một lần chèn (xếp mục hay dùng lên đầu)
+POST {{baseUrl}}/api/teacher/comment-bank/{{newComment.response.body.data.id}}/use
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Sửa nhận xét
+PUT {{baseUrl}}/api/teacher/comment-bank/{{newComment.response.body.data.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "criterion": "CC", "content": "Đoạn 2 thiếu câu chủ đề." }
+
+### Xoá nhận xét
+DELETE {{baseUrl}}/api/teacher/comment-bank/{{newComment.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}

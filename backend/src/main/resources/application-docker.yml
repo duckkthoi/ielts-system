@@ -1,0 +1,9 @@
+# Chạy trong docker compose: các host là tên service.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:ielts}
+  mail:
+    host: ${MAIL_HOST:mailpit}
+
+app:
+  upload-dir: ${UPLOAD_DIR:/data/uploads}

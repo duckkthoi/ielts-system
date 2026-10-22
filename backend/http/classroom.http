@@ -1,0 +1,80 @@
+### API lớp học của giáo viên — cần tài khoản TEACHER đã đổi mật khẩu
+### (tạo giáo viên trong admin.http, đăng nhập bằng mật khẩu tạm, đổi mật khẩu trong auth.http)
+
+@baseUrl = http://localhost:8080
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.hanh", "password": "MatKhauMoi123" }
+
+### Tạo lớp (mã lớp tự viết hoa)
+# @name created
+POST {{baseUrl}}/api/teacher/classes
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "code": "ielts-k15a", "name": "IELTS K15 – Lớp A", "description": "Lớp luyện Writing buổi tối" }
+
+### Danh sách lớp của tôi (sort: name|code|createdAt)
+GET {{baseUrl}}/api/teacher/classes?keyword=k15&sort=name,asc
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chi tiết lớp
+GET {{baseUrl}}/api/teacher/classes/{{created.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thêm sinh viên đã có tài khoản theo mã SV
+POST {{baseUrl}}/api/teacher/classes/{{created.response.body.data.id}}/members
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "studentCodes": ["2151000001", "2151000002", "KHONGCO"] }
+
+### Thành viên lớp (sort: studentCode|fullName|joinedAt)
+GET {{baseUrl}}/api/teacher/classes/{{created.response.body.data.id}}/members?sort=fullName,asc
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Tìm sinh viên để giao bài cá nhân
+GET {{baseUrl}}/api/teacher/students/search?keyword=2151
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Sửa lớp
+PUT {{baseUrl}}/api/teacher/classes/{{created.response.body.data.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "code": "IELTS-K15A", "name": "IELTS K15 – Lớp A (tối thứ 3, 5)" }
+
+### Tải file mẫu import (xlsx | csv)
+GET {{baseUrl}}/api/teacher/import-template?format=xlsx
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Import sinh viên từ file (sendEmail=true → gửi email tài khoản; xem thư ở Mailpit http://localhost:8025)
+# @name imported
+POST {{baseUrl}}/api/teacher/classes/{{created.response.body.data.id}}/import
+Authorization: Bearer {{login.response.body.data.accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="ds-k15a.csv"
+Content-Type: text/csv
+
+MSSV;Họ và tên;Email
+2151000101;Nguyễn Văn An;an.nv@sv.edu.vn
+2151000102;Trần Thị Bình;
+21A!;Mã sai;
+--WebAppBoundary
+Content-Disposition: form-data; name="sendEmail"
+
+true
+--WebAppBoundary--
+
+### Tải file tài khoản vừa tạo (CHỈ MỘT LẦN, hết hạn sau 15 phút)
+GET {{baseUrl}}/api/teacher/imports/{{imported.response.body.data.credentialsToken}}/credentials
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Xoá lớp
+DELETE {{baseUrl}}/api/teacher/classes/{{created.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}

@@ -1,0 +1,20 @@
+# Profile cho test tự động: dùng database riêng ielts_test, không đụng dữ liệu dev.
+spring:
+  datasource:
+    url: jdbc:postgresql://${TEST_DB_HOST:localhost}:${TEST_DB_PORT:5432}/${TEST_DB_NAME:ielts_test}
+    username: ${TEST_DB_USER:ielts}
+    password: ${TEST_DB_PASSWORD:ielts}
+
+app:
+  admin:
+    username: admin
+    password: Admin@123
+  upload-dir: ${java.io.tmpdir}/ielts-test-uploads
+  # Test tự gọi job với đồng hồ giả, không để bộ lập lịch chạy nền.
+  reminders:
+    enabled: false
+
+logging:
+  level:
+    com.ltmtu.ielts: INFO
+    org.flywaydb: WARN
