@@ -1,0 +1,19 @@
+{
+  "description": "Bộ ca kiểm thử đếm từ theo quy ước IELTS (BR-20, docs/08 mục 3.4). Backend (WordCounterTest) và frontend (wordCount.test.ts) cùng chạy bộ này để bảo đảm đếm giống hệt nhau.",
+  "cases": [
+    { "name": "rỗng", "text": "", "count": 0 },
+    { "name": "chỉ khoảng trắng", "text": "   \n\t  ", "count": 0 },
+    { "name": "câu thường", "text": "In recent years, the question has become controversial.", "count": 8 },
+    { "name": "nhiều khoảng trắng và xuống dòng", "text": "First  paragraph.\n\nSecond\tparagraph here.", "count": 5 },
+    { "name": "từ nối gạch ngang = 1", "text": "a well-known long-term problem", "count": 4 },
+    { "name": "viết tắt = 1", "text": "I don't think it's fair", "count": 5 },
+    { "name": "số và ký hiệu = 1", "text": "It rose by 20% in 2020", "count": 6 },
+    { "name": "số viết bằng chữ tính từng từ", "text": "twenty percent", "count": 2 },
+    { "name": "dấu câu đứng riêng không tính", "text": "Firstly - and most importantly — this matters …", "count": 6 },
+    { "name": "viết dính tính như sinh viên viết", "text": "eventhough it rained", "count": 3 },
+    { "name": "dấu phẩy không có khoảng trắng phía sau", "text": "cats,dogs and birds", "count": 3 },
+    { "name": "ngoặc và dấu câu dính từ", "text": "(for example, \"education\") is vital!", "count": 5 },
+    { "name": "chữ có dấu tiếng Việt vẫn là chữ", "text": "Hà Nội is the capital", "count": 5 },
+    { "name": "khoảng trắng không ngắt (NBSP)", "text": "ten thousand people", "count": 3 }
+  ]
+}

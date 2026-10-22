@@ -1,0 +1,60 @@
+### Gọi thử API xác thực (VS Code: extension "REST Client"; IntelliJ: có sẵn)
+### Chạy backend trước: cd backend && mvn spring-boot:run
+
+@baseUrl = http://localhost:8080
+
+### Giờ server (không cần đăng nhập)
+GET {{baseUrl}}/api/time
+
+### Đăng nhập admin (dev). Mật khẩu mặc định Admin@123 đã được đổi thành Admin@2026 khi chạy thử B3b.
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@2026"
+}
+
+### Thông tin tài khoản hiện tại
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Làm mới token (refresh token đổi sau mỗi lần gọi)
+# @name refresh
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.data.refreshToken}}"
+}
+
+### Gọi lại refresh với token CŨ trong 30 giây → 401 REFRESH_TOKEN_ROTATED
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.data.refreshToken}}"
+}
+
+### Gọi API quản trị bằng token mới (nếu tài khoản còn bị bắt đổi mật khẩu → 403 PASSWORD_CHANGE_REQUIRED)
+GET {{baseUrl}}/api/admin/teachers
+Authorization: Bearer {{refresh.response.body.data.accessToken}}
+
+### Đổi mật khẩu (sau khi đổi, nhớ cập nhật mật khẩu ở request đăng nhập phía trên)
+POST {{baseUrl}}/api/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{refresh.response.body.data.accessToken}}
+
+{
+  "currentPassword": "Admin@2026",
+  "newPassword": "MatKhauMoi2026"
+}
+
+### Đăng xuất
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh.response.body.data.refreshToken}}"
+}

@@ -1,0 +1,122 @@
+@layer theme, base, antd, components, utilities;
+
+@import 'tailwindcss';
+
+/* ─── Design tokens ───────────────────────────────────────────────────────────
+   Nguồn: docs/07-design-system.md. Giá trị JS tương ứng: lib/theme/tokens.ts.
+   Tailwind tự sinh class: bg-brand-600, text-neutral-500, rounded-lg, shadow-sm, font-serif…
+   `static`: luôn xuất mọi biến CSS (kể cả chưa dùng class nào) để CSS tự viết tham chiếu được. */
+@theme static {
+  /* Xoá bảng màu neutral mặc định của Tailwind, dùng bảng của design system. */
+  --color-neutral-*: initial;
+
+  --color-brand-50: #eff4ff;
+  --color-brand-100: #dbe6fe;
+  --color-brand-200: #bfd3fe;
+  --color-brand-500: #3b6ff6;
+  --color-brand-600: #2457e6;
+  --color-brand-700: #1c44c2;
+  --color-brand-900: #172c6e;
+
+  --color-accent-50: #fffbeb;
+  --color-accent-500: #f59e0b;
+
+  --color-neutral-0: #ffffff;
+  --color-neutral-25: #f8fafc;
+  --color-neutral-50: #f1f5f9;
+  --color-neutral-100: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-700: #334155;
+  --color-neutral-900: #0f172a;
+
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-error-border: #fecaca;
+  --color-info: #0284c7;
+  --color-info-bg: #f0f9ff;
+  --color-info-border: #bae6fd;
+
+  --color-highlight-comment: #fef08a;
+  --color-highlight-comment-line: #ca8a04;
+  --color-highlight-comment-active: #fde047;
+  --color-highlight-similar: #fce7f3;
+  --color-diff-added: #dcfce7;
+  --color-diff-added-text: #166534;
+  --color-diff-removed: #fee2e2;
+  --color-diff-removed-text: #991b1b;
+
+  --color-presence-online: #22c55e;
+  --color-presence-away: #f59e0b;
+  --color-presence-offline: #cbd5e1;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  --text-display: 30px;
+  --text-display--line-height: 38px;
+  --text-h1: 24px;
+  --text-h1--line-height: 32px;
+  --text-h2: 20px;
+  --text-h2--line-height: 28px;
+  --text-h3: 16px;
+  --text-h3--line-height: 24px;
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 18px;
+  --text-essay: 17px;
+  --text-essay--line-height: 30px;
+  --text-prompt: 15px;
+  --text-prompt--line-height: 24px;
+
+  --ease-out-fast: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-pulse-once: pulse-once 600ms ease-out 1;
+
+  @keyframes pulse-once {
+    0% {
+      box-shadow: 0 0 0 0 var(--color-brand-200);
+    }
+    100% {
+      box-shadow: 0 0 0 8px transparent;
+    }
+  }
+}
+
+/* Font do next/font nạp (app/layout.tsx) → gán vào token font của Tailwind. */
+@theme inline {
+  --font-sans: var(--font-roboto), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: var(--font-noto-serif), Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, Consolas, monospace;
+}
+
+body {
+  background: var(--color-neutral-25);
+  color: var(--color-neutral-700);
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

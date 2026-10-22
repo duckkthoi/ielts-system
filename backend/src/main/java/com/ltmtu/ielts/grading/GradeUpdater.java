@@ -1,0 +1,200 @@
+package com.ltmtu.ielts.grading;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
+import com.ltmtu.ielts.assignment.ChecklistItem;
+import com.ltmtu.ielts.assignment.RubricCriterion;
+import com.ltmtu.ielts.common.ApiException;
+import com.ltmtu.ielts.grading.BandCalculator.Weighted;
+import com.ltmtu.ielts.grading.GradingEnums.CriterionGroup;
+import com.ltmtu.ielts.grading.GradingRules.LimitMark;
+import com.ltmtu.ielts.grading.GradingRules.ScoreCap;
+import com.ltmtu.ielts.grading.dto.GradingDtos.InlineCommentRequest;
+import com.ltmtu.ielts.grading.dto.GradingDtos.MarkRequest;
+import com.ltmtu.ielts.grading.dto.GradingDtos.SaveGradeRequest;
+import com.ltmtu.ielts.grading.dto.GradingDtos.ScoreRequest;
+
+/**
+ * Áp body "lưu chấm" vào một {@link Grade} (thay toàn bộ), kiểm tra mọi quy tắc trước khi đổi dữ liệu:
+ * BR-11 / BR-17 / BR-18 (điểm), BR-19 ("Chấm 0"), BR-21 (nhận xét inline). Không phụ thuộc Spring.
+ */
+final class GradeUpdater {
+
+	private GradeUpdater() {
+	}
+
+	/**
+	 * @param criteria tiêu chí của phần (kèm checklist)
+	 * @param content  nội dung version đang chấm — offset nhận xét inline tính trên chuỗi này
+	 * @param codes    mã lỗi dùng được (của hệ thống + của giáo viên), khoá là mã viết hoa
+	 */
+	static void apply(Grade grade, List<RubricCriterion> criteria, String content, int wordCount,
+			SaveGradeRequest req, Map<String, ErrorCode> codes, Instant now) {
+		Map<Long, RubricCriterion> criteriaById = criteria.stream()
+				.collect(Collectors.toMap(RubricCriterion::getId, Function.identity()));
+		Map<Long, ScoreRequest> scores = indexScores(req.scores(), criteriaById);
+		Map<Long, Boolean> checked = indexMarks(req.checklist(), criteria);
+		boolean zero = req.zeroReason() != null;
+		if (zero && scores.values().stream().anyMatch(s -> s.score() != null && s.score().signum() != 0)) {
+			throw invalid("\"Chấm 0\": mọi tiêu chí phải là 0 (BR-19)");
+		}
+
+		// Kiểm tra và tính hết trước, rồi mới ghi vào entity: lỗi ở tiêu chí sau không để lại thay đổi dở dang.
+		Map<Long, BigDecimal> finalScores = new HashMap<>();
+		for (RubricCriterion c : criteria) {
+			ScoreRequest s = scores.get(c.getId());
+			BigDecimal score = zero ? BigDecimal.ZERO : (s == null ? null : s.score());
+			if (!zero) {
+				GradingRules.requireValidScore(c.getName(), score, c.getMaxScore(), c.getStep(),
+						capOf(c, checked, wordCount));
+			}
+			finalScores.put(c.getId(), score == null ? null : score.setScale(1, RoundingMode.UNNECESSARY));
+		}
+		List<InlineComment> inline = buildInline(req.inlineComments(), criteria, criteriaById, content, codes, now);
+
+		Map<Long, GradeCriterionScore> existingScores = grade.getScores().stream()
+				.collect(Collectors.toMap(s -> s.getCriterion().getId(), Function.identity()));
+		Map<Long, GradeChecklistMark> existingMarks = grade.getMarks().stream()
+				.collect(Collectors.toMap(m -> m.getItem().getId(), Function.identity()));
+		List<Weighted> weighted = new ArrayList<>();
+		for (RubricCriterion c : criteria) {
+			GradeCriterionScore row = existingScores.get(c.getId());
+			if (row == null) {
+				row = new GradeCriterionScore(grade, c);
+				grade.getScores().add(row);
+			}
+			ScoreRequest s = scores.get(c.getId());
+			row.setScore(finalScores.get(c.getId()));
+			row.setComment(s == null ? null : blankToNull(s.comment()));
+			weighted.add(new Weighted(row.getScore(), c.getWeight()));
+			for (ChecklistItem item : c.getChecklist()) {
+				GradeChecklistMark mark = existingMarks.get(item.getId());
+				if (mark == null) {
+					mark = new GradeChecklistMark(grade, item);
+					grade.getMarks().add(mark);
+				}
+				mark.setChecked(checked.getOrDefault(item.getId(), false));
+			}
+		}
+		grade.getInlineComments().clear();
+		inline.forEach(ic -> {
+			ic.setGrade(grade);
+			grade.getInlineComments().add(ic);
+		});
+		grade.setGeneralComment(blankToNull(req.generalComment()));
+		grade.setZeroReason(req.zeroReason());
+		grade.setOverallScore(BandCalculator.partBand(weighted));
+	}
+
+	/** Giới hạn điểm của một tiêu chí theo các mục LIMIT đang tick và số từ. */
+	static ScoreCap capOf(RubricCriterion c, Map<Long, Boolean> checked, int wordCount) {
+		List<LimitMark> limits = c.getChecklist().stream()
+				.filter(i -> i.getKind() == ChecklistKind.LIMIT && checked.getOrDefault(i.getId(), false))
+				.map(i -> new LimitMark(i.getContent(), i.getMaxBand()))
+				.toList();
+		return GradingRules.cap(c.getMaxScore(), limits, wordCount);
+	}
+
+	private static Map<Long, ScoreRequest> indexScores(List<ScoreRequest> scores, Map<Long, RubricCriterion> criteria) {
+		Map<Long, ScoreRequest> map = new HashMap<>();
+		for (ScoreRequest s : Objects.requireNonNullElse(scores, List.<ScoreRequest>of())) {
+			if (!criteria.containsKey(s.criterionId())) {
+				throw invalid("Tiêu chí " + s.criterionId() + " không thuộc phần này");
+			}
+			if (map.put(s.criterionId(), s) != null) {
+				throw invalid("Tiêu chí " + criteria.get(s.criterionId()).getName() + " bị gửi hai lần");
+			}
+		}
+		return map;
+	}
+
+	private static Map<Long, Boolean> indexMarks(List<MarkRequest> marks, List<RubricCriterion> criteria) {
+		Map<Long, ChecklistItem> items = criteria.stream().flatMap(c -> c.getChecklist().stream())
+				.collect(Collectors.toMap(ChecklistItem::getId, Function.identity()));
+		Map<Long, Boolean> map = new HashMap<>();
+		for (MarkRequest m : Objects.requireNonNullElse(marks, List.<MarkRequest>of())) {
+			if (!items.containsKey(m.checklistItemId())) {
+				throw invalid("Mục checklist " + m.checklistItemId() + " không thuộc phần này");
+			}
+			if (map.put(m.checklistItemId(), Boolean.TRUE.equals(m.checked())) != null) {
+				throw invalid("Mục checklist " + m.checklistItemId() + " bị gửi hai lần");
+			}
+		}
+		return map;
+	}
+
+	/** BR-21: vị trí hợp lệ, đoạn trích khớp nội dung, có ít nhất mã lỗi / nhận xét / gợi ý sửa, mã lỗi tồn tại. */
+	private static List<InlineComment> buildInline(List<InlineCommentRequest> requests, List<RubricCriterion> criteria,
+			Map<Long, RubricCriterion> criteriaById, String content, Map<String, ErrorCode> codes, Instant now) {
+		List<InlineComment> result = new ArrayList<>();
+		List<InlineCommentRequest> list = Objects.requireNonNullElse(requests, List.of());
+		for (int i = 0; i < list.size(); i++) {
+			InlineCommentRequest r = list.get(i);
+			String at = "Nhận xét inline thứ " + (i + 1);
+			if (r.startOffset() < 0 || r.endOffset() <= r.startOffset() || r.endOffset() > content.length()) {
+				throw invalid(at + ": vị trí đoạn văn không hợp lệ");
+			}
+			String quote = content.substring(r.startOffset(), r.endOffset());
+			if (r.quote() != null && !r.quote().equals(quote)) {
+				throw invalid(at + ": đoạn trích không khớp với nội dung bài nộp");
+			}
+			String comment = blankToNull(r.comment());
+			String suggestion = blankToNull(r.suggestion());
+			ErrorCode code = null;
+			if (blankToNull(r.errorCode()) != null) {
+				String key = r.errorCode().trim().toUpperCase(Locale.ROOT);
+				code = codes.get(key);
+				if (code == null) {
+					throw invalid(at + ": mã lỗi '" + key + "' không tồn tại");
+				}
+			}
+			if (code == null && comment == null && suggestion == null) {
+				throw invalid(at + ": cần có mã lỗi, lời nhận xét hoặc gợi ý sửa");
+			}
+			RubricCriterion criterion = null;
+			if (r.criterionId() != null) {
+				criterion = criteriaById.get(r.criterionId());
+				if (criterion == null) {
+					throw invalid(at + ": tiêu chí " + r.criterionId() + " không thuộc phần này");
+				}
+			} else if (code != null && code.getCriterion() != null) {
+				criterion = matchCriterion(criteria, code.getCriterion());
+			}
+			InlineComment ic = new InlineComment();
+			ic.setStartOffset(r.startOffset());
+			ic.setEndOffset(r.endOffset());
+			ic.setQuote(quote);
+			ic.setComment(comment);
+			ic.setErrorCode(code == null ? null : code.getCode());
+			ic.setCriterion(criterion);
+			ic.setSuggestion(suggestion);
+			ic.setCreatedAt(now);
+			result.add(ic);
+		}
+		return result;
+	}
+
+	/** Mã lỗi nhóm TASK khớp tiêu chí TA hoặc TR của phần; không có tiêu chí cùng nhóm → để trống. */
+	private static RubricCriterion matchCriterion(List<RubricCriterion> criteria, CriterionGroup group) {
+		return criteria.stream().filter(c -> CriterionGroup.of(c.getCode()) == group).findFirst().orElse(null);
+	}
+
+	private static String blankToNull(String s) {
+		return s == null || s.isBlank() ? null : s.trim();
+	}
+
+	private static ApiException invalid(String message) {
+		return ApiException.badRequest("VALIDATION_ERROR", message);
+	}
+}
