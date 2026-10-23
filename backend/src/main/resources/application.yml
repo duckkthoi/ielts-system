@@ -90,8 +90,32 @@ app:
     interval: PT15M
     soon: PT24H
     urgent: PT2H
+  # Server TCP import sinh viên (docs/05 phần C), chạy cùng ứng dụng.
+  tcp:
+    enabled: ${APP_TCP_ENABLED:true}
+    port: ${APP_TCP_PORT:9090}
+    threads: 16
+    read-timeout: 30s
+    session-timeout: 5m
+    max-payload: 5242880
+  # Một tài khoản một phiên (FR-06): đăng nhập nơi mới thì phiên cũ bị thu hồi và nhận FORCE_LOGOUT qua WebSocket.
+  session:
+    single-login: ${APP_SINGLE_LOGIN:true}
+  # Giới hạn tần suất trong bộ nhớ (NFR-09).
+  rate-limit:
+    login-max-failures: 5
+    login-window: 5m
+    remind-max: 3
+    remind-window: 10m
   grading:
     max-error-codes-per-teacher: 100
     max-comment-bank-items-per-teacher: 500
   ai:
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
+  # Dữ liệu mẫu — chỉ được nạp khi bật profile demo (SPRING_PROFILES_ACTIVE=docker,demo). Xem README.
+  demo:
+    prefix: ${DEMO_PREFIX:DEMO}
+    password: ${DEMO_PASSWORD:Demo@2026}
+    students-per-class: 10
+    # Lớp kiểm thử tải (bước 14, loadtest/): 500 sinh viên cho 500 kết nối WebSocket.
+    load-students: ${DEMO_LOAD_STUDENTS:0}

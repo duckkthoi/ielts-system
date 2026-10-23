@@ -51,6 +51,10 @@ public class Submission extends BaseEntity {
 	@Column(name = "draft_saved_at")
 	private Instant draftSavedAt;
 
+	/** Khoá lạc quan của bản nháp (SD-06): tăng 1 sau mỗi lần lưu nháp thành công. */
+	@Column(name = "draft_version", nullable = false)
+	private int draftVersion;
+
 	/** Hạn sửa khi bị yêu cầu sửa (BR-07: ưu tiên hơn hạn phần / hạn bài). */
 	@Column(name = "revision_due_at")
 	private Instant revisionDueAt;

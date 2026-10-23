@@ -20,7 +20,11 @@ public record ErrorResponse(
 		Map<String, String> fieldErrors) {
 
 	public static ErrorResponse of(int status, String code, String message, String path) {
-		return new ErrorResponse(false, null, message, code, status, path, Instant.now(), null);
+		return of(status, code, message, path, null);
+	}
+
+	public static ErrorResponse of(int status, String code, String message, String path, Object data) {
+		return new ErrorResponse(false, data, message, code, status, path, Instant.now(), null);
 	}
 
 	public static ErrorResponse withFields(int status, String code, String message, String path,

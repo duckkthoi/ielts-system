@@ -1,0 +1,25 @@
+# Ghép với docker-compose.yml gốc để kiểm thử tải (bước 14, docs/09-kiem-thu-tai.md):
+#   docker compose -f docker-compose.yml -f loadtest/compose.loadtest.yml up --build -d
+#   docker compose -f docker-compose.yml -f loadtest/compose.loadtest.yml run --rm k6 run submit-rush.js
+#   docker compose -f docker-compose.yml -f loadtest/compose.loadtest.yml run --rm k6 run ws-connections.js
+# Backend bật profile demo + lớp kiểm thử tải 500 sinh viên. k6 chạy trong mạng compose và đi qua nginx (HTTPS / WSS)
+# giống trình duyệt thật. Đường dẫn tương đối tính từ thư mục gốc dự án (thư mục của file compose đầu tiên).
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,demo
+      DEMO_LOAD_STUDENTS: ${DEMO_LOAD_STUDENTS:-500}
+
+  k6:
+    image: grafana/k6:0.54.0
+    profiles: ["loadtest"]
+    depends_on:
+      - nginx
+    working_dir: /scripts
+    volumes:
+      - ./loadtest:/scripts:ro
+    environment:
+      BASE_URL: https://nginx
+      WS_URL: wss://nginx/ws
+      DEMO_PREFIX: ${DEMO_PREFIX:-DEMO}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-Demo@2026}

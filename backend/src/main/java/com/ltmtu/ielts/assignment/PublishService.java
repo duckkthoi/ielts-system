@@ -1,14 +1,17 @@
 package com.ltmtu.ielts.assignment;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,8 @@ import com.ltmtu.ielts.assignment.dto.PublishDtos.TargetStudent;
 import com.ltmtu.ielts.assignment.dto.PublishDtos.Targets;
 import com.ltmtu.ielts.assignment.dto.PublishDtos.TargetsAdded;
 import com.ltmtu.ielts.assignment.dto.PublishDtos.TargetsRequest;
+import com.ltmtu.ielts.audit.AuditAction;
+import com.ltmtu.ielts.audit.AuditService;
 import com.ltmtu.ielts.classroom.Classroom;
 import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.common.ApiException;
@@ -44,6 +49,8 @@ public class PublishService {
 	private final UserQueryService userQueryService;
 	private final ApplicationEventPublisher events;
 	private final Clock clock;
+	private final RemindThrottle remindThrottle;
+	private final AuditService audit;
 
 	/**
 	 * UC-14: giao bài và phát hành. Điều kiện: bài nháp, có ≥ 1 phần, mỗi phần có ≥ 1 tiêu chí, có hạn nộp ở tương
@@ -75,6 +82,7 @@ public class PublishService {
 		}
 		events.publishEvent(new AssignmentEvents.Published(a.getId(), a.getTitle(), a.getDueAt(), Set.copyOf(recipients),
 				opensNow(a, now)));
+		audit.record(teacherId, AuditAction.PUBLISH_ASSIGNMENT, "ASSIGNMENT", id, Map.of("recipients", recipients.size()));
 		log.info("Giáo viên {} phát hành bài tập {} cho {} sinh viên", teacherId, id, recipients.size());
 		return new PublishResult(recipients.size());
 	}
@@ -135,9 +143,15 @@ public class PublishService {
 		if (!targetRepository.findRecipientIds(id).containsAll(req.studentIds())) {
 			throw ApiException.badRequest("VALIDATION_ERROR", "Có sinh viên không được giao bài này");
 		}
+		Duration wait = remindThrottle.blockedFor(teacherId, id);
+		if (wait != null) {
+			throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "Bạn vừa nhắc bài này nhiều lần. Vui lòng thử lại sau "
+					+ Math.max(1, (wait.toSeconds() + 59) / 60) + " phút");
+		}
 		Instant due = part != null && part.getPartDueAt() != null ? part.getPartDueAt() : a.getDueAt();
 		events.publishEvent(new AssignmentEvents.ManualReminder(a.getId(), a.getTitle(),
 				part == null ? null : part.getTitle(), due, Set.copyOf(req.studentIds())));
+		remindThrottle.reminded(teacherId, id);
 		log.info("Giáo viên {} nhắc {} sinh viên làm bài {}", teacherId, req.studentIds().size(), id);
 		return new RemindResult(req.studentIds().size());
 	}

@@ -27,15 +27,22 @@ public final class SubmissionDtos {
 		EMPTY
 	}
 
+	/** {@code draftVersion}: gửi lại ở lần lưu nháp sau để phát hiện tab / máy khác đã lưu (SD-06). */
 	public record DraftResponse(String content, DraftSource source, Instant savedAt, int wordCount,
-			SubmissionStatus status, int currentVersion) {
+			SubmissionStatus status, int currentVersion, int draftVersion) {
 	}
 
+	/** {@code draftVersion} bỏ trống = không kiểm tra xung đột (ghi đè như Mức 1). */
 	public record SaveDraftRequest(
-			@NotNull(message = "Thiếu nội dung") @Size(max = MAX_CONTENT, message = "Bài quá dài") String content) {
+			@NotNull(message = "Thiếu nội dung") @Size(max = MAX_CONTENT, message = "Bài quá dài") String content,
+			@Min(value = 0, message = "draftVersion không hợp lệ") Integer draftVersion) {
 	}
 
-	public record SaveDraftResponse(Instant savedAt, int wordCount) {
+	public record SaveDraftResponse(Instant savedAt, int wordCount, int draftVersion) {
+	}
+
+	/** {@code data} của lỗi 409 DRAFT_CONFLICT: bản đang lưu trên server, để client cho người dùng chọn bản. */
+	public record DraftConflict(String serverContent, int draftVersion, Instant savedAt) {
 	}
 
 	public record SubmitRequest(

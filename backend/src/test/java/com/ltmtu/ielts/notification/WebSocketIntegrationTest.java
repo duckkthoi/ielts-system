@@ -53,8 +53,19 @@ class WebSocketIntegrationTest extends IntegrationTest {
 
 	@AfterEach
 	void disconnect() {
-		sessions.stream().filter(StompSession::isConnected).forEach(StompSession::disconnect);
+		sessions.forEach(WebSocketIntegrationTest::disconnectQuietly);
 		client.stop();
+	}
+
+	/** Server có thể vừa đóng kết nối (sau khung ERROR) mà client chưa kịp biết → disconnect ném lỗi; bỏ qua. */
+	private static void disconnectQuietly(StompSession s) {
+		try {
+			if (s.isConnected()) {
+				s.disconnect();
+			}
+		} catch (RuntimeException ignored) {
+			// Kết nối đã đóng.
+		}
 	}
 
 	/** Ghi lại khung ERROR server gửi về (header {@code message}). */
@@ -162,7 +173,7 @@ class WebSocketIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Phân quyền SUBSCRIBE / SEND: kênh /topic/… và lệnh gửi lên chưa mở ở Mức 1 → khung ERROR")
+	@DisplayName("Phân quyền SUBSCRIBE / SEND: kênh /topic của bài không phải của mình, lệnh gửi không đúng vai trò → khung ERROR")
 	void forbiddenDestinations() throws Exception {
 		String token = accessToken(newUser(Role.TEACHER));
 		ErrorRecorder handler = new ErrorRecorder();

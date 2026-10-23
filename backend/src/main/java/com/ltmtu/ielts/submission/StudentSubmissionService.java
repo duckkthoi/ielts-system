@@ -13,6 +13,7 @@ import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentPart;
 import com.ltmtu.ielts.assignment.StudentAssignmentAccess;
 import com.ltmtu.ielts.common.ApiException;
+import com.ltmtu.ielts.submission.dto.SubmissionDtos.DraftConflict;
 import com.ltmtu.ielts.submission.dto.SubmissionDtos.DraftResponse;
 import com.ltmtu.ielts.submission.dto.SubmissionDtos.DraftSource;
 import com.ltmtu.ielts.submission.dto.SubmissionDtos.SaveDraftResponse;
@@ -40,38 +41,56 @@ public class StudentSubmissionService {
 		access.requireVisiblePart(partId, studentId, clock.instant());
 		Submission s = submissionRepository.findByPartIdAndStudentId(partId, studentId).orElse(null);
 		if (s == null) {
-			return new DraftResponse("", DraftSource.EMPTY, null, 0, SubmissionStatus.NOT_STARTED, 0);
+			return new DraftResponse("", DraftSource.EMPTY, null, 0, SubmissionStatus.NOT_STARTED, 0, 0);
 		}
 		if (s.getDraftContent() != null) {
 			return new DraftResponse(s.getDraftContent(), DraftSource.DRAFT, s.getDraftSavedAt(),
-					WordCounter.count(s.getDraftContent()), s.getStatus().forStudent(), s.getCurrentVersion());
+					WordCounter.count(s.getDraftContent()), s.getStatus().forStudent(), s.getCurrentVersion(),
+					s.getDraftVersion());
 		}
 		if (s.getStatus() == SubmissionStatus.REVISION_REQUESTED && s.getCurrentVersion() > 0) {
 			String last = versionRepository.findBySubmissionIdAndVersionNo(s.getId(), s.getCurrentVersion())
 					.map(SubmissionVersion::getContent).orElse("");
 			return new DraftResponse(last, DraftSource.LAST_VERSION, null, WordCounter.count(last), s.getStatus(),
-					s.getCurrentVersion());
+					s.getCurrentVersion(), s.getDraftVersion());
 		}
-		return new DraftResponse("", DraftSource.EMPTY, null, 0, s.getStatus().forStudent(), s.getCurrentVersion());
+		return new DraftResponse("", DraftSource.EMPTY, null, 0, s.getStatus().forStudent(), s.getCurrentVersion(),
+				s.getDraftVersion());
 	}
 
-	/** UC-23: lưu nháp (tự lưu sau 3 giây ngừng gõ). Chỉ khi phần còn mở và chưa quá hạn (trừ khi cho nộp muộn). */
+	/**
+	 * UC-23 / SD-06: lưu nháp (tự lưu sau 3 giây ngừng gõ). Chỉ khi phần còn mở và chưa quá hạn (trừ khi cho nộp muộn).
+	 * Khoá dòng bài làm rồi so {@code expectedDraftVersion}: lệch (tab / máy khác vừa lưu) → 409 DRAFT_CONFLICT kèm
+	 * bản trên server, không ghi đè. {@code null} = không kiểm tra.
+	 */
 	@Transactional
-	public SaveDraftResponse saveDraft(Long studentId, Long partId, String content) {
+	public SaveDraftResponse saveDraft(Long studentId, Long partId, String content, Integer expectedDraftVersion) {
 		Instant now = clock.instant();
 		AssignmentPart part = access.requireVisiblePart(partId, studentId, now);
 		Submission s = submissionRepository.findForUpdate(partId, studentId).orElse(null);
 		requireWritable(part, s, now);
+		int current = s == null ? 0 : s.getDraftVersion();
+		if (expectedDraftVersion != null && expectedDraftVersion != current) {
+			throw new ApiException(HttpStatus.CONFLICT, "DRAFT_CONFLICT",
+					"Bản nháp vừa được lưu ở tab hoặc thiết bị khác. Hãy chọn giữ bản nào",
+					new DraftConflict(s == null ? "" : s.getDraftContent(), current, s == null ? null : s.getDraftSavedAt()));
+		}
 		if (s == null) {
 			s = Submission.start(part, userQueryService.requireUser(studentId));
 		}
-		if (s.getStatus() == SubmissionStatus.NOT_STARTED) {
+		boolean started = s.getStatus() == SubmissionStatus.NOT_STARTED;
+		if (started) {
 			s.setStatus(SubmissionStatus.DRAFT);
 		}
 		s.setDraftContent(content);
 		s.setDraftSavedAt(now);
-		saveNew(s);
-		return new SaveDraftResponse(now, WordCounter.count(content));
+		s.setDraftVersion(current + 1);
+		saveNew(s, "DRAFT_CONFLICT");
+		if (started) {
+			events.publishEvent(new SubmissionEvents.DraftStarted(s.getId(), part.getAssignment().getId(), partId,
+					studentId));
+		}
+		return new SaveDraftResponse(now, WordCounter.count(content), s.getDraftVersion());
 	}
 
 	/**
@@ -99,7 +118,7 @@ public class StudentSubmissionService {
 		s.setStatus(SubmissionStatus.SUBMITTED);
 		s.setDraftContent(null);
 		s.setDraftSavedAt(null);
-		saveNew(s);
+		saveNew(s, "VERSION_CONFLICT");
 		SubmissionVersion v = versionRepository.save(SubmissionVersion.of(s, versionNo, content, now, late));
 
 		events.publishEvent(new SubmissionEvents.Submitted(s.getId(), part.getAssignment().getId(), partId, studentId,
@@ -127,11 +146,12 @@ public class StudentSubmissionService {
 	 * Lưu bài làm; nếu là dòng mới mà một request khác vừa tạo trước (lần lưu / nộp đầu tiên chạy đồng thời) thì
 	 * UNIQUE (part, student) chặn lại → báo xung đột thay vì lỗi 500.
 	 */
-	private void saveNew(Submission s) {
+	/** Lưu; lần lưu đầu chạy song song (2 tab) vi phạm UNIQUE (part, student) → 409 với mã {@code conflictCode}. */
+	private void saveNew(Submission s, String conflictCode) {
 		try {
 			submissionRepository.saveAndFlush(s);
 		} catch (DataIntegrityViolationException e) {
-			throw ApiException.conflict("VERSION_CONFLICT", "Phần này vừa được lưu ở tab hoặc thiết bị khác. Hãy tải lại trang");
+			throw ApiException.conflict(conflictCode, "Phần này vừa được lưu ở tab hoặc thiết bị khác. Hãy tải lại trang");
 		}
 	}
 }
