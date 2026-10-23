@@ -1,4 +1,4 @@
-### API làm bài và xem kết quả của sinh viên (B5, B6c) — đăng nhập bằng mã SV của một sinh viên được giao bài
+### API làm bài và xem kết quả của sinh viên (B5, B6c, B8c, bước 10) — đăng nhập bằng mã SV của một sinh viên được giao bài
 
 @baseUrl = http://localhost:8080
 @partId = 1
@@ -53,3 +53,14 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### Band từng phần và band cả bài
 GET {{baseUrl}}/api/student/assignments/1/result
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Kết quả học tập: band theo thời gian, trung bình theo tiêu chí, hồ sơ lỗi (chỉ điểm đã trả)
+GET {{baseUrl}}/api/student/results
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Lưu nháp có kiểm tra xung đột (bước 10): gửi draftVersion đang có; lệch → 409 DRAFT_CONFLICT kèm bản trên server
+PUT {{baseUrl}}/api/student/parts/{{partId}}/draft
+Authorization: Bearer {{login.response.body.data.accessToken}}
+Content-Type: application/json
+
+{ "content": "Some people believe that…", "draftVersion": 0 }

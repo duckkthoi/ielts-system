@@ -45,8 +45,9 @@ public class AdminUserController {
 
 	@PostMapping("/teachers")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<CreatedTeacher> createTeacher(@Valid @RequestBody CreateTeacherRequest body) {
-		return ApiResponse.ok(adminUserService.createTeacher(body), "Đã tạo tài khoản giáo viên");
+	public ApiResponse<CreatedTeacher> createTeacher(@AuthenticationPrincipal AuthPrincipal me,
+			@Valid @RequestBody CreateTeacherRequest body) {
+		return ApiResponse.ok(adminUserService.createTeacher(me, body), "Đã tạo tài khoản giáo viên");
 	}
 
 	@PutMapping("/teachers/{id}")
@@ -72,8 +73,8 @@ public class AdminUserController {
 	}
 
 	@PostMapping("/users/{id}/unlock")
-	public ApiResponse<UserSummary> unlock(@PathVariable Long id) {
-		return ApiResponse.ok(adminUserService.unlock(id), "Đã mở khoá tài khoản");
+	public ApiResponse<UserSummary> unlock(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long id) {
+		return ApiResponse.ok(adminUserService.unlock(me, id), "Đã mở khoá tài khoản");
 	}
 
 	@PostMapping("/users/{id}/reset-password")

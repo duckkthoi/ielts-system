@@ -40,7 +40,7 @@ public class StudentSubmissionController {
 	@PutMapping("/draft")
 	public ApiResponse<SaveDraftResponse> saveDraft(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long partId,
 			@Valid @RequestBody SaveDraftRequest body) {
-		return ApiResponse.ok(service.saveDraft(me.id(), partId, body.content()));
+		return ApiResponse.ok(service.saveDraft(me.id(), partId, body.content(), body.draftVersion()));
 	}
 
 	@PostMapping("/submit")

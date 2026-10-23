@@ -10,11 +10,18 @@ public class ApiException extends RuntimeException {
 
 	private final HttpStatus status;
 	private final String code;
+	/** Dữ liệu kèm lỗi, trả trong trường {@code data} của body lỗi (vd bản nháp trên server khi xung đột). */
+	private final transient Object data;
 
 	public ApiException(HttpStatus status, String code, String message) {
+		this(status, code, message, null);
+	}
+
+	public ApiException(HttpStatus status, String code, String message, Object data) {
 		super(message);
 		this.status = status;
 		this.code = code;
+		this.data = data;
 	}
 
 	public static ApiException badRequest(String code, String message) {

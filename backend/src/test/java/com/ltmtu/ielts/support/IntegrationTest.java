@@ -17,6 +17,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import com.ltmtu.ielts.assignment.RemindThrottle;
+import com.ltmtu.ielts.user.LoginThrottle;
 import com.ltmtu.ielts.user.Role;
 import com.ltmtu.ielts.user.User;
 import com.ltmtu.ielts.user.UserRepository;
@@ -55,9 +57,21 @@ public abstract class IntegrationTest {
 	@Autowired
 	protected PasswordEncoder passwordEncoder;
 
+	@Autowired
+	protected LoginThrottle loginThrottle;
+
+	@Autowired
+	protected RemindThrottle remindThrottle;
+
+	/**
+	 * Đồng hồ về mốc chuẩn và xoá bộ đếm giới hạn tần suất: mọi request MockMvc cùng IP 127.0.0.1, nên lần đăng nhập
+	 * sai của test trước không được làm test sau bị 429.
+	 */
 	@BeforeEach
-	void resetClock() {
+	void resetClockAndLimits() {
 		clock.reset();
+		loginThrottle.clear();
+		remindThrottle.clear();
 	}
 
 	/** Tạo tài khoản mới với tên đăng nhập duy nhất, mật khẩu {@link #DEFAULT_PASSWORD}. */

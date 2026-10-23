@@ -51,3 +51,11 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### Đặt lại mật khẩu
 POST {{baseUrl}}/api/admin/users/{{created.response.body.data.teacher.id}}/reset-password
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Nhật ký hệ thống (bước 12): lọc theo hành động, IP (tiền tố), khoảng thời gian
+GET {{baseUrl}}/api/admin/audit-logs?action=LOGIN_FAILED&ip=127.0.0.&from=2026-10-01T00:00:00Z&page=0&size=20
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Nhật ký của một người
+GET {{baseUrl}}/api/admin/audit-logs?actorId={{created.response.body.data.teacher.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
