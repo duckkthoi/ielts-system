@@ -156,9 +156,9 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 
 | Mã | Nhóm | Yêu cầu | Cách kiểm chứng |
 |---|---|---|---|
-| NFR-01 | Hiệu năng | 200 sinh viên nộp bài trong 5 phút cuối trước hạn: **p95 < 500 ms**, tỉ lệ lỗi < 1% | Script k6 `loadtest/submit-rush.js` |
-| NFR-02 | Hiệu năng | Giữ được **500 kết nối WebSocket** đồng thời | k6 + số liệu Actuator |
-| NFR-03 | Realtime | Thông báo tới người nhận **dưới 1 giây** sau khi sự kiện xảy ra | Đo thời gian trong log |
+| NFR-01 | Hiệu năng | 200 sinh viên nộp bài trong 5 phút cuối trước hạn: **p95 < 500 ms**, tỉ lệ lỗi < 1% | Script k6 `loadtest/submit-rush.js` — đạt, p95 9,9 ms, 0% lỗi ([09](09-kiem-thu-tai.md)) |
+| NFR-02 | Hiệu năng | Giữ được **500 kết nối WebSocket** đồng thời | Script k6 `loadtest/ws-connections.js` — đạt, 500 / 500 ([09](09-kiem-thu-tai.md)) |
+| NFR-03 | Realtime | Thông báo tới người nhận **dưới 1 giây** sau khi sự kiện xảy ra | `ws-connections.js` đo giờ nhận − `createdAt` — đạt, p95 228 ms ([09](09-kiem-thu-tai.md)) |
 | NFR-04 | Sẵn sàng | Backend khởi động lại thì client tự kết nối lại và lấy đủ các thông báo phát ra trong lúc mất kết nối | `docker compose restart backend` |
 | NFR-05 | Chịu lỗi | Mất mạng khi đang gõ bài thì không mất nội dung; có mạng lại tự đồng bộ | DevTools → Offline |
 | NFR-06 | Chịu lỗi | Client tự kết nối lại WebSocket theo exponential backoff (1s, 2s, 4s… tối đa 30s) | Ngắt mạng thủ công |
@@ -247,6 +247,8 @@ flowchart LR
 - `admin-cli` kết nối thẳng tới server TCP ở cổng 9090, server này chạy ngay trong backend.
 - Giám sát bằng Spring Actuator + Prometheus + Grafana là tuỳ chọn.
 
+**Triển khai (đã cài ở bước 13):** `docker-compose.yml` ở thư mục gốc dựng 5 container — `postgres` (18), `mailpit`, `backend` (profile `docker`), `frontend`, `nginx` (1.27). Chỉ mở ra máy chủ: 80 / 443 (nginx), 9090 (TCP cho `admin-cli`), 8025 (giao diện Mailpit); backend 8080 và PostgreSQL chỉ nằm trong mạng nội bộ của Docker, nên header `X-Forwarded-For` chỉ nginx đặt được và backend tin header này để lấy IP thật (nhật ký, giới hạn đăng nhập sai). Dữ liệu nằm trong volume `pgdata`, `uploads`. Hướng dẫn chạy: [`deploy/README.md`](../deploy/README.md). Thêm profile `demo` (`SPRING_PROFILES_ACTIVE=docker,demo`) thì backend nạp sẵn dữ liệu mẫu cho buổi demo (bước 20, [`README`](../README.md)); ghép thêm `loadtest/compose.loadtest.yml` để kiểm thử tải bằng k6 (bước 14, [09-kiem-thu-tai.md](09-kiem-thu-tai.md)).
+
 ---
 
 ## 8. Công nghệ sử dụng
@@ -256,7 +258,7 @@ flowchart LR
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Ant Design 6, Tailwind CSS 4, Zustand 5, axios, dayjs, `@stomp/stompjs` |
 | Backend | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, WebSocket/STOMP, Mail, Actuator, Validation), Flyway, jjwt, Apache POI, Commons CSV, springdoc-openapi |
 | Mạng tự viết | `java.net.ServerSocket` / `Socket`, `ExecutorService`, `java.nio` (Selector), `SSLServerSocket` |
-| Dữ liệu | PostgreSQL 16 |
+| Dữ liệu | PostgreSQL 18 |
 | Hạ tầng | Docker Compose, nginx (reverse proxy), Mailpit; tuỳ chọn Prometheus + Grafana |
 | Kiểm thử | JUnit 5, Mockito, Testcontainers, k6, Wireshark |
 

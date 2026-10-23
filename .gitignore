@@ -19,3 +19,6 @@ cbs-fe/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Chứng chỉ tự ký của nginx, file tài khoản do admin-cli xuất
+deploy/nginx/certs/

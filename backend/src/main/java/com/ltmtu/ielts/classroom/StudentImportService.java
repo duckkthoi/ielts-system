@@ -2,6 +2,7 @@ package com.ltmtu.ielts.classroom;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,6 +17,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.ltmtu.ielts.audit.AuditAction;
+import com.ltmtu.ielts.audit.AuditService;
 import com.ltmtu.ielts.classroom.ImportCredentialStore.Credential;
 import com.ltmtu.ielts.classroom.StudentFileParser.RawRow;
 import com.ltmtu.ielts.classroom.dto.ImportDtos.ImportReport;
@@ -33,7 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Import danh sách sinh viên vào lớp và tự tạo tài khoản theo mã SV — yêu cầu cốt lõi (UC-11, SD-03, BR-01..03).
  * <p>
- * Mỗi dòng chạy trong <b>một transaction riêng</b>: dòng lỗi không làm hỏng các dòng khác, và client mất kết nối
+ * Hai cửa vào dùng chung một lõi: file upload (HTTP) và CSV qua TCP ({@code tcpgateway}). Mỗi dòng chạy trong
+ * <b>một transaction riêng</b>: dòng lỗi không làm hỏng các dòng khác, và client mất kết nối
  * giữa chừng (import qua TCP) thì các dòng đã xử lý vẫn được giữ.
  */
 @Slf4j
@@ -51,11 +55,12 @@ public class StudentImportService {
 	private final MailService mailService;
 	private final Clock clock;
 	private final TransactionTemplate rowTx;
+	private final AuditService audit;
 
 	public StudentImportService(ClassroomService classroomService, ClassroomRepository classroomRepository,
 			ClassMemberRepository memberRepository, StudentAccountService studentAccountService,
 			ImportCredentialStore credentialStore, MailService mailService, Clock clock,
-			PlatformTransactionManager txManager) {
+			PlatformTransactionManager txManager, AuditService audit) {
 		this.classroomService = classroomService;
 		this.classroomRepository = classroomRepository;
 		this.memberRepository = memberRepository;
@@ -65,9 +70,10 @@ public class StudentImportService {
 		this.clock = clock;
 		this.rowTx = new TransactionTemplate(txManager);
 		this.rowTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		this.audit = audit;
 	}
 
-	/** Import từ file upload (HTTP). */
+	/** Import từ file upload (HTTP). Tài khoản mới được giữ tạm để tải file một lần (BR-02). */
 	public ImportReport importFile(Long teacherId, Long classroomId, String filename, InputStream content,
 			boolean sendEmail) {
 		Classroom classroom = classroomService.requireOwned(teacherId, classroomId);
@@ -77,15 +83,58 @@ public class StudentImportService {
 		} catch (IOException e) {
 			throw ApiException.badRequest("BAD_FILE", "Không đọc được file");
 		}
-		return importRows(teacherId, classroom, rows, sendEmail, (done, total) -> {
+		Outcome o = run(classroom, rows, sendEmail, (done, total) -> {
 		});
+		audit.record(teacherId, AuditAction.IMPORT_STUDENTS, "CLASSROOM", classroom.getId(), o.summary());
+		ImportCredentialStore.Issued issued = o.credentials().isEmpty() ? null
+				: credentialStore.put(teacherId, classroom.getCode(), o.credentials());
+		return o.report(issued);
 	}
 
 	/**
-	 * Xử lý các dòng đã đọc. {@code progress} được gọi sau mỗi dòng với (đã xử lý, tổng) — luồng TCP dùng để gửi
-	 * {@code PROGRESS n/total}.
+	 * Lớp nhận import qua TCP (docs/05 phần C), tra theo mã lớp (không phân biệt hoa thường). Không có lớp → 404;
+	 * giáo viên chỉ import vào lớp của mình (khác → 403), admin import được mọi lớp. Gọi trước khi nhận dữ liệu, để
+	 * từ chối sớm.
 	 */
-	public ImportReport importRows(Long teacherId, Classroom classroom, List<RawRow> rows, boolean sendEmail,
+	public Classroom requireImportableClass(Long actorId, boolean admin, String classCode) {
+		Classroom classroom = classroomRepository.findByCode(ClassroomService.normalizeCode(classCode))
+				.orElseThrow(() -> ApiException.notFound("Không tìm thấy lớp " + classCode));
+		if (!admin && classroomRepository.findByIdAndTeacherId(classroom.getId(), actorId).isEmpty()) {
+			throw ApiException.forbidden("Không có quyền import vào lớp " + classroom.getCode());
+		}
+		return classroom;
+	}
+
+	/**
+	 * Import nội dung CSV nhận qua TCP. {@code progress} được gọi sau mỗi dòng với (đã xử lý, tổng) để gửi
+	 * {@code PROGRESS n/total}. Tài khoản mới (kèm mật khẩu tạm) trả thẳng cho người gọi, chỉ nằm trong bộ nhớ.
+	 */
+	public CsvImportResult importCsv(Long actorId, boolean admin, String classCode, byte[] csv, boolean sendEmail,
+			String clientIp, BiConsumer<Integer, Integer> progress) {
+		Classroom classroom = requireImportableClass(actorId, admin, classCode);
+		List<RawRow> rows;
+		try {
+			rows = StudentFileParser.parseCsv(new String(csv, StandardCharsets.UTF_8));
+		} catch (IOException e) {
+			throw ApiException.badRequest("BAD_FILE", "Nội dung CSV không hợp lệ");
+		}
+		Outcome o = run(classroom, rows, sendEmail, progress);
+		audit.recordAlone(actorId, AuditAction.TCP_IMPORT, "CLASSROOM", classroom.getId(), clientIp, o.summary());
+		List<NewAccount> accounts = o.credentials().stream()
+				.map(c -> new NewAccount(c.studentCode(), c.fullName(), c.temporaryPassword())).toList();
+		return new CsvImportResult(o.report(null), accounts);
+	}
+
+	/** Kết quả import qua TCP. */
+	public record CsvImportResult(ImportReport report, List<NewAccount> accounts) {
+	}
+
+	/** Tài khoản vừa tạo. Mật khẩu tạm không ghi DB, không ghi log (BR-02). */
+	public record NewAccount(String studentCode, String fullName, String temporaryPassword) {
+	}
+
+	/** Xử lý các dòng đã đọc, gửi email tài khoản nếu được yêu cầu. */
+	private Outcome run(Classroom classroom, List<RawRow> rows, boolean sendEmail,
 			BiConsumer<Integer, Integer> progress) {
 		Counters counters = new Counters();
 		List<RowError> errors = new ArrayList<>();
@@ -104,8 +153,6 @@ public class StudentImportService {
 			progress.accept(i + 1, rows.size());
 		}
 
-		ImportCredentialStore.Issued issued = credentials.isEmpty() ? null
-				: credentialStore.put(teacherId, classroom.getCode(), credentials);
 		List<NewAccountMail> mails = credentials.stream().filter(c -> c.email() != null)
 				.map(c -> new NewAccountMail(c.email(), c.fullName(), c.studentCode(), c.temporaryPassword()))
 				.toList();
@@ -116,8 +163,22 @@ public class StudentImportService {
 
 		log.info("Import lớp {}: {} dòng, tạo {}, đã có {}, bỏ qua {}, lỗi {}", classroom.getId(), rows.size(),
 				counters.created, counters.existing, counters.skipped, errors.size());
-		return new ImportReport(rows.size(), counters.created, counters.existing, counters.skipped, errors,
-				emailQueued, issued == null ? null : issued.token(), issued == null ? null : issued.expiresAt());
+		return new Outcome(rows.size(), counters, errors, credentials, emailQueued);
+	}
+
+	private record Outcome(int totalRows, Counters counters, List<RowError> errors, List<Credential> credentials,
+			boolean emailQueued) {
+
+		/** Số liệu cho nhật ký (không có mã SV, tên hay mật khẩu). */
+		Map<String, Integer> summary() {
+			return Map.of("rows", totalRows, "created", counters.created, "existing", counters.existing, "skipped",
+					counters.skipped, "errors", errors.size());
+		}
+
+		ImportReport report(ImportCredentialStore.Issued issued) {
+			return new ImportReport(totalRows, counters.created, counters.existing, counters.skipped, errors,
+					emailQueued, issued == null ? null : issued.token(), issued == null ? null : issued.expiresAt());
+		}
 	}
 
 	/** Kiểm tra một dòng (không đụng DB). Trả về lý do lỗi, hoặc {@code null} nếu hợp lệ. */

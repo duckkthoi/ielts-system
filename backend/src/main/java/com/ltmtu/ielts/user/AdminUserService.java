@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ltmtu.ielts.audit.AuditAction;
+import com.ltmtu.ielts.audit.AuditService;
 import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.common.Pageables;
@@ -42,6 +44,8 @@ public class AdminUserService {
 	private final ClassroomService classroomService;
 	private final PasswordEncoder passwordEncoder;
 	private final Clock clock;
+	private final AuditService audit;
+	private final SessionRevoker sessionRevoker;
 
 	@Transactional(readOnly = true)
 	public Page<UserSummary> search(String keyword, Role role, Boolean active, Pageable pageable) {
@@ -63,7 +67,7 @@ public class AdminUserService {
 
 	/** UC-05. Tài khoản mới có mật khẩu tạm và bị bắt đổi mật khẩu ở lần đăng nhập đầu (BR-02). */
 	@Transactional
-	public CreatedTeacher createTeacher(CreateTeacherRequest req) {
+	public CreatedTeacher createTeacher(AuthPrincipal admin, CreateTeacherRequest req) {
 		String username = req.username().trim();
 		if (userRepository.existsByUsernameIgnoreCase(username)) {
 			throw ApiException.conflict("DUPLICATE", "Tên đăng nhập '" + username + "' đã tồn tại");
@@ -77,6 +81,7 @@ public class AdminUserService {
 		teacher.setPasswordHash(passwordEncoder.encode(password));
 		teacher.setMustChangePassword(true);
 		userRepository.save(teacher);
+		audit.record(admin.id(), AuditAction.CREATE_TEACHER, "USER", teacher.getId(), Map.of("username", username));
 		log.info("Admin tạo giáo viên {} ({})", teacher.getId(), username);
 		return new CreatedTeacher(UserSummary.from(teacher), password);
 	}
@@ -98,15 +103,17 @@ public class AdminUserService {
 		}
 		User user = load(id);
 		user.setActive(false);
-		int revoked = sessionRepository.revokeAllOfUser(id, null, RevokeReason.ACCOUNT_LOCKED, clock.instant());
+		int revoked = sessionRevoker.revokeAll(user, null, RevokeReason.ACCOUNT_LOCKED, clock.instant());
+		audit.record(admin.id(), AuditAction.LOCK_USER, "USER", id, Map.of("revokedSessions", revoked));
 		log.info("Admin {} khoá tài khoản {}, thu hồi {} phiên", admin.id(), id, revoked);
 		return UserSummary.from(user);
 	}
 
 	@Transactional
-	public UserSummary unlock(Long id) {
+	public UserSummary unlock(AuthPrincipal admin, Long id) {
 		User user = load(id);
 		user.setActive(true);
+		audit.record(admin.id(), AuditAction.UNLOCK_USER, "USER", id, null);
 		return UserSummary.from(user);
 	}
 
@@ -118,7 +125,8 @@ public class AdminUserService {
 		user.setPasswordHash(passwordEncoder.encode(password));
 		user.setMustChangePassword(true);
 		Instant now = clock.instant();
-		sessionRepository.revokeAllOfUser(id, null, RevokeReason.ADMIN_FORCED, now);
+		sessionRevoker.revokeAll(user, null, RevokeReason.ADMIN_FORCED, now);
+		audit.record(admin.id(), AuditAction.RESET_PASSWORD, "USER", id, null);
 		log.info("Admin {} đặt lại mật khẩu cho tài khoản {}", admin.id(), id);
 		return new TemporaryPassword(password);
 	}

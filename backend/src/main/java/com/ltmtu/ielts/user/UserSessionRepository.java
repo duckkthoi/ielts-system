@@ -1,6 +1,7 @@
 package com.ltmtu.ielts.user;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,6 +32,11 @@ public interface UserSessionRepository extends JpaRepository<UserSession, Long> 
 
 	@Query("SELECT count(s) FROM UserSession s WHERE s.user.id = :userId AND s.revokedAt IS NULL AND s.expiresAt > :now")
 	long countActive(@Param("userId") Long userId, @Param("now") Instant now);
+
+	/** Id các phiên chưa thu hồi của user (trừ một phiên), để báo cho thiết bị của các phiên đó trước khi thu hồi. */
+	@Query("SELECT s.id FROM UserSession s WHERE s.user.id = :userId AND s.revokedAt IS NULL "
+			+ "AND (:exceptId IS NULL OR s.id <> :exceptId)")
+	List<Long> findActiveIds(@Param("userId") Long userId, @Param("exceptId") Long exceptSessionId);
 
 	@Modifying
 	@Query("""

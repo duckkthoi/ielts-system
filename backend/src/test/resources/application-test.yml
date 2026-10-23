@@ -13,6 +13,14 @@ app:
   # Test tự gọi job với đồng hồ giả, không để bộ lập lịch chạy nền.
   reminders:
     enabled: false
+  # Test lấy token nhiều lần cho cùng một người; chính sách một phiên chỉ bật trong test riêng của nó.
+  session:
+    single-login: false
+  # Cổng ngẫu nhiên; ít luồng và timeout ngắn để test được "pool đầy" và "quá thời gian chờ".
+  tcp:
+    port: 0
+    threads: 3
+    read-timeout: 2s
 
 logging:
   level:
