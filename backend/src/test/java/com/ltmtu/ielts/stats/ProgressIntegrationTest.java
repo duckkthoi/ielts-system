@@ -1,10 +1,10 @@
 package com.ltmtu.ielts.stats;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -69,10 +69,10 @@ class ProgressIntegrationTest extends StatsTestSupport {
 		grade(b1, Map.of(ta, 5));
 		call(postJson("/api/teacher/submissions/" + b1 + "/request-revision",
 				Map.of("note", "Thêm overview", "dueAt", clock.instant().plus(Duration.ofDays(10)).toString())), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		call(put("/api/student/parts/" + task2 + "/draft").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("content", "Nháp dở"))), accessToken(b))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 
 		// D: Task 1 "Chấm 0" rồi trả.
 		long d1 = submit(d, task1);
@@ -144,8 +144,8 @@ class ProgressIntegrationTest extends StatsTestSupport {
 	@Test
 	@DisplayName("Rời lớp: người đã có bài làm vẫn ở trong ma trận, người chưa làm gì thì không")
 	void leftClass() throws Exception {
-		call(delete("/api/teacher/classes/" + classId + "/members/" + b.getId()), teacher).andExpect(status().isOk());
-		call(delete("/api/teacher/classes/" + classId + "/members/" + c.getId()), teacher).andExpect(status().isOk());
+		call(delete("/api/teacher/classes/" + classId + "/members/" + b.getId()), teacher).andExpect(apiStatus(200));
+		call(delete("/api/teacher/classes/" + classId + "/members/" + c.getId()), teacher).andExpect(apiStatus(200));
 
 		assertThat(ids(progress(Map.of()))).containsExactlyInAnyOrder(a.getId(), b.getId(), d.getId());
 	}
@@ -154,13 +154,13 @@ class ProgressIntegrationTest extends StatsTestSupport {
 	@DisplayName("Phân quyền: bài của giáo viên khác → 404, lớp của giáo viên khác → 400, sinh viên → 403, trạng thái sai → 400")
 	void access() throws Exception {
 		String other = accessToken(newUser(Role.TEACHER));
-		call(get(url()), other).andExpect(status().isNotFound());
+		call(get(url()), other).andExpect(apiStatus(404));
 
 		long otherClass = createClass(other);
-		call(get(url()).param("classId", String.valueOf(otherClass)), teacher).andExpect(status().isBadRequest());
+		call(get(url()).param("classId", String.valueOf(otherClass)), teacher).andExpect(apiStatus(400));
 
-		call(get(url()), accessToken(a)).andExpect(status().isForbidden());
-		call(get(url()).param("status", "LAZY"), teacher).andExpect(status().isBadRequest());
+		call(get(url()), accessToken(a)).andExpect(apiStatus(403));
+		call(get(url()).param("status", "LAZY"), teacher).andExpect(apiStatus(400));
 	}
 
 	// ─── Hỗ trợ ─────────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ class ProgressIntegrationTest extends StatsTestSupport {
 	private JsonNode progress(Map<String, String> params) throws Exception {
 		MockHttpServletRequestBuilder req = get(url());
 		params.forEach(req::param);
-		return data(call(req, teacher).andExpect(status().isOk()));
+		return data(call(req, teacher).andExpect(apiStatus(200)));
 	}
 
 	private static JsonNode row(JsonNode matrix, User student) {

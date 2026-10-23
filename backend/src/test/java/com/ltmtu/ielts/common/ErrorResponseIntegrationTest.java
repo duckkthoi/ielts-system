@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.common;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ class ErrorResponseIntegrationTest extends IntegrationTest {
 	@DisplayName("Health trả UP, không cần đăng nhập")
 	void health_isPublicAndUp() throws Exception {
 		mvc.perform(get("/actuator/health"))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.status").value("UP"));
 	}
 
@@ -26,7 +26,7 @@ class ErrorResponseIntegrationTest extends IntegrationTest {
 	@DisplayName("Giờ server công khai (SD-11)")
 	void serverTime_isPublic() throws Exception {
 		mvc.perform(get("/api/time"))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.serverTime").value(clock.instant().toString()));
 	}
 
@@ -35,12 +35,12 @@ class ErrorResponseIntegrationTest extends IntegrationTest {
 	void unknownPath_returns404WithErrorBody() throws Exception {
 		String token = accessToken(newUser(Role.TEACHER));
 		mvc.perform(get("/api/khong-ton-tai").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isNotFound())
+				.andExpect(apiStatus(404))
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.data").isEmpty())
-				.andExpect(jsonPath("$.code").value("NOT_FOUND"))
+				.andExpect(jsonPath("$.errorCode").value("NOT_FOUND"))
 				.andExpect(jsonPath("$.status").value(404))
-				.andExpect(jsonPath("$.message").value("Không tìm thấy đường dẫn"))
+				.andExpect(jsonPath("$.errorMessage").value("Không tìm thấy đường dẫn"))
 				.andExpect(jsonPath("$.path").value("/api/khong-ton-tai"));
 	}
 }

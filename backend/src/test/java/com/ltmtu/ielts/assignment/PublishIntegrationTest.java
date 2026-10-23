@@ -1,5 +1,6 @@
 package com.ltmtu.ielts.assignment;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -9,7 +10,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -69,14 +69,14 @@ class PublishIntegrationTest extends IntegrationTest {
 	private long classWith(User... members) throws Exception {
 		String code = "PUB-" + UUID.randomUUID().toString().substring(0, 6);
 		long id = data(mvc.perform(as(postJson("/api/teacher/classes", Map.of("code", code, "name", "Lớp " + code))))
-				.andExpect(status().isCreated())).get("id").asLong();
+				.andExpect(apiStatus(201))).get("id").asLong();
 		if (members.length > 0) {
 			List<String> codes = new ArrayList<>();
 			for (User m : members) {
 				codes.add(m.getStudentCode());
 			}
 			mvc.perform(as(postJson("/api/teacher/classes/" + id + "/members", Map.of("studentCodes", codes))))
-					.andExpect(status().isOk());
+					.andExpect(apiStatus(200));
 		}
 		return id;
 	}
@@ -94,7 +94,7 @@ class PublishIntegrationTest extends IntegrationTest {
 				List.of(limitItem));
 		body.put("parts", List.of(Map.of("title", "Task 2", "taskType", "WRITING_TASK2", "prompt", "<p>Đề</p>",
 				"criteria", List.of(criterion))));
-		return data(mvc.perform(as(postJson("/api/teacher/assignments", body))).andExpect(status().isCreated()))
+		return data(mvc.perform(as(postJson("/api/teacher/assignments", body))).andExpect(apiStatus(201)))
 				.get("id").asLong();
 	}
 
@@ -113,7 +113,7 @@ class PublishIntegrationTest extends IntegrationTest {
 		long id = readyDraft(null);
 
 		publish(id, Set.of(classId), Set.of(s1.getId(), extra.getId()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.recipientCount").value(3));
 
 		Assignment a = assignmentRepository.findById(id).orElseThrow();
@@ -133,7 +133,7 @@ class PublishIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.data.students", hasSize(2)))
 				.andExpect(jsonPath("$.data.recipientCount").value(3));
 
-		publish(id, Set.of(classId), Set.of()).andExpect(status().isConflict());
+		publish(id, Set.of(classId), Set.of()).andExpect(apiStatus(409));
 	}
 
 	@Test
@@ -144,10 +144,10 @@ class PublishIntegrationTest extends IntegrationTest {
 		long id = data(mvc.perform(as(postJson("/api/teacher/assignments", body)))).get("id").asLong();
 
 		publish(id, Set.of(), Set.of(newUser(Role.STUDENT).getId()))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("NOT_READY"))
-				.andExpect(jsonPath("$.message", containsString("chưa có tiêu chí")))
-				.andExpect(jsonPath("$.message", containsString("chưa đặt hạn nộp")));
+				.andExpect(apiStatus(400))
+				.andExpect(jsonPath("$.errorCode").value("NOT_READY"))
+				.andExpect(jsonPath("$.errorMessage", containsString("chưa có tiêu chí")))
+				.andExpect(jsonPath("$.errorMessage", containsString("chưa đặt hạn nộp")));
 		assertThat(assignmentRepository.findById(id).orElseThrow().isDraft()).isTrue();
 	}
 
@@ -158,8 +158,8 @@ class PublishIntegrationTest extends IntegrationTest {
 		long id = readyDraft(null);
 
 		publish(id, Set.of(emptyClass), Set.of())
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message", containsString("chưa có sinh viên nào")));
+				.andExpect(apiStatus(400))
+				.andExpect(jsonPath("$.errorMessage", containsString("chưa có sinh viên nào")));
 		mvc.perform(as(get("/api/teacher/assignments/" + id + "/targets")))
 				.andExpect(jsonPath("$.data.classes", hasSize(0)));
 		assertThat(events.stream(AssignmentEvents.Published.class)).isEmpty();
@@ -174,8 +174,8 @@ class PublishIntegrationTest extends IntegrationTest {
 				Map.of("code", "OTH-" + UUID.randomUUID().toString().substring(0, 6), "name", "X"))
 				.header(HttpHeaders.AUTHORIZATION, bearer(otherToken)))).get("id").asLong();
 
-		publish(id, Set.of(othersClass), Set.of()).andExpect(status().isBadRequest());
-		publish(id, Set.of(), Set.of(teacher.getId())).andExpect(status().isBadRequest());
+		publish(id, Set.of(othersClass), Set.of()).andExpect(apiStatus(400));
+		publish(id, Set.of(), Set.of(teacher.getId())).andExpect(apiStatus(400));
 	}
 
 	@Test
@@ -189,9 +189,9 @@ class PublishIntegrationTest extends IntegrationTest {
 
 		long draft = readyDraft(null);
 		long openNow = readyDraft(null);
-		publish(openNow, Set.of(classId), Set.of(direct.getId())).andExpect(status().isOk());
+		publish(openNow, Set.of(classId), Set.of(direct.getId())).andExpect(apiStatus(200));
 		long opensLater = readyDraft(clock.instant().plus(Duration.ofDays(1)));
-		publish(opensLater, Set.of(classId), Set.of()).andExpect(status().isOk());
+		publish(opensLater, Set.of(classId), Set.of()).andExpect(apiStatus(200));
 
 		assertThat(visibleIds(member)).contains(openNow).doesNotContain(draft, opensLater);
 		assertThat(visibleIds(direct)).contains(openNow);
@@ -207,7 +207,7 @@ class PublishIntegrationTest extends IntegrationTest {
 		clock.advance(Duration.ofDays(1).plusMinutes(1));
 		assertThat(visibleIds(member)).contains(openNow, opensLater);
 		token = accessToken(teacher); // access token cũ đã quá 30 phút sau khi tua đồng hồ
-		mvc.perform(as(post("/api/teacher/assignments/" + openNow + "/close"))).andExpect(status().isOk());
+		mvc.perform(as(post("/api/teacher/assignments/" + openNow + "/close"))).andExpect(apiStatus(200));
 		assertThat(visibleIds(member)).contains(openNow);
 	}
 
@@ -220,7 +220,7 @@ class PublishIntegrationTest extends IntegrationTest {
 	@DisplayName("Mở trong tương lai → sự kiện ghi opensNow = false (thông báo do job gửi lúc mở — SD-05)")
 	void futureOpen_eventNotOpenNow() throws Exception {
 		long id = readyDraft(clock.instant().plus(Duration.ofHours(3)));
-		publish(id, Set.of(), Set.of(newUser(Role.STUDENT).getId())).andExpect(status().isOk());
+		publish(id, Set.of(), Set.of(newUser(Role.STUDENT).getId())).andExpect(apiStatus(200));
 		assertThat(events.stream(AssignmentEvents.Published.class)).singleElement()
 				.satisfies(e -> assertThat(e.opensNow()).isFalse());
 	}
@@ -233,12 +233,12 @@ class PublishIntegrationTest extends IntegrationTest {
 		long id = readyDraft(null);
 		mvc.perform(as(put("/api/teacher/assignments/" + id + "/targets").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("studentIds", List.of(s1.getId()))))))
-				.andExpect(status().isConflict());
-		publish(id, Set.of(), Set.of(s1.getId())).andExpect(status().isOk());
+				.andExpect(apiStatus(409));
+		publish(id, Set.of(), Set.of(s1.getId())).andExpect(apiStatus(200));
 
 		mvc.perform(as(put("/api/teacher/assignments/" + id + "/targets").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("studentIds", List.of(s1.getId(), s2.getId()))))))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.newRecipients").value(1))
 				.andExpect(jsonPath("$.data.recipientCount").value(2));
 		assertThat(events.stream(AssignmentEvents.RecipientsAdded.class)).singleElement()
@@ -247,7 +247,7 @@ class PublishIntegrationTest extends IntegrationTest {
 		mvc.perform(as(post("/api/teacher/assignments/" + id + "/close")));
 		mvc.perform(as(put("/api/teacher/assignments/" + id + "/targets").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("studentIds", List.of(s2.getId()))))))
-				.andExpect(status().isConflict());
+				.andExpect(apiStatus(409));
 	}
 
 	@Test
@@ -256,27 +256,27 @@ class PublishIntegrationTest extends IntegrationTest {
 		User s = newUser(Role.STUDENT);
 		long classId = classWith(s);
 		long id = readyDraft(null);
-		mvc.perform(as(post("/api/teacher/assignments/" + id + "/close"))).andExpect(status().isConflict());
-		publish(id, Set.of(classId), Set.of()).andExpect(status().isOk());
+		mvc.perform(as(post("/api/teacher/assignments/" + id + "/close"))).andExpect(apiStatus(409));
+		publish(id, Set.of(classId), Set.of()).andExpect(apiStatus(200));
 		mvc.perform(as(get("/api/teacher/classes/" + classId))).andExpect(jsonPath("$.data.openAssignmentCount").value(1));
 
 		mvc.perform(as(post("/api/teacher/assignments/" + id + "/close")))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("CLOSED"));
+				.andExpect(apiStatus(200)).andExpect(jsonPath("$.data.status").value("CLOSED"));
 		mvc.perform(as(get("/api/teacher/classes/" + classId))).andExpect(jsonPath("$.data.openAssignmentCount").value(0));
-		mvc.perform(as(post("/api/teacher/assignments/" + id + "/close"))).andExpect(status().isConflict());
+		mvc.perform(as(post("/api/teacher/assignments/" + id + "/close"))).andExpect(apiStatus(409));
 		mvc.perform(as(post("/api/teacher/assignments/" + id + "/reopen")))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("PUBLISHED"));
-		mvc.perform(as(post("/api/teacher/assignments/" + id + "/reopen"))).andExpect(status().isConflict());
+				.andExpect(apiStatus(200)).andExpect(jsonPath("$.data.status").value("PUBLISHED"));
+		mvc.perform(as(post("/api/teacher/assignments/" + id + "/reopen"))).andExpect(apiStatus(409));
 	}
 
 	@Test
 	@DisplayName("UC-15: nhân bản → bài nháp mới, đủ phần + rubric (kể cả mục LIMIT), không chép người nhận và mốc thời gian")
 	void duplicate() throws Exception {
 		long id = readyDraft(null);
-		publish(id, Set.of(), Set.of(newUser(Role.STUDENT).getId())).andExpect(status().isOk());
+		publish(id, Set.of(), Set.of(newUser(Role.STUDENT).getId())).andExpect(apiStatus(200));
 
 		JsonNode copy = data(mvc.perform(as(post("/api/teacher/assignments/" + id + "/duplicate")))
-				.andExpect(status().isCreated()));
+				.andExpect(apiStatus(201)));
 		assertThat(copy.get("id").asLong()).isNotEqualTo(id);
 		assertThat(copy.get("status").asString()).isEqualTo("DRAFT");
 		assertThat(copy.get("title").asString()).endsWith("(bản sao)");
@@ -295,19 +295,19 @@ class PublishIntegrationTest extends IntegrationTest {
 		String url = data(mvc.perform(multipart("/api/files")
 				.file(new MockMultipartFile("file", "bieu-do.png", "image/png", png))
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isCreated())
+				.andExpect(apiStatus(201))
 				.andExpect(jsonPath("$.data.url", matchesPattern("^/uploads/\\d{4}/\\d{2}/[0-9a-f-]{36}\\.png$"))))
 				.get("url").asString();
 
-		byte[] served = mvc.perform(get(url)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+		byte[] served = mvc.perform(get(url)).andExpect(apiStatus(200)).andReturn().getResponse().getContentAsByteArray();
 		assertThat(served).isEqualTo(png);
 
 		mvc.perform(multipart("/api/files").file(new MockMultipartFile("file", "virus.png", "image/png",
 				"<script>alert(1)</script>".getBytes())).header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("BAD_FILE"));
+				.andExpect(apiStatus(400))
+				.andExpect(jsonPath("$.errorCode").value("BAD_FILE"));
 		mvc.perform(multipart("/api/files").file(new MockMultipartFile("file", "a.png", "image/png", png))
 				.header(HttpHeaders.AUTHORIZATION, bearer(accessToken(newUser(Role.STUDENT)))))
-				.andExpect(status().isForbidden());
+				.andExpect(apiStatus(403));
 	}
 }

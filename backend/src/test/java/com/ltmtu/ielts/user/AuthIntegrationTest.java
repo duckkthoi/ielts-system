@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.user;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.Map;
@@ -26,13 +26,13 @@ class AuthIntegrationTest extends IntegrationTest {
 
 	private String refresh(String refreshToken, int expectedStatus) throws Exception {
 		return mvc.perform(postJson("/api/auth/refresh", Map.of("refreshToken", refreshToken)))
-				.andExpect(status().is(expectedStatus))
+				.andExpect(apiStatus(expectedStatus))
 				.andReturn().getResponse().getContentAsString();
 	}
 
 	private void expectMe(String accessToken, int expectedStatus) throws Exception {
 		mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
-				.andExpect(status().is(expectedStatus));
+				.andExpect(apiStatus(expectedStatus));
 	}
 
 	@Nested
@@ -58,9 +58,9 @@ class AuthIntegrationTest extends IntegrationTest {
 			User u = newUser(Role.STUDENT);
 			for (var creds : new String[][] { { u.getUsername(), "sai-mat-khau" }, { "khong_ton_tai", "x" } }) {
 				mvc.perform(postJson("/api/auth/login", Map.of("username", creds[0], "password", creds[1])))
-						.andExpect(status().isUnauthorized())
-						.andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"))
-						.andExpect(jsonPath("$.message").value("Tên đăng nhập hoặc mật khẩu không đúng"));
+						.andExpect(apiStatus(401))
+						.andExpect(jsonPath("$.errorCode").value("BAD_CREDENTIALS"))
+						.andExpect(jsonPath("$.errorMessage").value("Tên đăng nhập hoặc mật khẩu không đúng"));
 			}
 		}
 
@@ -72,16 +72,16 @@ class AuthIntegrationTest extends IntegrationTest {
 			userRepository.save(u);
 
 			mvc.perform(postJson("/api/auth/login", Map.of("username", u.getUsername(), "password", DEFAULT_PASSWORD)))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
+					.andExpect(apiStatus(403))
+					.andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
 		}
 
 		@Test
 		@DisplayName("Thiếu trường → 400 VALIDATION_ERROR kèm lỗi từng trường")
 		void validation() throws Exception {
 			mvc.perform(postJson("/api/auth/login", Map.of("username", "")))
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+					.andExpect(apiStatus(400))
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
 					.andExpect(jsonPath("$.fieldErrors.username").exists())
 					.andExpect(jsonPath("$.fieldErrors.password").exists());
 		}
@@ -96,7 +96,7 @@ class AuthIntegrationTest extends IntegrationTest {
 		void me() throws Exception {
 			User u = newUser(Role.STUDENT);
 			mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(accessToken(u))))
-					.andExpect(status().isOk())
+					.andExpect(apiStatus(200))
 					.andExpect(jsonPath("$.data.username").value(u.getUsername()))
 					.andExpect(jsonPath("$.data.studentCode").value(u.getStudentCode()));
 		}
@@ -105,11 +105,11 @@ class AuthIntegrationTest extends IntegrationTest {
 		@DisplayName("Không có token / token rác → 401 UNAUTHORIZED dạng JSON")
 		void missingOrGarbageToken() throws Exception {
 			mvc.perform(get("/api/auth/me"))
-					.andExpect(status().isUnauthorized())
+					.andExpect(apiStatus(401))
 					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+					.andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
 			mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer("abc.def.ghi")))
-					.andExpect(status().isUnauthorized());
+					.andExpect(apiStatus(401));
 		}
 
 		@Test
@@ -125,8 +125,8 @@ class AuthIntegrationTest extends IntegrationTest {
 		void wrongRole() throws Exception {
 			String token = accessToken(newUser(Role.TEACHER));
 			mvc.perform(get("/api/admin/teachers").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.code").value("FORBIDDEN"));
+					.andExpect(apiStatus(403))
+					.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 		}
 
 		@Test
@@ -137,8 +137,8 @@ class AuthIntegrationTest extends IntegrationTest {
 
 			expectMe(token, 200);
 			mvc.perform(get("/api/admin/teachers").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.code").value("PASSWORD_CHANGE_REQUIRED"));
+					.andExpect(apiStatus(403))
+					.andExpect(jsonPath("$.errorCode").value("PASSWORD_CHANGE_REQUIRED"));
 		}
 
 		@Test
@@ -176,7 +176,7 @@ class AuthIntegrationTest extends IntegrationTest {
 			JsonNode second = json.readTree(refresh(oldRefresh, 200)).get("data");
 
 			clock.advance(Duration.ofSeconds(10));
-			assertThat(json.readTree(refresh(oldRefresh, 401)).get("code").asString())
+			assertThat(json.readTree(refresh(oldRefresh, 401)).get("errorCode").asString())
 					.isEqualTo("REFRESH_TOKEN_ROTATED");
 			refresh(second.get("refreshToken").asString(), 200);
 		}
@@ -191,7 +191,7 @@ class AuthIntegrationTest extends IntegrationTest {
 			JsonNode second = json.readTree(refresh(oldRefresh, 200)).get("data");
 
 			clock.advance(Duration.ofSeconds(31));
-			assertThat(json.readTree(refresh(oldRefresh, 401)).get("code").asString()).isEqualTo("UNAUTHORIZED");
+			assertThat(json.readTree(refresh(oldRefresh, 401)).get("errorCode").asString()).isEqualTo("UNAUTHORIZED");
 
 			refresh(second.get("refreshToken").asString(), 401);
 			refresh(otherDevice.get("refreshToken").asString(), 401);
@@ -219,7 +219,7 @@ class AuthIntegrationTest extends IntegrationTest {
 			String refreshToken = tokens.get("refreshToken").asString();
 
 			mvc.perform(postJson("/api/auth/logout", Map.of("refreshToken", refreshToken)))
-					.andExpect(status().isOk());
+					.andExpect(apiStatus(200));
 
 			refresh(refreshToken, 401);
 			expectMe(tokens.get("accessToken").asString(), 401);
@@ -232,8 +232,8 @@ class AuthIntegrationTest extends IntegrationTest {
 			mvc.perform(postJson("/api/auth/change-password",
 					Map.of("currentPassword", "sai", "newPassword", "MatKhauMoi123"))
 					.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.code").value("WRONG_PASSWORD"));
+					.andExpect(apiStatus(400))
+					.andExpect(jsonPath("$.errorCode").value("WRONG_PASSWORD"));
 		}
 
 		@Test
@@ -244,7 +244,7 @@ class AuthIntegrationTest extends IntegrationTest {
 				mvc.perform(postJson("/api/auth/change-password",
 						Map.of("currentPassword", DEFAULT_PASSWORD, "newPassword", weak))
 						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-						.andExpect(status().isBadRequest())
+						.andExpect(apiStatus(400))
 						.andExpect(jsonPath("$.fieldErrors.newPassword").exists());
 			}
 		}
@@ -259,7 +259,7 @@ class AuthIntegrationTest extends IntegrationTest {
 			mvc.perform(postJson("/api/auth/change-password",
 					Map.of("currentPassword", DEFAULT_PASSWORD, "newPassword", "MatKhauMoi123"))
 					.header(HttpHeaders.AUTHORIZATION, bearer(current)))
-					.andExpect(status().isOk())
+					.andExpect(apiStatus(200))
 					.andExpect(jsonPath("$.data.mustChangePassword").value(false));
 
 			expectMe(current, 200);

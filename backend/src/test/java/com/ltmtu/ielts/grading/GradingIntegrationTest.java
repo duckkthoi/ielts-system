@@ -1,11 +1,11 @@
 package com.ltmtu.ielts.grading;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ class GradingIntegrationTest extends GradingTestSupport {
 	void screen() throws Exception {
 		Fixture f = submitted();
 		call(get("/api/teacher/submissions/" + f.submissionId()), teacher)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.submission.status").value("SUBMITTED"))
 				.andExpect(jsonPath("$.data.submission.student.studentCode").value(student.getStudentCode()))
 				.andExpect(jsonPath("$.data.submission.revisionsUsed").value(0))
@@ -62,11 +62,11 @@ class GradingIntegrationTest extends GradingTestSupport {
 	void ownership() throws Exception {
 		Fixture f = submitted();
 		String other = accessToken(newUser(Role.TEACHER));
-		call(get("/api/teacher/submissions/" + f.submissionId()), other).andExpect(status().isNotFound());
+		call(get("/api/teacher/submissions/" + f.submissionId()), other).andExpect(apiStatus(404));
 		call(putJson("/api/teacher/submissions/" + f.submissionId() + "/grade", grade(1, List.of(), List.of(), List.of())),
-				other).andExpect(status().isNotFound());
-		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), other).andExpect(status().isNotFound());
-		call(get("/api/teacher/submissions/" + f.submissionId()), studentToken).andExpect(status().isForbidden());
+				other).andExpect(apiStatus(404));
+		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), other).andExpect(apiStatus(404));
+		call(get("/api/teacher/submissions/" + f.submissionId()), studentToken).andExpect(apiStatus(403));
 	}
 
 	@Test
@@ -74,7 +74,7 @@ class GradingIntegrationTest extends GradingTestSupport {
 	void partialDraft() throws Exception {
 		Fixture f = submitted();
 		saveGrade(f.submissionId(), grade(1, List.of(score(f.criterion("TR"), 6)), List.of(), List.of()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.status").value("DRAFT"))
 				.andExpect(jsonPath("$.data.complete").value(false))
 				.andExpect(jsonPath("$.data.band").isEmpty())
@@ -84,8 +84,8 @@ class GradingIntegrationTest extends GradingTestSupport {
 				.andExpect(jsonPath("$.data.submission.status").value("GRADED"))
 				.andExpect(jsonPath("$.data.canReturn").value(false));
 		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher)
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.message").value(containsString("Coherence and Cohesion")));
+				.andExpect(apiStatus(409))
+				.andExpect(jsonPath("$.errorMessage").value(containsString("Coherence and Cohesion")));
 	}
 
 	@Test
@@ -93,7 +93,7 @@ class GradingIntegrationTest extends GradingTestSupport {
 	void bandComputedByServer() throws Exception {
 		Fixture f = submitted();
 		saveGrade(f.submissionId(), grade(1, scores(f, 6, 7, 6.5, 6), List.of(), List.of()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.complete").value(true))
 				.andExpect(jsonPath("$.data.rawBand").value(6.375))
 				.andExpect(jsonPath("$.data.band").value(6.5));
@@ -108,12 +108,12 @@ class GradingIntegrationTest extends GradingTestSupport {
 	void scoreStep() throws Exception {
 		Fixture f = submitted();
 		saveGrade(f.submissionId(), grade(1, List.of(score(f.criterion("TR"), 6.5)), List.of(), List.of()))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value(containsString("bội số của 1")));
+				.andExpect(apiStatus(400))
+				.andExpect(jsonPath("$.errorMessage").value(containsString("bội số của 1")));
 		saveGrade(f.submissionId(), grade(1, List.of(score(f.criterion("GRA"), 10)), List.of(), List.of()))
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		saveGrade(f.submissionId(), grade(1, List.of(score(f.criterion("LR"), 6.5)), List.of(), List.of()))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -122,22 +122,22 @@ class GradingIntegrationTest extends GradingTestSupport {
 		Fixture f = submitted();
 		List<Map<String, Object>> marks = List.of(mark(f.item("CC", 0), true));
 		saveGrade(f.submissionId(), grade(1, scores(f, 6, 6, 6, 6), marks, List.of()))
-				.andExpect(status().isUnprocessableContent())
-				.andExpect(jsonPath("$.code").value("SCORE_LIMITED"))
-				.andExpect(jsonPath("$.message").value(containsString("Không chia đoạn")));
+				.andExpect(apiStatus(422))
+				.andExpect(jsonPath("$.errorCode").value("SCORE_LIMITED"))
+				.andExpect(jsonPath("$.errorMessage").value(containsString("Không chia đoạn")));
 		saveGrade(f.submissionId(), grade(1, scores(f, 6, 5, 6, 6), marks, List.of()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.scores[1].maxAllowed").value(5.0))
 				.andExpect(jsonPath("$.data.scores[1].limitReason").value("Không chia đoạn"))
 				.andExpect(jsonPath("$.data.scores[0].limitReason").isEmpty());
 
 		List<Map<String, Object>> both = List.of(mark(f.item("CC", 0), true), mark(f.item("CC", 1), true));
 		saveGrade(f.submissionId(), grade(1, scores(f, 6, 3, 6, 6), both, List.of()))
-				.andExpect(status().isUnprocessableContent())
-				.andExpect(jsonPath("$.message").value(containsString("tối đa 2")));
+				.andExpect(apiStatus(422))
+				.andExpect(jsonPath("$.errorMessage").value(containsString("tối đa 2")));
 		// Mục CHECK không giới hạn điểm.
 		saveGrade(f.submissionId(), grade(1, scores(f, 8, 6, 6, 6), List.of(mark(f.item("TR", 0), true)), List.of()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.checklist[0].checked").value(true));
 	}
 
@@ -149,10 +149,10 @@ class GradingIntegrationTest extends GradingTestSupport {
 				.andExpect(jsonPath("$.data.version.wordCount").value(9))
 				.andExpect(jsonPath("$.data.warnings[0].code").value("SHORT_ESSAY"));
 		saveGrade(f.submissionId(), grade(1, scores(f, 2, 1, 1, 1), List.of(), List.of()))
-				.andExpect(status().isUnprocessableContent())
-				.andExpect(jsonPath("$.code").value("SCORE_LIMITED"));
+				.andExpect(apiStatus(422))
+				.andExpect(jsonPath("$.errorCode").value("SCORE_LIMITED"));
 		saveGrade(f.submissionId(), grade(1, scores(f, 1, 1, 1, 0), List.of(), List.of()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.band").value(1.0));
 	}
 
@@ -163,7 +163,7 @@ class GradingIntegrationTest extends GradingTestSupport {
 		Map<String, Object> body = grade(1, List.of(), List.of(), List.of());
 		body.put("zeroReason", "NOT_ENGLISH");
 		saveGrade(f.submissionId(), body)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.zeroReason").value("NOT_ENGLISH"))
 				.andExpect(jsonPath("$.data.complete").value(true))
 				.andExpect(jsonPath("$.data.band").value(0.0))
@@ -171,12 +171,12 @@ class GradingIntegrationTest extends GradingTestSupport {
 
 		Map<String, Object> bad = grade(1, List.of(score(f.criterion("TR"), 3)), List.of(), List.of());
 		bad.put("zeroReason", "NO_ATTEMPT");
-		saveGrade(f.submissionId(), bad).andExpect(status().isBadRequest());
+		saveGrade(f.submissionId(), bad).andExpect(apiStatus(400));
 		bad.put("zeroReason", "LAZY");
-		saveGrade(f.submissionId(), bad).andExpect(status().isBadRequest());
+		saveGrade(f.submissionId(), bad).andExpect(apiStatus(400));
 
 		saveGrade(f.submissionId(), grade(1, scores(f, 5, 5, 5, 5), List.of(), List.of()))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.zeroReason").isEmpty())
 				.andExpect(jsonPath("$.data.band").value(5.0));
 	}
@@ -193,7 +193,7 @@ class GradingIntegrationTest extends GradingTestSupport {
 		Map<String, Object> plain = inline(ESSAY.indexOf("Governments"), ESSAY.indexOf("Governments") + 11, null, "Tốt");
 		plain.put("quote", "Governments");
 		JsonNode g = data(saveGrade(f.submissionId(), grade(1, List.of(), List.of(), List.of(withSuggestion, taskComment, plain)))
-				.andExpect(status().isOk()));
+				.andExpect(apiStatus(200)));
 		JsonNode list = g.get("inlineComments");
 		assertThat(list).hasSize(3);
 		JsonNode first = list.get(0); // sắp theo vị trí
@@ -218,9 +218,9 @@ class GradingIntegrationTest extends GradingTestSupport {
 		Fixture f = submitted();
 		String otherTeacher = accessToken(newUser(Role.TEACHER));
 		call(postJson("/api/teacher/error-codes", Map.of("code", "XYZ", "name", "Mã của người khác")), otherTeacher)
-				.andExpect(status().isCreated());
+				.andExpect(apiStatus(201));
 		call(postJson("/api/teacher/error-codes", Map.of("code", "MINE", "name", "Mã của tôi", "criterion", "LR")), teacher)
-				.andExpect(status().isCreated());
+				.andExpect(apiStatus(201));
 
 		List<Map<String, Object>> bad = List.of(
 				inline(0, ESSAY.length() + 1, "SP", null),
@@ -229,16 +229,16 @@ class GradingIntegrationTest extends GradingTestSupport {
 				inline(0, 5, "NOPE", null),
 				inline(0, 5, "XYZ", null));
 		for (Map<String, Object> c : bad) {
-			saveGrade(f.submissionId(), grade(1, List.of(), List.of(), List.of(c))).andExpect(status().isBadRequest());
+			saveGrade(f.submissionId(), grade(1, List.of(), List.of(), List.of(c))).andExpect(apiStatus(400));
 		}
 		Map<String, Object> wrongQuote = inline(0, 2, "SP", null);
 		wrongQuote.put("quote", "xx");
 		saveGrade(f.submissionId(), grade(1, List.of(), List.of(), List.of(wrongQuote)))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value(containsString("không khớp")));
+				.andExpect(apiStatus(400))
+				.andExpect(jsonPath("$.errorMessage").value(containsString("không khớp")));
 
 		saveGrade(f.submissionId(), grade(1, List.of(), List.of(), List.of(inline(0, 2, "mine", null))))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.inlineComments[0].criterionId").value(f.criterion("LR")));
 	}
 
@@ -247,15 +247,15 @@ class GradingIntegrationTest extends GradingTestSupport {
 	void invalidReferences() throws Exception {
 		Fixture f = submitted();
 		Fixture other = submitted();
-		saveGrade(f.submissionId(), grade(2, List.of(), List.of(), List.of())).andExpect(status().isConflict());
+		saveGrade(f.submissionId(), grade(2, List.of(), List.of(), List.of())).andExpect(apiStatus(409));
 		saveGrade(f.submissionId(), grade(1, List.of(score(other.criterion("TR"), 5)), List.of(), List.of()))
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		saveGrade(f.submissionId(), grade(1, List.of(), List.of(mark(other.item("CC", 0), true)), List.of()))
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		saveGrade(f.submissionId(),
 				grade(1, List.of(score(f.criterion("TR"), 5), score(f.criterion("TR"), 6)), List.of(), List.of()))
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		call(putJson("/api/teacher/submissions/" + f.submissionId() + "/grade", Map.of("scores", List.of())), teacher)
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 	}
 }

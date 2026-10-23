@@ -41,6 +41,14 @@ Ký hiệu: ✅ xong · 🟡 đang làm / xong một phần · ⬜ chưa làm
 | 13 | Docker hoá toàn bộ: postgres + mailpit + backend (monolith) + frontend + nginx reverse proxy | ✅ chạy thật: 5 container, HTTPS / WSS / TCP 9090, khởi động lại backend không mất dữ liệu |
 | 14 | Load test k6 | ✅ NFR-01 (p95 9,9 ms, 0% lỗi), NFR-02 (500 / 500 kết nối), NFR-03 (thông báo p95 228 ms) — `loadtest/`, `docs/09` |
 
+### Frontend — giao diện theo thiết kế Figma Make
+| # | Hạng mục | Trạng thái |
+|---|---|---|
+| F1 | Khung app: đăng nhập, đổi mật khẩu, sidebar, header · chuông thông báo + WebSocket + ConnectionBanner | ✅ F1a (đăng nhập, đổi mật khẩu, sidebar, header) · F1b (STOMP client, chuông, trang Thông báo, banner, FORCE_LOGOUT) |
+| F2 | Quản trị · giáo viên: lớp học + import sinh viên | ✅ F2a (5 màn quản trị) · F2b (lớp học, thành viên, import) |
+| F3 | Bài tập: danh sách, chi tiết, giao bài · trình soạn | 🟡 F3a ✅ (danh sách, chi tiết, cài đặt, giao bài / phát hành, đóng / mở lại / nhân bản / xoá) · F3b ⬜ (trình soạn) |
+| F4–F6 | Làm bài · chấm bài · kết quả, thống kê | ⬜ |
+
 ### Mức 3 — Mở rộng
 | # | Hạng mục | Trạng thái |
 |---|---|---|
@@ -1369,13 +1377,133 @@ B6 chia 3 phần:
 
 **Kiểm tra:** link trong README trỏ đúng file; lệnh chạy Docker / k6 trong README và docs/09 là đúng lệnh đã chạy ở bước 14.
 
+### 2026-10-24 · F1a — Đăng nhập, đổi mật khẩu, khung app theo thiết kế Figma Make
+**Nguồn thiết kế:** người dùng tải code Figma Make về thư mục `Review attached content figma/` (Vite + React + antd 6, các màn Prompt 1 → 10). Link Figma Make cần đăng nhập nên agent không tự đọc được → quy ước từ nay: lấy thiết kế từ code tải về. Thiết kế khớp `docs/07` (cùng token màu, font, sidebar 240 / 72 px) nên làm theo, chỉ viết lại theo cấu trúc Next.js + Tailwind token, không chép CSS / dữ liệu mẫu.
+
+**Đã làm**
+- [lib/apiError.ts](frontend/lib/apiError.ts) mới: `ApiError` (`code`, `status`, `fieldErrors`) + `getErrorMessage`. [axiosClient](frontend/lib/axiosClient.ts) reject bằng `ApiError` thay cho `Error` → trang xử lý được theo `code` như quy tắc frontend mục 4 đã yêu cầu (trước đây `code` bị mất).
+- [Đăng nhập](frontend/app/dang-nhap/index.tsx): bố cục 2 cột (panel giới thiệu màu brand từ màn lg, form trong card), lỗi hiện ngay trên form thay cho toast — `RATE_LIMITED` màu vàng, lỗi khác màu đỏ, nội dung lấy từ server. `authApi.login` tắt toast.
+- [Đổi mật khẩu](frontend/app/doi-mat-khau/index.tsx): card có icon, Alert "lần đăng nhập đầu", danh sách điều kiện tick xanh theo thời gian thực (≥ 8 ký tự, có chữ và số, khác mật khẩu hiện tại — khớp `SAME_PASSWORD` của server); nút "Quay lại" khi đổi chủ động.
+- [Layout có sidebar](frontend/app/(admin)/layout.tsx) + [AppSidebar](frontend/app/(admin)/AppSidebar.tsx): sidebar cố định từ màn lg, thu gọn còn icon (72 px); nhỏ hơn lg → nút menu mở Drawer. Header: tiêu đề trang (`findPageTitle` trong `const.tsx`), nút thông báo, menu tài khoản có avatar chữ cái đầu + họ tên + vai trò ([AppHeaderActions](frontend/components/AppHeaderActions.tsx)). Token Menu trong `antdTheme.ts` (cao 40, cách 4, bỏ viền).
+- [BrandMark](frontend/components/BrandMark.tsx) (logo "IW") dùng ở đăng nhập và sidebar. Layout toàn màn hình `(main)` thêm viền dưới header cho đồng bộ.
+
+**Khác so với thiết kế**
+- Bỏ khối "Cần trợ giúp? Xem hướng dẫn sử dụng" ở chân sidebar và số đếm trên mục menu (Chấm bài 12…) — chưa có trang hướng dẫn / API đếm riêng; số đếm làm cùng F5. Bỏ dòng "Đại học Việt Nam" (tên trường giả) ở bản quyền.
+- Thiết kế khoá nút Đăng nhập khi bị tạm khoá; ở đây không khoá vì server đã chặn và message ghi số phút phải chờ.
+- Trạng thái kết nối ("Trực tuyến / Mất kết nối"), banner mất kết nối, modal "Tài khoản vừa đăng nhập ở nơi khác", trang thông báo → F1b (cần WebSocket).
+
+**Kiểm tra:** `npm run lint`, `tsc --noEmit`, `npm run build` sạch; `npm run test:unit` 14 / 14 pass. Chạy thử với backend thật (`dev,demo`) bằng Edge headless điều khiển qua DevTools Protocol (script tạm ở scratchpad, không thêm thư viện): sai mật khẩu → Alert "Tên đăng nhập hoặc mật khẩu không đúng"; `gv.demo` đăng nhập → `/giao-vien/tong-quan`, sidebar đúng mục active, thu gọn, Drawer trên màn 420 px, menu tài khoản; `DEMO020` (tạm bật `must_change_password` rồi trả lại) → chuyển `/doi-mat-khau`, danh sách điều kiện cập nhật khi gõ.
+
+**Lỗi gặp khi làm:** form đổi mật khẩu lúc đầu vừa hiện từng lỗi validate vừa hiện danh sách điều kiện (lặp ý) → gộp thành một dòng "Mật khẩu mới chưa đạt các điều kiện bên dưới". Edge headless không thu cửa sổ nhỏ hơn 496 px nên ảnh mobile phải chụp bằng `Emulation.setDeviceMetricsOverride`. `frontend/.env.local` chưa có (API gọi nhầm sang cổng 3000) → tạo từ `.env.example` (không commit).
+
+### 2026-10-24 · Đổi tên trường body lỗi: `errorCode`, `errorMessage`
+**Yêu cầu người dùng:** mọi API bọc trong một khung response, lỗi ghi trong `errorCode` / `errorMessage`. Ý ban đầu là luôn trả HTTP 200; sau khi xem ảnh hưởng (refresh token dựa vào `401`, 387 chỗ kiểm tra status trong test, k6, nginx, admin-cli), người dùng chốt **giữ HTTP status thật, chỉ đổi tên trường**.
+
+**Đã làm**
+- [ErrorResponse](backend/src/main/java/com/ltmtu/ielts/common/ErrorResponse.java): `code` → `errorCode`, `message` → `errorMessage` (các trường khác giữ nguyên: `success`, `data`, `status`, `path`, `timestamp`, `fieldErrors`). Áp dụng cho mọi lỗi: `GlobalExceptionHandler`, lỗi của Spring Security (`SecurityErrorWriter`), rate limit. Response thành công không đổi (`message` vẫn là câu thông báo thành công).
+- Lỗi chat qua STOMP `/user/queue/errors` (`ChatError`) đổi cùng tên trường cho đồng bộ.
+- Client: frontend `ApiErrorBody` + `axiosClient` đọc `errorCode` / `errorMessage`; `admin-cli` (`HttpLogin`) đọc `errorMessage`. k6 không đọc body lỗi nên không phải sửa.
+- Test: 39 chỗ `jsonPath("$.code" / "$.message")` → `$.errorCode` / `$.errorMessage`, 3 chỗ đọc qua `JsonNode` (Auth, Chat).
+- Tài liệu: `docs/05` mục A.1 (ví dụ body lỗi, giải thích vì sao giữ HTTP status, cột `errorCode` ở các bảng mã lỗi, kênh `/user/queue/errors`), quy tắc code backend + frontend; xuất lại Word.
+
+**Khác so với tài liệu:** tên `errorCode` cũng là tên trường "mã lỗi ngữ pháp" trong nhận xét inline (`data.…comments[].errorCode`) — khác cấp nên không lẫn, giữ nguyên.
+
+**Kiểm tra:** `mvn test` backend pass hết (0 failures, 0 errors); `npm run lint`, `tsc` frontend sạch; `admin-cli` `mvn package` được. Chạy thật: `POST /api/auth/login` sai mật khẩu → `401 {"errorCode":"BAD_CREDENTIALS","errorMessage":"Tên đăng nhập hoặc mật khẩu không đúng",…}`, gọi API không token → `401 UNAUTHORIZED`; trang đăng nhập vẫn hiện đúng câu lỗi.
+
+### 2026-10-24 · HTTP status luôn là 200 (đổi quyết định của mục trên)
+**Yêu cầu người dùng:** sau khi đổi tên trường, người dùng chốt lại **mọi response trả HTTP 200**; kết quả đọc trong body (`success`, `errorCode`, `errorMessage`, `status`).
+
+**Đã làm**
+- Backend: `GlobalExceptionHandler` trả `ResponseEntity.ok(ErrorResponse…)`; `SecurityErrorWriter` (401 chưa đăng nhập, 403 không có quyền / phải đổi mật khẩu, 429 rate limit đăng nhập) đặt HTTP 200. Bỏ `@ResponseStatus(HttpStatus.CREATED)` ở 8 endpoint tạo mới → trả 200. Trường `status` trong body lỗi giữ mã kiểu HTTP để phân loại.
+- Test: thêm [support/ApiStatus.java](backend/src/test/java/com/ltmtu/ielts/support/ApiStatus.java) — `apiStatus(n)` kiểm tra **HTTP đúng 200** và mã trong body (`n` 2xx = thành công, body không phải lỗi), `apiStatusOf(result)` cho test đồng thời. Thay toàn bộ `status().isXxx()` (387 chỗ, 32 file); 2 test nộp đồng thời đổi kỳ vọng `201, 409` → `200, 409`.
+- Frontend [axiosClient](frontend/lib/axiosClient.ts): lỗi giờ đi qua nhánh thành công của axios → gom vào `handleFailure`: đọc `status` trong body, `401` → refresh token một lần rồi gửi lại; file tải về (blob) mà server trả JSON lỗi cũng được đọc ra. Nhánh lỗi của axios chỉ còn lỗi mạng / nginx.
+- k6: hàm `apiOk(r)` (`status === 200` **và** `success === true`) thay cho so `r.status === 200/201` — nếu không thì lỗi nghiệp vụ cũng được tính là đạt. `http_req_failed` giờ chỉ đếm lỗi mạng / nginx; ngưỡng `checks > 99%` vẫn bắt được lỗi ứng dụng. admin-cli không đổi (đã kiểm tra `statusCode == 200` **và** có `accessToken`).
+- Tài liệu: `docs/05` mục A.1 (quy ước HTTP 200, ý nghĩa `status`, bảng mã lỗi cột `status`, bỏ `201`), quy tắc code backend mục 6 + frontend; xuất lại Word.
+
+**Khác so với tài liệu cũ:** đảo quyết định "giữ HTTP status" vừa ghi ở mục trên. Ngoại lệ: lỗi ngoài ứng dụng (nginx 502/504, `/actuator/health` 503, bắt tay WebSocket 101) vẫn là HTTP thật. Lưu ý khi demo Wireshark: mọi response API đều là `HTTP/1.1 200`, phải mở body mới thấy lỗi.
+
+**Kiểm tra:** `mvn test` 466 test case, 0 failures, 0 errors (mọi test giờ kiểm tra luôn HTTP = 200). Frontend `lint`, `tsc`, `build` sạch, `test:unit` 14 / 14. Chạy thật: đăng nhập sai, gọi API không token, đường dẫn không tồn tại → đều `HTTP 200` với `status: 401` trong body; đăng nhập `gv.demo`, làm hỏng access token trong localStorage rồi tải lại trang → app tự refresh và ở lại `/giao-vien/lop-hoc` (không bị đẩy về đăng nhập).
+
+### 2026-10-24 · F1b — Thông báo realtime: STOMP client, chuông, trang Thông báo, mất kết nối, bị đăng xuất
+**Thiết kế:** Figma Make Prompt 2 → tab "App shell" (chấm Trực tuyến / Mất kết nối, banner, modal đăng xuất) và "Thông báo".
+
+**Đã làm**
+- [lib/realtime.ts](frontend/lib/realtime.ts): **một** STOMP client cho cả app (`@stomp/stompjs` đã có sẵn). Heartbeat 10 s mỗi chiều; kết nối lại theo `ReconnectionTimeMode.EXPONENTIAL` 1 s → 30 s; `beforeConnect` refresh token khi access token còn < 30 s (đọc `exp` trong JWT, dùng `refreshAccessToken` của axiosClient — nay export); khung `ERROR` → gọi `/api/auth/me` để axiosClient tự refresh hoặc về trang đăng nhập. Kênh đăng ký qua `subscribeRealtime` được giữ và SUBSCRIBE lại sau mỗi lần kết nối; kết nối lại → trạng thái `SYNCING` → gọi lấy bù → `CONNECTED` (docs/06 mục 6, SD-09).
+- Store: [useRealtimeStore](frontend/stores/useRealtimeStore.tsx) (trạng thái, số lần thử, lý do bị đăng xuất), [useNotificationStore](frontend/stores/useNotificationStore.tsx) (20 thông báo gần nhất, số chưa đọc, `sync()` gọi `GET /api/notifications?after=<createdAt mới nhất>`, `incoming` cho trang Thông báo). API [lib/api/notification.ts](frontend/lib/api/notification.ts), kiểu [lib/types/notification.ts](frontend/lib/types/notification.ts), màu theo loại `NOTIFICATION_TYPE_META` trong `status.ts`.
+- [RealtimeBridge](frontend/components/RealtimeBridge.tsx) (đặt trong `providers.tsx`): có phiên và đã đổi mật khẩu lần đầu → nạp chuông + kết nối; thông báo mới → thông báo bật lên (antd `notification`, nằm dưới header, bấm → đánh dấu đã đọc + mở `link`); `FORCE_LOGOUT` → đóng kết nối, xoá phiên, hộp thoại theo lý do (`NEW_LOGIN` "Tài khoản vừa đăng nhập ở nơi khác", đổi mật khẩu, bị khoá…) → "Đăng nhập lại".
+- Header: [ConnectionStatus](frontend/components/ConnectionStatus.tsx) (chấm + chữ, ẩn dưới md), [NotificationBell](frontend/components/NotificationBell.tsx) (badge, 6 thông báo mới nhất, "Đánh dấu đã đọc tất cả", "Xem tất cả"). [ConnectionBanner](frontend/components/ConnectionBanner.tsx) dưới header ở cả 2 layout: vàng "Mất kết nối… đang thử lại (lần n)", xanh "Đã kết nối lại" 3 giây.
+- [Trang Thông báo](frontend/app/(admin)/thong-bao/index.tsx): tab Tất cả / Chưa đọc (n), nhóm Hôm nay / Hôm qua / Trước đó, "Xem thêm" 20 / lần, thông báo mới và thông báo lấy bù được chèn lên đầu; có Skeleton, Empty.
+- Hàm thuần [lib/utils/notifications.ts](frontend/lib/utils/notifications.ts) (`mergeNotifications`, `latestCreatedAt`, `groupByDay`) + 4 test.
+
+**Khác so với thiết kế / tài liệu**
+- Thiết kế có ô "Đã kết nối lại" và toast tự viết; ở đây dùng `Alert banner` và `notification` của antd (cùng bố cục, đỡ code).
+- Bị đăng xuất: xoá phiên ngay rồi mới hiện hộp thoại (hộp thoại nằm ở providers nên vẫn hiện trên trang đăng nhập) — để không còn request nào dùng token đã thu hồi.
+- Thông báo có nhiều loại hơn thiết kế (6 loại theo docs/05 A.9), mỗi loại một icon + màu.
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch; `test:unit` **18 / 18** (thêm 4). Chạy thật với backend `dev,demo` bằng script Edge + CDP (scratchpad): `DEMO001` đăng nhập → "Trực tuyến"; giáo viên nhắc qua REST → thông báo bật lên + badge tăng ngay; chuông và trang hiện đúng; **tắt backend** → banner "Mất kết nối… đang thử lại (lần 5)", chấm vàng; **bật lại** rồi nhắc ngay lúc client còn chờ backoff → client tự kết nối, lấy bù được thông báo bị lỡ (badge 4 → 5, trang có thêm dòng); đăng nhập `DEMO001` ở "máy khác" → máy này về trang đăng nhập với hộp thoại "Tài khoản vừa đăng nhập ở nơi khác". Dữ liệu dev: `DEMO001` có thêm 4 thông báo "nhắc nhở" do chạy thử.
+
+**Lỗi gặp khi làm:** lint `react-hooks/set-state-in-effect` ở trang Thông báo → tải trang đầu trong `.then` của promise, "đang tải" suy ra từ `loadedTab !== tab`, nghe store bằng `subscribe`. Lần chạy thử đầu: thông báo lấy bù chỉ vào chuông, không vào trang (store mới báo `lastReceived` cho WebSocket) → đổi thành `incoming` (lô) cho cả hai đường. Toast antd che chuông → đặt `top` dưới header. Nút "Xem thêm" thừa do React StrictMode gọi updater 2 lần làm `total` cộng đôi → bỏ `total`, dùng `hasMore` theo trang vừa tải.
+
+### 2026-10-24 · F2a — Màn quản trị: tổng quan, giáo viên, người dùng, nhật ký, phiên đăng nhập
+**Thiết kế:** Figma Make Prompt 9 (bảng có bộ lọc, Drawer thêm giáo viên, modal mật khẩu tạm, nhật ký mở dòng xem JSON).
+
+**Đã làm**
+- API + kiểu: [lib/api/admin.ts](frontend/lib/api/admin.ts), [lib/types/admin.ts](frontend/lib/types/admin.ts) (khớp `AdminUserDtos`, `SystemStats`, `AuditLogDto` của backend).
+- Hook [`useServerList`](frontend/lib/utils/hooks.ts): tải danh sách phân trang theo query (lọc + trang), `loading` suy ra từ query, `reload()` sau khi sửa — dùng lại cho các bảng ở F2b → F6.
+- Component dùng chung (tên theo docs/07 mục 7.2): `PageHeader`, `StatCard`, `AccountStatusTag`, `TemporaryPasswordModal` (mật khẩu tạm chỉ trong state, nút sao chép), `useAccountActions` (menu "…": sửa / đặt lại mật khẩu / khoá / mở khoá, đều có hộp thoại xác nhận; không cho tự khoá mình).
+- [Tổng quan](frontend/app/(admin)/quan-tri/tong-quan/index.tsx): 4 `StatCard` (người dùng theo vai trò + bị khoá, lớp, bài tập theo trạng thái, bài nộp hôm nay + phiên đang hoạt động) + [biểu đồ cột 14 ngày](frontend/app/(admin)/quan-tri/tong-quan/SubmissionsChart.tsx) viết bằng CSS (một chuỗi một màu brand, tooltip từng cột, chỉ ghi số ở cột cao nhất + hôm nay, có bản chữ cho trình đọc màn hình) — không thêm thư viện biểu đồ.
+- [Giáo viên](frontend/app/(admin)/quan-tri/giao-vien/index.tsx): tìm kiếm, lọc trạng thái, phân trang server; [Drawer thêm / sửa](frontend/app/(admin)/quan-tri/giao-vien/TeacherFormDrawer.tsx) cùng quy tắc tên đăng nhập với server, lỗi `fieldErrors` / `DUPLICATE` hiện dưới ô; tạo xong hiện mật khẩu tạm.
+- [Người dùng](frontend/app/(admin)/quan-tri/nguoi-dung/index.tsx): tìm, lọc vai trò + trạng thái, bấm dòng mở [Drawer chi tiết](frontend/app/(admin)/quan-tri/nguoi-dung/UserDetailDrawer.tsx) (số phiên đang hoạt động…), menu khoá / mở / đặt lại mật khẩu.
+- [Nhật ký](frontend/app/(admin)/quan-tri/nhat-ky/index.tsx): lọc hành động (nhãn tiếng Việt), tiền tố IP, khoảng ngày (giờ máy → `from`/`to` ISO); mở dòng xem `detail`.
+- [Phiên đăng nhập](frontend/app/(admin)/quan-tri/phien-dang-nhap/index.tsx): API danh sách / buộc đăng xuất từng phiên là **Mức 3, backend chưa có** → trang hiện số phiên đang hoạt động (`/api/admin/stats`) và hướng dẫn khoá / đặt lại mật khẩu để đăng xuất một người.
+
+**Khác so với thiết kế:** thiết kế gộp 5 tab trong một trang "Quản trị hệ thống" → giữ 5 trang theo menu sidebar đã có (mỗi mục một đường dẫn). Bỏ nút "Xuất" nhật ký và nút "Thêm người dùng" ở trang Người dùng (không có API; sinh viên được tạo khi giáo viên import). Bảng phiên đăng nhập chờ Mức 3.
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch, `test:unit` 18 / 18. Chạy thật bằng Edge + CDP với tài khoản admin **tạm** `admin.test` (tạo trong DB dev bằng cách chép mã băm mật khẩu của tài khoản demo — người dùng đồng ý; mật khẩu `admin` thật không biết nên không đụng tới): tổng quan đúng số liệu (34 người dùng, 6 bài nộp hôm nay); thêm giáo viên trùng `gv.demo` → lỗi dưới ô "Tên đăng nhập 'gv.demo' đã tồn tại"; tạo `gv.test.f2a` → modal mật khẩu tạm; khoá → xác nhận → "Đã khoá"; nhật ký có dòng "Tạo giáo viên", "Khoá tài khoản" (mở xem `revokedSessions`); drawer chi tiết `DEMO020`; giao diện 420 px. Xong thì **xoá** `admin.test` và `gv.test.f2a` (nhật ký của chúng còn, người thực hiện thành "Không xác định").
+
+**Lỗi gặp khi làm:** `form.setFields` cần tên trường đúng kiểu → ép `keyof TeacherFormValues`. Tên tài khoản tạm bị lỗi dấu do gõ SQL qua Git Bash (chỉ dữ liệu thử, đã xoá).
+
+### 2026-10-24 · F2b — Giáo viên: lớp học, thành viên, import sinh viên
+**Thiết kế:** Figma Make Prompt 3 (lưới thẻ lớp, Drawer tạo lớp, chi tiết lớp + bảng thành viên, hộp thoại import 3 bước, hỏi lại khi đóng mà chưa tải file tài khoản).
+
+**Đã làm**
+- API + kiểu: [lib/api/classroom.ts](frontend/lib/api/classroom.ts) (lớp, thành viên, import multipart có `onUploadProgress`, tải file tài khoản / file mẫu dạng blob), [lib/types/classroom.ts](frontend/lib/types/classroom.ts). Hàm thuần [`filenameFromDisposition`](frontend/lib/utils/download.ts) (đọc tên file tiếng Việt `filename*=UTF-8''…`) + `saveBlob`, 3 test.
+- [Danh sách lớp](frontend/app/(admin)/giao-vien/lop-hoc/index.tsx): thẻ lớp (mã, mô tả, số sinh viên, số bài đang mở), tìm kiếm, menu sửa / xoá (xác nhận: không xoá tài khoản sinh viên), trống → nút tạo lớp. Tạo xong chuyển thẳng vào lớp để import.
+- [ClassFormDrawer](frontend/components/ClassFormDrawer.tsx) (dùng ở danh sách + chi tiết): quy tắc mã lớp giống server; `DUPLICATE` / `fieldErrors` hiện dưới ô.
+- [Chi tiết lớp](frontend/app/(admin)/giao-vien/lop-hoc/[id]/index.tsx): tiêu đề (mã, số SV, số bài đang mở, mô tả), bảng thành viên (tìm, phân trang 50, xoá khỏi lớp có Popconfirm), lớp không tồn tại / của người khác → trang 404. Thêm sinh viên đã có tài khoản theo mã ([AddMembersModal](frontend/app/(admin)/giao-vien/lop-hoc/[id]/AddMembersModal.tsx), báo mã không tìm thấy).
+- [ImportModal](frontend/app/(admin)/giao-vien/lop-hoc/[id]/ImportModal.tsx): kéo thả .xlsx / .csv (chặn > 10 MB ở client), tải file mẫu Excel / CSV, tuỳ chọn gửi email; đang xử lý: % tải lên rồi "đang kiểm tra từng dòng"; lỗi cả file (`BAD_FILE`) → quay lại bước chọn file, hiện lý do. [ImportResult](frontend/app/(admin)/giao-vien/lop-hoc/[id]/ImportResult.tsx) (tên theo docs/07): 4 số, bảng lỗi (dòng, mã, lý do), nút tải file tài khoản (chỉ một lần, ghi giờ hết hạn). Đóng khi còn file chưa tải → hộp thoại "Bạn chưa tải file tài khoản". Client không đọc / không log nội dung file (CLAUDE.md ràng buộc 4).
+
+**Khác so với thiết kế:** bỏ tab "Bài tập" / "Thống kê" trong chi tiết lớp (thuộc F3 / F6) và chấm online cạnh avatar (presence theo lớp chưa có kênh; có ở ma trận tiến độ F6). Bước "đang xử lý" hiện % tải lên thật thay cho "28/45 dòng" (server xử lý trong một request, không báo từng dòng).
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch, `test:unit` **21 / 21**. Chạy thật (Edge + CDP, `gv.demo`): tạo lớp `demo-a` → "Mã lớp 'DEMO-A' đã tồn tại"; tạo `test-f2b` → vào trang lớp trống; import CSV 4 dòng (2 mới, `DEMO001` đã có, `21A` sai) → 2 / 1 / 0 / 1 + bảng lỗi dòng 5; bấm Xong khi chưa tải → hỏi lại; tải → nhận file `tai-khoan-test-f2b.xlsx`; thêm `DEMO012` + `KHONGCO99` → thêm 1, báo không tìm thấy 1; màn 420 px. Dọn: xoá lớp `TEST-F2B` (qua API), 2 tài khoản `F2BTEST01/02` (SQL), file tài khoản đã tải và file CSV thử trong scratchpad.
+
+**Lỗi gặp khi làm:** file nhỏ hiện "0 KB" → hàm `formatSize` (B / KB / MB).
+
+### 2026-10-24 · F3a — Bài tập: danh sách, chi tiết, cài đặt, giao bài và phát hành
+**Thiết kế:** Figma Make Prompt 4 (bảng bài tập có lọc trạng thái, hạn nộp + đếm ngược, tiến độ nộp, chờ chấm; bước "Giao bài" của trình soạn). Trình soạn nhiều bước để F3b.
+
+**Đã làm**
+- API + kiểu: [lib/api/assignment.ts](frontend/lib/api/assignment.ts) (đủ các endpoint A.5, kể cả tạo / sửa nháp, rubric mẫu cho F3b), [lib/types/assignment.ts](frontend/lib/types/assignment.ts). `TASK_TYPE_LABEL`, `fileUrl()` (ảnh `/uploads/…` khi frontend khác origin) trong `lib/constants`.
+- Component dùng chung: `StatusTag` (docs/07, màu từ `status.ts`), `CountdownTimer` (docs/07: > 24 giờ "Còn n ngày", ≤ 24 giờ hh:mm:ss, < 2 giờ vàng, < 15 phút đỏ, quá hạn) dựa trên hàm thuần [`describeDue`](frontend/lib/utils/due.ts) + 3 test; [`AssignTargetsModal`](frontend/components/AssignTargetsModal.tsx) (chọn lớp, tìm sinh viên theo mã / tên, ước tính số người nhận; `NOT_READY` hiện thành danh sách vấn đề; chế độ giao thêm khoá lớp / người đã giao); [`useAssignmentActions`](frontend/components/AssignmentActions.tsx) (sửa nội dung / nhân bản / đóng / mở lại / xoá theo trạng thái, có xác nhận).
+- [Danh sách](frontend/app/(admin)/giao-vien/bai-tap/index.tsx): lọc Tất cả / Nháp / Đang mở / Đã đóng, tìm kiếm, cột hạn nộp + đếm ngược, "đã nộp đủ" (thanh tiến độ), "chờ chấm", nút Tiến độ / Chấm bài.
+- [Chi tiết](frontend/app/(admin)/giao-vien/bai-tap/[id]/index.tsx): tab từng phần ([PartView](frontend/app/(admin)/giao-vien/bai-tap/[id]/PartView.tsx): loại, số từ, thời gian gợi ý, hạn riêng, trọng số, đề HTML đã lọc + ảnh, tiêu chí kèm checklist, mục Giới hạn điểm có tag "Tối đa n"); thời gian & tuỳ chọn; đã giao cho (lớp, cá nhân, tổng đã loại trùng); nháp → "Giao bài & phát hành", đang mở → "Giao thêm"; [Cài đặt](frontend/app/(admin)/giao-vien/bai-tap/[id]/SettingsDrawer.tsx) (PATCH mọi trạng thái: tên, mô tả, hạn nộp, hạn riêng từng phần, nộp muộn, số lần sửa, ẩn / hiện gợi ý — BR-06); bài của người khác → 404.
+
+**Khác so với thiết kế / tài liệu**
+- Cột "Giao cho" (tên lớp) trong bảng không có vì `AssignmentSummary` không trả danh sách lớp — xem ở trang chi tiết.
+- `CountdownTimer` chưa bù độ lệch giờ máy theo `GET /api/time` (SD-11) → làm cùng F4 (màn làm bài).
+- Nút "Tiến độ" / "Chấm bài" trỏ tới trang của F5 / F6 (đang là khung chờ). "Sửa nội dung" trỏ tới trình soạn F3b (`/giao-vien/bai-tap/tao-moi?id=`).
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch, `test:unit` **24 / 24**. Chạy thật (Edge + CDP, `gv.demo`): danh sách 2 bài demo; chi tiết "Tuần 1"; nhân bản → bản nháp mới; phát hành ngay → "Chưa phát hành được · chưa đặt hạn nộp"; Cài đặt đặt hạn 30/11; giao riêng `DEMO020` (tìm bằng mã) → phát hành, "giao cho 1 sinh viên"; đóng bài → xác nhận → "Đã đóng". Không đụng bài "Tuần 2" (để demo phát hành). Dọn: xoá bài thử (id 3) và thông báo `DEMO020` nhận từ bài đó.
+
+**Lỗi gặp khi làm:** hai dòng import trùng module ở trang chi tiết → gộp. Xoá bài thử bằng SQL theo tên bị lỗi dấu (Git Bash) → xoá theo id sau khi kiểm tra.
+
 ---
 
 ## Tồn đọng / việc cần làm tiếp
 - [x] Docker: `docker-compose.yml` + `.env.example` — xong ở bước 13 (xem `deploy/README.md`).
 - [x] Git: commit đầu tiên `bd9c7cf` (bước 1 → B7b) đã push lên https://github.com/duckkthoi/ielts-system (nhánh `main`). Từ nay commit khi người dùng yêu cầu.
 - [ ] (tuỳ chọn) File mẫu `tools/docs-export/reference.docx` theo định dạng báo cáo của trường.
-- [ ] Người dùng chạy các prompt trên Figma Make, gửi lại link Figma để code giao diện theo thiết kế.
+- [x] Thiết kế Figma Make: người dùng đã tải code về `Review attached content figma/` (24/10). Cần chốt có commit thư mục này không (có `CLAUDE.md` / `AGENTS.md` riêng của Figma Make, dễ làm agent đọc nhầm) — đề xuất thêm vào `.gitignore` hoặc chuyển vào `design/figma-make/`.
 - [x] Audit log cho import (IP, số dòng) — xong ở bước 12 (`IMPORT_STUDENTS`, `TCP_IMPORT`).
 - [ ] Trường `grades.updated_at` dùng auditing của Spring Data (giờ hệ thống), không qua bean `Clock` (giống mọi bảng khác từ B1). Chưa ảnh hưởng nghiệp vụ; nếu cần test theo giờ thì cấu hình `DateTimeProvider` dùng `Clock`.
 - [ ] Frontend (khi có thiết kế Figma): so sánh 2 version (diff) ở màn chấm và màn kết quả, dùng nội dung từ `…/submissions/{id}?versionNo` và `…/versions/{n}`.
@@ -1384,4 +1512,6 @@ B6 chia 3 phần:
 - [ ] Frontend cho bước 10: lưu nháp IndexedDB khi mất mạng, hộp thoại chọn bản khi `409 DRAFT_CONFLICT`, đồng hồ đếm ngược theo `GET /api/time` (SD-11).
 - [x] Commit + push các bước B8a → 14, 20 (người dùng yêu cầu 23/10).
 - [ ] Ảnh Wireshark HTTP / HTTPS / TCP 9090 cho báo cáo — người dùng tự chụp theo README mục "Ảnh Wireshark".
-- [ ] **Bước tiếp theo:** backend Mức 1 + Mức 2 đã xong. Còn: frontend F1–F6 (cần link Figma), sửa 2 tồn đọng nhỏ ở trên (`AdminUserService` phụ thuộc ngược `ClassroomService`; `grades.updated_at` không qua `Clock`), Mức 3 (15–19) nếu còn thời gian.
+- [ ] **Bước tiếp theo:** F3b — Trình soạn bài nhiều bước (`/giao-vien/bai-tap/tao-moi`, `?id=` để sửa nháp): thông tin chung → các phần (loại, đề, ảnh upload `POST /api/files`, số từ, thời gian, hạn riêng, trọng số) → tiêu chí + checklist (nạp rubric mẫu, Đạt / Giới hạn điểm) → giao bài (dùng lại `AssignTargetsModal`). Thiết kế: Prompt 4 Wizard. Sau đó F4–F6, 2 tồn đọng nhỏ backend, Mức 3.
+- [ ] `CountdownTimer` (F3a) chưa bù độ lệch giờ máy theo `GET /api/time` (SD-11) — làm ở F4.
+- [x] Mật khẩu `admin` trên DB dev bị đổi (22/10), không ai nhớ → 24/10 người dùng đồng ý xoá tài khoản `admin` (phiên, thông báo xoá theo; nhật ký giữ, người thực hiện thành "Không xác định"), khởi động lại backend → `AdminSeeder` tạo lại `admin` / `Admin@123`, bắt đổi mật khẩu lần đầu.

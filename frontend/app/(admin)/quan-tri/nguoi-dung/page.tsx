@@ -1,7 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import UsersPage from './index';
+
+export const metadata: Metadata = { title: 'Người dùng — IELTS Writing' };
 
 export default function Page() {
-  return (
-    <PagePlaceholder title="Quản lý người dùng" description="Tra cứu toàn bộ tài khoản, khoá/mở, buộc đăng xuất." />
-  );
+  return <UsersPage />;
 }
