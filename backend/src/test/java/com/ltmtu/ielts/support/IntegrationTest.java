@@ -1,7 +1,7 @@
 package com.ltmtu.ielts.support;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
 import java.util.UUID;
@@ -97,7 +97,7 @@ public abstract class IntegrationTest {
 	/** Đăng nhập và trả về {@code data} của response (accessToken, refreshToken, user). */
 	protected JsonNode login(String username, String password) throws Exception {
 		String body = mvc.perform(postJson("/api/auth/login", Map.of("username", username, "password", password)))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data");
 	}

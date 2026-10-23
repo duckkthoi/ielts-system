@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.demo;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,7 +100,7 @@ class DemoSeederIntegrationTest extends IntegrationTest {
 	}
 
 	private JsonNode data(String token, String url) throws Exception {
-		String body = mvc.perform(get(url).header("Authorization", bearer(token))).andExpect(status().isOk())
+		String body = mvc.perform(get(url).header("Authorization", bearer(token))).andExpect(apiStatus(200))
 				.andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data");
 	}

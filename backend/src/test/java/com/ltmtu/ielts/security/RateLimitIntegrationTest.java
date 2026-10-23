@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.security;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.List;
@@ -41,15 +41,15 @@ class RateLimitIntegrationTest extends IntegrationTest {
 	void perAccount() throws Exception {
 		User u = newUser(Role.TEACHER);
 		for (int i = 0; i < 5; i++) {
-			login(u.getUsername(), "sai-mat-khau", newIp()).andExpect(status().isUnauthorized());
+			login(u.getUsername(), "sai-mat-khau", newIp()).andExpect(apiStatus(401));
 		}
 		login(u.getUsername(), DEFAULT_PASSWORD, newIp())
-				.andExpect(status().isTooManyRequests())
-				.andExpect(jsonPath("$.code").value("RATE_LIMITED"))
-				.andExpect(jsonPath("$.message").value("Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 5 phút"));
+				.andExpect(apiStatus(429))
+				.andExpect(jsonPath("$.errorCode").value("RATE_LIMITED"))
+				.andExpect(jsonPath("$.errorMessage").value("Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 5 phút"));
 
 		clock.advance(Duration.ofMinutes(5).plusSeconds(1));
-		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(status().isOk());
+		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -57,11 +57,11 @@ class RateLimitIntegrationTest extends IntegrationTest {
 	void perIp() throws Exception {
 		String ip = newIp();
 		for (int i = 0; i < 5; i++) {
-			login("khong-ton-tai-" + i, "x", ip).andExpect(status().isUnauthorized());
+			login("khong-ton-tai-" + i, "x", ip).andExpect(apiStatus(401));
 		}
 		User u = newUser(Role.STUDENT);
-		login(u.getUsername(), DEFAULT_PASSWORD, ip).andExpect(status().isTooManyRequests());
-		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(status().isOk());
+		login(u.getUsername(), DEFAULT_PASSWORD, ip).andExpect(apiStatus(429));
+		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -69,13 +69,13 @@ class RateLimitIntegrationTest extends IntegrationTest {
 	void successResetsAccount() throws Exception {
 		User u = newUser(Role.TEACHER);
 		for (int i = 0; i < 4; i++) {
-			login(u.getUsername(), "sai", newIp()).andExpect(status().isUnauthorized());
+			login(u.getUsername(), "sai", newIp()).andExpect(apiStatus(401));
 		}
-		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(status().isOk());
+		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(apiStatus(200));
 		for (int i = 0; i < 4; i++) {
-			login(u.getUsername(), "sai", newIp()).andExpect(status().isUnauthorized());
+			login(u.getUsername(), "sai", newIp()).andExpect(apiStatus(401));
 		}
-		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(status().isOk());
+		login(u.getUsername(), DEFAULT_PASSWORD, newIp()).andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -90,26 +90,26 @@ class RateLimitIntegrationTest extends IntegrationTest {
 		String body = mvc.perform(postJson("/api/teacher/assignments", Map.of("title", "Nhắc", "dueAt",
 				clock.instant().plus(Duration.ofDays(3)).toString(), "parts", List.of(part)))
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+				.andExpect(apiStatus(201)).andReturn().getResponse().getContentAsString();
 		long id = json.readTree(body).get("data").get("id").asLong();
 		mvc.perform(postJson("/api/teacher/assignments/" + id + "/publish", Map.of("studentIds", List.of(student.getId())))
-				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(apiStatus(200));
 
 		String url = "/api/teacher/assignments/" + id + "/remind";
 		mvc.perform(postJson(url, Map.of("studentIds", List.of(-1))).header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		for (int i = 0; i < 3; i++) {
 			mvc.perform(postJson(url, Map.of("studentIds", List.of(student.getId())))
-					.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
+					.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(apiStatus(200));
 		}
 		mvc.perform(postJson(url, Map.of("studentIds", List.of(student.getId())))
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isTooManyRequests())
-				.andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+				.andExpect(apiStatus(429))
+				.andExpect(jsonPath("$.errorCode").value("RATE_LIMITED"));
 
 		clock.advance(Duration.ofMinutes(10).plusSeconds(1));
 		mvc.perform(postJson(url, Map.of("studentIds", List.of(student.getId())))
-				.header(HttpHeaders.AUTHORIZATION, bearer(accessToken(teacher)))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(accessToken(teacher)))).andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -123,6 +123,6 @@ class RateLimitIntegrationTest extends IntegrationTest {
 				.with(r -> {
 					r.setRemoteAddr(ip);
 					return r;
-				})).andExpect(status().isUnauthorized());
+				})).andExpect(apiStatus(401));
 	}
 }

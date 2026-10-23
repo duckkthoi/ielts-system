@@ -1,10 +1,11 @@
 package com.ltmtu.ielts.realtime;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
+import static com.ltmtu.ielts.support.ApiStatus.apiStatusOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -53,8 +54,7 @@ class SingleSessionIntegrationTest extends IntegrationTest {
 	}
 
 	private int me(String token) throws Exception {
-		return mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))).andReturn()
-				.getResponse().getStatus();
+		return apiStatusOf(mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))).andReturn());
 	}
 
 	@Test
@@ -90,7 +90,7 @@ class SingleSessionIntegrationTest extends IntegrationTest {
 		BlockingQueue<JsonNode> kicked = stomp.subscribe(c, SESSION_QUEUE);
 		String admin = accessToken(newUser(Role.ADMIN));
 		mvc.perform(post("/api/admin/users/" + u.getId() + "/lock").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		assertThat(kicked.poll(5, TimeUnit.SECONDS).get("reason").asString()).isEqualTo("ACCOUNT_LOCKED");
 		assertThat(c.awaitClosed(5000)).isTrue();
 	}
@@ -110,7 +110,7 @@ class SingleSessionIntegrationTest extends IntegrationTest {
 		BlockingQueue<JsonNode> mine = stomp.subscribe(currentDevice, SESSION_QUEUE);
 		mvc.perform(postJson("/api/auth/change-password", Map.of("currentPassword", DEFAULT_PASSWORD,
 				"newPassword", "MatKhauMoi#2026")).header(HttpHeaders.AUTHORIZATION, bearer(current)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		assertThat(mine.poll(800, TimeUnit.MILLISECONDS)).as("phiên đang đổi mật khẩu không bị đá").isNull();
 		assertThat(me(current)).isEqualTo(200);
 	}

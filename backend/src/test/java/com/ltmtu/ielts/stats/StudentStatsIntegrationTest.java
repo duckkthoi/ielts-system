@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.stats;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -86,7 +86,7 @@ class StudentStatsIntegrationTest extends StatsTestSupport {
 	@Test
 	@DisplayName("FR-64: giáo viên xem một sinh viên — chỉ bài của mình; số nộp / muộn; band theo thời gian; band bài chỉ khi đủ phần (BR-12)")
 	void teacherView() throws Exception {
-		JsonNode r = data(call(get("/api/teacher/stats/students/" + s.getId()), teacher).andExpect(status().isOk()));
+		JsonNode r = data(call(get("/api/teacher/stats/students/" + s.getId()), teacher).andExpect(apiStatus(200)));
 		assertThat(r.get("student").get("studentCode").asString()).isEqualTo(s.getStudentCode());
 		assertThat(r.get("submittedCount").asInt()).isEqualTo(4);
 		assertThat(r.get("lateCount").asInt()).isEqualTo(2);
@@ -113,7 +113,7 @@ class StudentStatsIntegrationTest extends StatsTestSupport {
 	@Test
 	@DisplayName("UC-28 / BR-13: sinh viên xem kết quả học tập — mọi bài được thấy (kể cả của giáo viên khác), chỉ điểm đã trả")
 	void studentView() throws Exception {
-		JsonNode r = data(call(get("/api/student/results"), accessToken(s)).andExpect(status().isOk()));
+		JsonNode r = data(call(get("/api/student/results"), accessToken(s)).andExpect(apiStatus(200)));
 		assertThat(r.get("submittedCount").asInt()).isEqualTo(5);
 		assertThat(r.get("lateCount").asInt()).isEqualTo(2);
 		assertThat(r.get("returnedCount").asInt()).isEqualTo(4);
@@ -129,7 +129,7 @@ class StudentStatsIntegrationTest extends StatsTestSupport {
 	@DisplayName("Sinh viên chưa có bài nào: số liệu rỗng, trung bình null")
 	void empty() throws Exception {
 		User fresh = newUser(Role.STUDENT);
-		JsonNode r = data(call(get("/api/student/results"), accessToken(fresh)).andExpect(status().isOk()));
+		JsonNode r = data(call(get("/api/student/results"), accessToken(fresh)).andExpect(apiStatus(200)));
 		assertThat(r.get("submittedCount").asInt()).isZero();
 		assertThat(r.get("averageBand").isNull()).isTrue();
 		assertThat(r.get("assignments")).isEmpty();
@@ -140,14 +140,14 @@ class StudentStatsIntegrationTest extends StatsTestSupport {
 	@DisplayName("Phân quyền: sinh viên không thuộc giáo viên / không phải sinh viên → 404; sai vai trò → 403")
 	void access() throws Exception {
 		User stranger = newUser(Role.STUDENT);
-		call(get("/api/teacher/stats/students/" + stranger.getId()), teacher).andExpect(status().isNotFound());
-		call(get("/api/teacher/stats/students/" + teacherUser.getId()), teacher).andExpect(status().isNotFound());
+		call(get("/api/teacher/stats/students/" + stranger.getId()), teacher).andExpect(apiStatus(404));
+		call(get("/api/teacher/stats/students/" + teacherUser.getId()), teacher).andExpect(apiStatus(404));
 
 		String other = accessToken(newUser(Role.TEACHER));
-		call(get("/api/teacher/stats/students/" + s.getId()), other).andExpect(status().isNotFound());
+		call(get("/api/teacher/stats/students/" + s.getId()), other).andExpect(apiStatus(404));
 
-		call(get("/api/teacher/stats/students/" + s.getId()), accessToken(s)).andExpect(status().isForbidden());
-		call(get("/api/student/results"), teacher).andExpect(status().isForbidden());
+		call(get("/api/teacher/stats/students/" + s.getId()), accessToken(s)).andExpect(apiStatus(403));
+		call(get("/api/student/results"), teacher).andExpect(apiStatus(403));
 	}
 
 	// ─── Hỗ trợ ─────────────────────────────────────────────────────────────

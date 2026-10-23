@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.stats;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -70,7 +70,7 @@ class AssignmentStatsIntegrationTest extends StatsTestSupport {
 		grade(c1, scores(x, 0, "TA", 7, "GRA", 7));
 		call(postJson("/api/teacher/submissions/" + c1 + "/request-revision",
 				Map.of("dueAt", clock.instant().plus(Duration.ofDays(10)).toString())), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		submit(c, t1, 1);
 		grade(c1, 2, scores(x, 0, "TA", 9, "GRA", 9), null, List.of());
 
@@ -161,9 +161,9 @@ class AssignmentStatsIntegrationTest extends StatsTestSupport {
 	@DisplayName("Phân quyền: bài của giáo viên khác → 404, lớp của giáo viên khác → 400, sinh viên → 403")
 	void access() throws Exception {
 		String other = accessToken(newUser(Role.TEACHER));
-		call(get(url()), other).andExpect(status().isNotFound());
-		call(get(url()).param("classId", String.valueOf(createClass(other))), teacher).andExpect(status().isBadRequest());
-		call(get(url()), accessToken(a)).andExpect(status().isForbidden());
+		call(get(url()), other).andExpect(apiStatus(404));
+		call(get(url()).param("classId", String.valueOf(createClass(other))), teacher).andExpect(apiStatus(400));
+		call(get(url()), accessToken(a)).andExpect(apiStatus(403));
 	}
 
 	// ─── Hỗ trợ ─────────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ class AssignmentStatsIntegrationTest extends StatsTestSupport {
 		if (classId != null) {
 			req.param("classId", String.valueOf(classId));
 		}
-		return data(call(req, teacher).andExpect(status().isOk()));
+		return data(call(req, teacher).andExpect(apiStatus(200)));
 	}
 
 	private static JsonNode criterion(JsonNode part, String code) {

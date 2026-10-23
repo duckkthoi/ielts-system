@@ -1,12 +1,12 @@
 package com.ltmtu.ielts.notification;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -90,10 +90,10 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		if (openAt != null) {
 			body.put("openAt", openAt.toString());
 		}
-		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(status().isCreated()));
+		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(apiStatus(201)));
 		if (publishBody != null) {
 			call(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish", publishBody), teacher)
-					.andExpect(status().isOk());
+					.andExpect(apiStatus(200));
 		}
 		return a;
 	}
@@ -112,7 +112,7 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 
 	private void submit(User s, long partId, int expectedVersion) throws Exception {
 		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", "My essay.", "expectedVersion",
-				expectedVersion)), accessToken(s)).andExpect(status().isCreated());
+				expectedVersion)), accessToken(s)).andExpect(apiStatus(201));
 	}
 
 	@Test
@@ -123,7 +123,7 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		User done = newUser(Role.STUDENT);
 		JsonNode a = published("Nhắc hạn", Duration.ofHours(20), notStarted, drafting, done);
 		call(put("/api/student/parts/" + partId(a) + "/draft").contentType(MediaType.APPLICATION_JSON)
-				.content(json.writeValueAsString(Map.of("content", "nháp"))), accessToken(drafting)).andExpect(status().isOk());
+				.content(json.writeValueAsString(Map.of("content", "nháp"))), accessToken(drafting)).andExpect(apiStatus(200));
 		submit(done, partId(a), 0);
 
 		reminderJob.run();
@@ -162,7 +162,7 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		assignment("Chưa mở", Duration.ofHours(20), clock.instant().plus(Duration.ofHours(10)),
 				Map.of("studentIds", Set.of(notOpen.getId())));
 		JsonNode c = published("Đã đóng", Duration.ofHours(20), closed);
-		call(post("/api/teacher/assignments/" + c.get("id").asLong() + "/close"), teacher).andExpect(status().isOk());
+		call(post("/api/teacher/assignments/" + c.get("id").asLong() + "/close"), teacher).andExpect(apiStatus(200));
 
 		reminderJob.run();
 		assertThat(ofType(late, NotificationType.DEADLINE_REMINDER)).singleElement()
@@ -179,16 +179,16 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		long classId = data(call(postJson("/api/teacher/classes", Map.of("code", "N" + UUID.randomUUID().toString()
 				.substring(0, 8), "name", "Lớp nhắc")), teacher)).get("id").asLong();
 		call(postJson("/api/teacher/classes/" + classId + "/members", Map.of("studentCodes", List.of(member.getStudentCode()))),
-				teacher).andExpect(status().isOk());
+				teacher).andExpect(apiStatus(200));
 		// Hạn bài còn 3 ngày, nhưng hạn riêng của phần còn 5 giờ.
 		JsonNode a = assignment("Theo lớp", Duration.ofDays(3), null, null);
 		call(patch(
 				"/api/teacher/assignments/" + a.get("id").asLong() + "/settings").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("partDueAts",
 						Map.of(String.valueOf(partId(a)), clock.instant().plus(Duration.ofHours(5)).toString())))), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		call(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish", Map.of("classIds", Set.of(classId))),
-				teacher).andExpect(status().isOk());
+				teacher).andExpect(apiStatus(200));
 
 		reminderJob.run();
 		assertThat(ofType(member, NotificationType.DEADLINE_REMINDER)).singleElement()
@@ -208,9 +208,9 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		for (int cycle = 1; cycle <= 2; cycle++) {
 			call(put("/api/teacher/submissions/" + submissionId + "/grade").contentType(MediaType.APPLICATION_JSON)
 					.content(json.writeValueAsString(Map.of("versionNo", cycle, "scores",
-							List.of(Map.of("criterionId", criterionId, "score", 1))))), teacher).andExpect(status().isOk());
+							List.of(Map.of("criterionId", criterionId, "score", 1))))), teacher).andExpect(apiStatus(200));
 			call(postJson("/api/teacher/submissions/" + submissionId + "/request-revision",
-					Map.of("dueAt", clock.instant().plus(Duration.ofHours(10)).toString())), teacher).andExpect(status().isOk());
+					Map.of("dueAt", clock.instant().plus(Duration.ofHours(10)).toString())), teacher).andExpect(apiStatus(200));
 			reminderJob.run();
 			reminderJob.run();
 			assertThat(ofType(s, NotificationType.DEADLINE_REMINDER)).hasSize(cycle)
@@ -260,7 +260,7 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		call(put(
 				"/api/teacher/assignments/" + a.get("id").asLong() + "/targets").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("studentIds", Set.of(added.getId())))), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		published("Mở ngay", Duration.ofDays(3), alreadyOpen);
 
 		openingService.announceOpened(clock.instant());
@@ -285,7 +285,7 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 
 		call(postJson("/api/teacher/assignments/" + id + "/remind", Map.of("studentIds", Set.of(s.getId()),
 				"partId", partId(a))), teacher)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.sent").value(1));
 		assertThat(ofType(s, NotificationType.MANUAL_REMINDER)).singleElement().satisfies(n -> {
 			assertThat(n.getTitle()).isEqualTo("Giáo viên nhắc bạn hoàn thành: Nhắc tay – Task 2");
@@ -293,15 +293,15 @@ class ReminderJobIntegrationTest extends IntegrationTest {
 		});
 
 		call(postJson("/api/teacher/assignments/" + id + "/remind", Map.of("studentIds", Set.of(outsider.getId()))), teacher)
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		call(postJson("/api/teacher/assignments/" + id + "/remind", Map.of("studentIds", Set.of(s.getId()), "partId", 999999)),
-				teacher).andExpect(status().isBadRequest());
+				teacher).andExpect(apiStatus(400));
 		call(postJson("/api/teacher/assignments/" + id + "/remind", Map.of("studentIds", Set.of())), teacher)
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		call(postJson("/api/teacher/assignments/" + id + "/remind", Map.of("studentIds", Set.of(s.getId()))),
-				accessToken(newUser(Role.TEACHER))).andExpect(status().isNotFound());
+				accessToken(newUser(Role.TEACHER))).andExpect(apiStatus(404));
 		long draft = assignment("Nháp", Duration.ofDays(2), null, null).get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + draft + "/remind", Map.of("studentIds", Set.of(s.getId()))), teacher)
-				.andExpect(status().isConflict());
+				.andExpect(apiStatus(409));
 	}
 }

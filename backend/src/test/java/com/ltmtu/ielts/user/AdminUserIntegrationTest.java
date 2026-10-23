@@ -1,5 +1,6 @@
 package com.ltmtu.ielts.user;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -8,7 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
 import java.util.UUID;
@@ -43,7 +43,7 @@ class AdminUserIntegrationTest extends IntegrationTest {
 	private JsonNode createTeacher(String username) throws Exception {
 		String body = mvc.perform(asAdmin(postJson("/api/admin/teachers",
 				Map.of("username", username, "fullName", "ThS. Nguyễn Thị Hạnh", "email", username + "@truong.edu.vn"))))
-				.andExpect(status().isCreated())
+				.andExpect(apiStatus(201))
 				.andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data");
 	}
@@ -74,10 +74,10 @@ class AdminUserIntegrationTest extends IntegrationTest {
 		createTeacher(username);
 
 		mvc.perform(asAdmin(postJson("/api/admin/teachers", Map.of("username", username, "fullName", "Khác"))))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("DUPLICATE"));
+				.andExpect(apiStatus(409))
+				.andExpect(jsonPath("$.errorCode").value("DUPLICATE"));
 		mvc.perform(asAdmin(postJson("/api/admin/teachers", Map.of("username", "có dấu cách", "fullName", "X"))))
-				.andExpect(status().isBadRequest())
+				.andExpect(apiStatus(400))
 				.andExpect(jsonPath("$.fieldErrors.username").exists());
 	}
 
@@ -87,13 +87,13 @@ class AdminUserIntegrationTest extends IntegrationTest {
 		long id = createTeacher(uniqueName("gv.")).get("teacher").get("id").asLong();
 		mvc.perform(asAdmin(put("/api/admin/teachers/" + id).contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("fullName", "TS. Trần Văn Minh", "email", "minh@truong.edu.vn")))))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.fullName").value("TS. Trần Văn Minh"));
 
 		User student = newUser(Role.STUDENT);
 		mvc.perform(asAdmin(put("/api/admin/teachers/" + student.getId()).contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("fullName", "X")))))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -103,13 +103,13 @@ class AdminUserIntegrationTest extends IntegrationTest {
 
 		mvc.perform(asAdmin(get("/api/admin/users").param("keyword", student.getStudentCode().toLowerCase())
 				.param("role", "STUDENT").param("size", "5")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data", hasSize(1)))
 				.andExpect(jsonPath("$.data[0].username").value(student.getUsername()))
 				.andExpect(jsonPath("$.totalRecord").value(1));
 
 		mvc.perform(asAdmin(get("/api/admin/teachers").param("size", "100")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data[*].role", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("TEACHER"))));
 	}
 
@@ -117,8 +117,8 @@ class AdminUserIntegrationTest extends IntegrationTest {
 	@DisplayName("Sắp xếp theo trường không cho phép → 400, không phải 500")
 	void searchUsers_invalidSort() throws Exception {
 		mvc.perform(asAdmin(get("/api/admin/users").param("sort", "passwordHash,asc")))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+				.andExpect(apiStatus(400))
+				.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
 	}
 
 	@Test
@@ -128,17 +128,17 @@ class AdminUserIntegrationTest extends IntegrationTest {
 		String studentToken = accessToken(student);
 
 		mvc.perform(asAdmin(post("/api/admin/users/" + student.getId() + "/lock")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.active").value(false));
 
 		mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
-				.andExpect(status().isUnauthorized());
+				.andExpect(apiStatus(401));
 		mvc.perform(postJson("/api/auth/login", Map.of("username", student.getUsername(), "password", DEFAULT_PASSWORD)))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
+				.andExpect(apiStatus(403))
+				.andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
 
 		mvc.perform(asAdmin(post("/api/admin/users/" + student.getId() + "/unlock")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.active").value(true));
 		login(student.getUsername(), DEFAULT_PASSWORD);
 	}
@@ -147,8 +147,8 @@ class AdminUserIntegrationTest extends IntegrationTest {
 	@DisplayName("Admin không được tự khoá chính mình → 409 INVALID_STATE")
 	void cannotLockSelf() throws Exception {
 		mvc.perform(asAdmin(post("/api/admin/users/" + admin.getId() + "/lock")))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("INVALID_STATE"));
+				.andExpect(apiStatus(409))
+				.andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
 	}
 
 	@Test
@@ -158,14 +158,14 @@ class AdminUserIntegrationTest extends IntegrationTest {
 		String oldToken = accessToken(teacher);
 
 		String body = mvc.perform(asAdmin(post("/api/admin/users/" + teacher.getId() + "/reset-password")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andReturn().getResponse().getContentAsString();
 		String temp = json.readTree(body).get("data").get("temporaryPassword").asString();
 
 		mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(oldToken)))
-				.andExpect(status().isUnauthorized());
+				.andExpect(apiStatus(401));
 		mvc.perform(postJson("/api/auth/login", Map.of("username", teacher.getUsername(), "password", DEFAULT_PASSWORD)))
-				.andExpect(status().isUnauthorized());
+				.andExpect(apiStatus(401));
 		assertThat(login(teacher.getUsername(), temp).get("user").get("mustChangePassword").asBoolean()).isTrue();
 	}
 
@@ -177,18 +177,18 @@ class AdminUserIntegrationTest extends IntegrationTest {
 		accessToken(teacher);
 
 		mvc.perform(asAdmin(get("/api/admin/users/" + teacher.getId())))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.user.username").value(teacher.getUsername()))
 				.andExpect(jsonPath("$.data.activeSessions").value(2));
 		mvc.perform(asAdmin(get("/api/admin/users/999999999")))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
 	@DisplayName("UC-09: thống kê hệ thống có đủ các mục, biểu đồ 14 ngày")
 	void systemStats() throws Exception {
 		mvc.perform(asAdmin(get("/api/admin/stats")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.usersByRole.ADMIN", greaterThanOrEqualTo(1)))
 				.andExpect(jsonPath("$.data.usersByRole.TEACHER").exists())
 				.andExpect(jsonPath("$.data.usersByRole.STUDENT").exists())
@@ -203,7 +203,7 @@ class AdminUserIntegrationTest extends IntegrationTest {
 		for (Role role : new Role[] { Role.TEACHER, Role.STUDENT }) {
 			String token = accessToken(newUser(role));
 			mvc.perform(get("/api/admin/users").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-					.andExpect(status().isForbidden());
+					.andExpect(apiStatus(403));
 		}
 		mvc.perform(asAdmin(get("/api/admin/users").param("role", "ADMIN")))
 				.andExpect(jsonPath("$.data[*].username", hasItem(admin.getUsername())));

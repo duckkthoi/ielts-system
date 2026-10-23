@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import AdminOverviewPage from './index';
+
+export const metadata: Metadata = { title: 'Tổng quan hệ thống — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Tổng quan hệ thống" description="Số liệu toàn hệ thống: người dùng, lớp, bài nộp." />;
+  return <AdminOverviewPage />;
 }

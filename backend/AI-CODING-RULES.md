@@ -100,7 +100,7 @@ Bên trong module: file đặt phẳng; tách `dto/` khi có từ 5 DTO. KHÔNG 
 ## 5. API và DTO
 
 - Đường dẫn, method, quyền, dạng dữ liệu PHẢI đúng `docs/05-api.md`. Thêm / đổi endpoint thì cập nhật file đó và thêm request vào `backend/http/<module>.http`.
-- Response luôn bọc `ApiResponse`: `ApiResponse.ok(data)`, `ApiResponse.ok(data, "Đã lưu…")`, `ApiResponse.page(page)`, `ApiResponse.message("Đã xoá…")`. Tạo mới trả `201` (`@ResponseStatus(HttpStatus.CREATED)`).
+- Response luôn bọc `ApiResponse`: `ApiResponse.ok(data)`, `ApiResponse.ok(data, "Đã lưu…")`, `ApiResponse.page(page)`, `ApiResponse.message("Đã xoá…")`. HTTP status **luôn là 200** (kể cả tạo mới — KHÔNG dùng `@ResponseStatus`); lỗi trả 200 với body `ErrorResponse`.
 - DTO là **record**, gom theo nhóm trong một class `XxxDtos` (vd `grading/dto/GradingDtos.java`). KHÔNG trả entity ra API. Ánh xạ bằng `static from(entity)` hoặc class `XxxMapper` có hàm static.
 - **Request record KHÔNG dùng kiểu nguyên thuỷ** cho trường client có thể bỏ trống: Jackson 3 báo 400 khi thiếu. Dùng `Integer`, `Boolean`, xử lý null (`Boolean.TRUE.equals(x)`).
 - Validate bằng Jakarta Validation, **message tiếng Việt**: `@NotBlank(message = "Vui lòng nhập mã lớp")`.
@@ -110,11 +110,11 @@ Bên trong module: file đặt phẳng; tách `dto/` khi có từ 5 DTO. KHÔNG 
 
 ---
 
-## 6. Lỗi — chọn mã HTTP theo bảng này
+## 6. Lỗi — chọn mã `status` theo bảng này
 
-Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflict`, hoặc `new ApiException(status, code, message)`), message tiếng Việt hiển thị thẳng cho người dùng. Mã `code` PHẢI có trong bảng mã lỗi `docs/05` A.1 (mã mới thì thêm vào đó).
+Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflict`, hoặc `new ApiException(status, code, message)`), message tiếng Việt hiển thị thẳng cho người dùng. Mã `code` (trả cho client trong trường `errorCode`, message trong `errorMessage`) PHẢI có trong bảng mã lỗi `docs/05` A.1 (mã mới thì thêm vào đó). HTTP status của response luôn là 200; mã trong bảng dưới là trường `status` của body lỗi (`GlobalExceptionHandler`, `SecurityErrorWriter` đã lo). Test kiểm tra bằng `apiStatus(409)` / `apiStatusOf(result)` trong `support/ApiStatus` — KHÔNG dùng `status().isConflict()`.
 
-| Tình huống | HTTP · code | Ví dụ thật |
+| Tình huống | `status` · code | Ví dụ thật |
 |---|---|---|
 | Dữ liệu gửi lên sai: thiếu trường, sai định dạng, id tham chiếu không hợp lệ | `400 VALIDATION_ERROR` | điểm sai bước; `classId` không phải lớp của mình |
 | Chưa đăng nhập / token sai | `401` | do `JwtAuthFilter` |

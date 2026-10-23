@@ -48,10 +48,25 @@ export const MENU_BY_ROLE: Record<Role, MenuItem[]> = {
   ]
 };
 
+/** Tiêu đề trên header cho trang dùng chung không nằm trong menu. */
+const SHARED_PAGE_TITLE: Record<string, string> = {
+  '/thong-bao': 'Thông báo',
+  '/ca-nhan': 'Thông tin cá nhân'
+};
+
 /** Tìm key menu đang active: mục có đường dẫn là tiền tố dài nhất của pathname. */
 export function findActiveMenuKey(items: MenuItem[], pathname: string): string | undefined {
   return items
     .map((item) => (item && 'key' in item ? String(item.key) : ''))
     .filter((key) => key && (pathname === key || pathname.startsWith(`${key}/`)))
     .sort((a, b) => b.length - a.length)[0];
+}
+
+/** Tiêu đề trang hiện tại trên header: nhãn mục menu đang active, hoặc tên trang dùng chung. */
+export function findPageTitle(items: MenuItem[], pathname: string): string {
+  const key = findActiveMenuKey(items, pathname);
+  const item = items.find((i) => i && 'key' in i && i.key === key);
+  if (item && 'label' in item && typeof item.label === 'string') return item.label;
+  const shared = Object.keys(SHARED_PAGE_TITLE).find((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return shared ? SHARED_PAGE_TITLE[shared] : '';
 }
