@@ -23,6 +23,24 @@ export function syncServerClock(
   if (serverTime) offsetMs = computeClockOffset(serverTime, sentAt, receivedAt);
 }
 
+export interface ClockSample {
+  serverTime: string;
+  sentAt: number;
+  receivedAt: number;
+}
+
+/** SD-11: trong các lần gọi GET /api/time, lấy lần có thời gian đi về nhỏ nhất (ít sai số nhất). */
+export function bestClockOffset(samples: readonly ClockSample[]): number | null {
+  const valid = samples.filter((s) => !Number.isNaN(Date.parse(s.serverTime)) && s.receivedAt >= s.sentAt);
+  if (valid.length === 0) return null;
+  const best = valid.reduce((a, b) => (b.receivedAt - b.sentAt < a.receivedAt - a.sentAt ? b : a));
+  return computeClockOffset(best.serverTime, best.sentAt, best.receivedAt);
+}
+
+export function setClockOffset(ms: number) {
+  offsetMs = ms;
+}
+
 /** "Bây giờ" theo giờ server (ms). */
 export function serverNow(): number {
   return Date.now() + offsetMs;
