@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
 import { ROLE_HOME, ROLE_PATH_PREFIX, ROUTES, SHARED_PATHS } from '@/lib/constants';
+import type { ApiResponse } from '@/lib/types/api';
 import type { AccountInfo } from '@/lib/types/auth';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -43,4 +44,37 @@ export function useAuthGuard(): { ready: boolean; user: AccountInfo | null } {
   }, [redirectTo, router]);
 
   return { ready: isInitialized && !redirectTo, user };
+}
+
+/**
+ * Tải danh sách phân trang từ server theo `query` (bộ lọc + `page`, `size`); đổi query là tải lại.
+ * `loading` suy ra từ việc kết quả đang giữ có ứng với query hiện tại không (không setState đồng bộ trong effect).
+ * `reload()` tải lại cùng query (sau khi thêm / sửa / khoá…).
+ */
+export function useServerList<T, Q extends object>(
+  fetcher: (query: Q) => Promise<ApiResponse<T[]>>,
+  query: Q
+): { data: T[]; total: number; loading: boolean; reload: () => void } {
+  const [version, setVersion] = useState(0);
+  const [result, setResult] = useState<{ key: string; data: T[]; total: number } | null>(null);
+  const queryKey = JSON.stringify(query);
+  const key = `${queryKey}#${version}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetcher(JSON.parse(queryKey) as Q)
+      .then((res) => {
+        if (!cancelled) setResult({ key, data: res.data, total: res.totalRecord ?? res.data.length });
+      })
+      .catch(() => {
+        // axiosClient đã hiển thị toast lỗi; giữ dữ liệu cũ nhưng thoát trạng thái đang tải
+        if (!cancelled) setResult((prev) => ({ key, data: prev?.data ?? [], total: prev?.total ?? 0 }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetcher, queryKey, key]);
+
+  const reload = useCallback(() => setVersion((v) => v + 1), []);
+  return { data: result?.data ?? [], total: result?.total ?? 0, loading: result?.key !== key, reload };
 }

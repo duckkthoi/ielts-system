@@ -22,24 +22,32 @@ Ký hiệu: ✅ xong · 🟡 đang làm / xong một phần · ⬜ chưa làm
 ### Mức 1 — Lõi nghiệp vụ
 | # | Hạng mục | Trạng thái |
 |---|---|---|
-| 1 | Khung dự án: backend, frontend, Flyway, seed admin + rubric IELTS, docker-compose | ✅ chạy với PostgreSQL trên máy (docker-compose để bước 13) |
+| 1 | Khung dự án: backend, frontend, Flyway, seed admin + rubric IELTS, docker-compose | ✅ chạy với PostgreSQL trên máy; docker-compose ở bước 13 |
 | 2 | Đăng nhập JWT, đổi mật khẩu, layout theo vai trò, admin quản lý giáo viên | ✅ backend (frontend chờ Figma) |
 | 3 | Lớp học, import sinh viên từ file, xuất danh sách tài khoản, gửi email | ✅ backend (frontend chờ Figma) |
 | 4 | Bài tập: các phần, rubric, checklist, giao bài, publish | ✅ backend (thông báo khi phát hành nối ở B7) |
 | 5 | Sinh viên làm bài: lưu nháp, nộp từng phần, version | ✅ backend (frontend chờ Figma; nháp offline + xung đột ở Mức 2) |
 | 6 | Chấm bài: checklist, điểm, nhận xét inline, trả bài, yêu cầu sửa, diff | ✅ backend (B6a–c). So sánh 2 version (diff) làm ở frontend từ nội dung 2 version mà API đã trả |
 | 7 | Thông báo: WebSocket, email, job nhắc hạn | ✅ backend (B7a: thông báo, WebSocket, email; B7b: job nhắc hạn, bài hẹn giờ mở, nhắc thủ công) |
-| 8 | Tiến độ, thống kê, xuất Excel | ⬜ |
+| 8 | Tiến độ, thống kê, xuất Excel | ✅ backend (B8a ma trận tiến độ · B8b thống kê một bài · B8c kết quả học tập một sinh viên · B8d thống kê lớp + xếp hạng · B8e xuất Excel) |
 
 ### Mức 2 — Trọng tâm mạng
 | # | Hạng mục | Trạng thái |
 |---|---|---|
-| 9 | Realtime nâng cao: online, tiến độ live, chat, một phiên, heartbeat | ⬜ |
-| 10 | Đồng bộ giờ server, nháp offline (IndexedDB), xung đột bản nháp | ⬜ |
-| 11 | Module TCP: `TcpImportServer` + `admin-cli` | ⬜ |
-| 12 | Bảo mật: HTTPS/WSS, rate limit, audit log | ⬜ |
-| 13 | Docker hoá toàn bộ: postgres + mailpit + backend (monolith) + frontend + nginx reverse proxy | ⬜ |
-| 14 | Load test k6 | ⬜ |
+| 9 | Realtime nâng cao: online, tiến độ live, chat, một phiên, heartbeat | ✅ backend: 9a một phiên + FORCE_LOGOUT, online, tiến độ live, phân quyền kênh · 9b chat theo bài nộp / lớp |
+| 10 | Đồng bộ giờ server, nháp offline (IndexedDB), xung đột bản nháp | 🟡 backend ✅ (`draft_version` + 409 `DRAFT_CONFLICT`, `/api/time`); IndexedDB / hộp thoại chọn bản ở frontend |
+| 11 | Module TCP: `TcpImportServer` + `admin-cli` | ✅ server trong backend + client `admin-cli/` (chạy thử đầu-cuối được) |
+| 12 | Bảo mật: HTTPS/WSS, rate limit, audit log | ✅ nhật ký + API admin, rate limit đăng nhập / nhắc thủ công, cấu hình nginx + chứng chỉ tự ký (nginx chạy thử ở bước 13) |
+| 13 | Docker hoá toàn bộ: postgres + mailpit + backend (monolith) + frontend + nginx reverse proxy | ✅ chạy thật: 5 container, HTTPS / WSS / TCP 9090, khởi động lại backend không mất dữ liệu |
+| 14 | Load test k6 | ✅ NFR-01 (p95 9,9 ms, 0% lỗi), NFR-02 (500 / 500 kết nối), NFR-03 (thông báo p95 228 ms) — `loadtest/`, `docs/09` |
+
+### Frontend — giao diện theo thiết kế Figma Make
+| # | Hạng mục | Trạng thái |
+|---|---|---|
+| F1 | Khung app: đăng nhập, đổi mật khẩu, sidebar, header · chuông thông báo + WebSocket + ConnectionBanner | ✅ F1a (đăng nhập, đổi mật khẩu, sidebar, header) · F1b (STOMP client, chuông, trang Thông báo, banner, FORCE_LOGOUT) |
+| F2 | Quản trị · giáo viên: lớp học + import sinh viên | ✅ F2a (5 màn quản trị) · F2b (lớp học, thành viên, import) |
+| F3 | Bài tập: danh sách, chi tiết, giao bài · trình soạn | 🟡 F3a ✅ (danh sách, chi tiết, cài đặt, giao bài / phát hành, đóng / mở lại / nhân bản / xoá) · F3b ⬜ (trình soạn) |
+| F4–F6 | Làm bài · chấm bài · kết quả, thống kê | ⬜ |
 
 ### Mức 3 — Mở rộng
 | # | Hạng mục | Trạng thái |
@@ -49,7 +57,7 @@ Ký hiệu: ✅ xong · 🟡 đang làm / xong một phần · ⬜ chưa làm
 | 17 | Ngân hàng đề | ⬜ |
 | 18 | Gợi ý chấm bằng AI (tuỳ chọn) | ⬜ |
 | 19 | TCP qua TLS + bản NIO | ⬜ |
-| 20 | README, dữ liệu demo, tài liệu báo cáo | ⬜ |
+| 20 | README, dữ liệu demo, tài liệu báo cáo | ✅ `README.md`, profile `demo`, `docs/09` + Word; ảnh Wireshark người dùng tự chụp |
 
 ---
 
@@ -1047,19 +1055,463 @@ B6 chia 3 phần:
 
 **Kiểm tra:** chỉ sửa tài liệu và một dòng comment; `mvn compile` qua. Đã đối chiếu từng tên class, hàm, file được nhắc trong quy tắc với code hiện có (`AccessTokenVerifier`, `TeacherSubmissionAccess`, `ReminderLogRepository`, `lib/api/base.ts`, `lib/theme/status.ts`, `lib/utils/date.ts`…).
 
+### 2026-10-22 · B8a — Ma trận tiến độ của một bài tập
+**Đã làm**
+- `GET /api/teacher/assignments/{id}/progress?classId&status` (UC-16) — [TeacherStatsController](backend/src/main/java/com/ltmtu/ielts/stats/TeacherStatsController.java), [ProgressService](backend/src/main/java/com/ltmtu/ielts/stats/ProgressService.java), DTO ở [stats/dto/ProgressDtos](backend/src/main/java/com/ltmtu/ielts/stats/dto/ProgressDtos.java):
+  - **một câu SQL** (`NamedParameterJdbcTemplate`, CTE + UNION) lấy mọi ô sinh viên × phần, kèm bài làm, version mới nhất và kết quả đã trả — không N+1;
+  - hàng = người nhận bài (giao trực tiếp ∪ thành viên lớp, tính lúc truy vấn) **∪ người đã có bài làm**; sắp theo mã SV;
+  - ô: `status` (chưa có bài làm = `NOT_STARTED`), `currentVersion`, `late` (lần nộp mới nhất muộn, BR-08), `overdue` (còn phải nộp mà quá hạn áp dụng, BR-07), `score` (band phần đã làm tròn, chỉ khi kết quả lần nộp mới nhất đã trả — BR-13);
+  - tóm tắt: `students`, `completedCount`, `completedRate`, `lateCount`, `overdueCount`;
+  - lọc `classId` (lớp không phải của mình → 400), `status` (giữ hàng có ô ở trạng thái đó).
+- Cửa mới [assignment/TeacherAssignmentAccess](backend/src/main/java/com/ltmtu/ielts/assignment/TeacherAssignmentAccess.java) (`requireOwned`, bài của người khác → 404) cho module `stats`; thêm vào bảng cửa trong coding rules.
+- `DeadlineRules.effectiveDue(assignmentDue, partDue, status, revisionDue)`: bản đọc thẳng từ cột, bản cũ (theo entity) gọi lại bản này — BR-07 chỉ viết một chỗ.
+- Tài liệu: `docs/05` A.6 (mô tả đầy đủ + ví dụ mới), `docs/02` UC-16 bước 2, [stats.http](backend/http/stats.http); xuất lại Word (02, 03, 05 + bản gộp).
+
+**Khác so với tài liệu / quyết định**
+- Tên trường **`late`** thay cho `isLate` trong ví dụ cũ của docs/05 — cho thống nhất với mọi DTO đã có (`QueueRow`, `VersionSummary`, `SubmitResponse`…). Sửa luôn các chỗ docs còn ghi `isLate` (docs/03 SD-07, docs/05 API nộp bài và kênh `/progress`) vì code trả `late` từ bước 5.
+- Thêm trường so với ví dụ cũ: `parts[].orderNo / taskType`, ô `currentVersion` + `overdue`, tóm tắt `completedCount` + `overdueCount`. `lateCount` / `overdueCount` đếm **sinh viên**, không đếm ô.
+- Người **rời lớp sau khi đã có bài làm** vẫn nằm trong ma trận (để không mất bài cần chấm); người chưa làm gì thì biến mất cùng lúc với việc không còn thấy bài.
+- Tóm tắt tính **sau khi lọc lớp, trước khi lọc trạng thái** (lọc trạng thái chỉ để chọn người cần nhắc).
+- Giáo viên chỉ thấy `score` khi đã trả, kể cả bài đang "Cần sửa"; bài "Đang chấm" thì xem điểm nháp ở màn chấm.
+- Trường `online` để bước 9 (Mức 2).
+
+**Kiểm tra:** `mvn test`: **398 lượt pass** (394 + 4). `ProgressIntegrationTest` (4), dữ liệu: bài 2 phần, giao cho lớp (B, C) + trực tiếp (A, D), tua giờ qua hạn:
+- ma trận đủ 4 × 2: A (đã trả 7.0 / đang chấm → không có band), B ("Cần sửa" 5.0, hạn sửa còn xa → không quá hạn / nháp → quá hạn), C (chưa làm → 2 ô quá hạn, `submissionId` null), D (**"Chấm 0" → 0.0** / nộp muộn); tóm tắt 4 SV, 2 hoàn thành, tỉ lệ 0.5, 1 muộn, 2 quá hạn;
+- lọc lớp (B, C; tóm tắt theo lớp), lọc `DRAFT` / `NOT_STARTED` (tóm tắt không đổi);
+- rời lớp: B (có bài) vẫn còn, C (chưa làm) mất;
+- bài của GV khác → 404, lớp của GV khác → 400, sinh viên → 403, `status` sai → 400.
+
+### 2026-10-22 · B8b — Thống kê một bài tập
+**Cách tách B8 (báo trước khi làm):** B8a ma trận tiến độ (xong) · **B8b thống kê một bài** · B8c thống kê lớp + một sinh viên + kết quả học tập phía sinh viên · B8d xuất Excel. Đã sửa PLAN cho khớp.
+
+**Đã làm**
+- `GET /api/teacher/assignments/{id}/stats?classId` (UC-19, FR-63) — [AssignmentStatsService](backend/src/main/java/com/ltmtu/ielts/stats/AssignmentStatsService.java), DTO [AssignmentStatsDtos](backend/src/main/java/com/ltmtu/ielts/stats/dto/AssignmentStatsDtos.java):
+  - theo phần: số đã nộp, số nộp muộn (lần đầu), tỉ lệ đúng hạn, số đã trả, band trung bình, trung bình từng tiêu chí, phân bố band;
+  - `overall`: band cả bài (BR-12, có trọng số phần) của sinh viên đã được trả mọi phần, dùng lại `BandCalculator.assignmentBand`;
+  - `topErrors`: 10 mã lỗi hay gặp (số lần, số sinh viên, tên, nhóm tiêu chí), bỏ mã khen; tên tra theo mã hệ thống rồi tới mã riêng của giáo viên (`LEFT JOIN LATERAL`);
+  - **4 câu SQL cố định**, không phụ thuộc số sinh viên.
+- [StatsSql](backend/src/main/java/com/ltmtu/ielts/stats/StatsSql.java): 2 đoạn CTE dùng chung — `people` (tập sinh viên của bài, có lọc lớp) và `latest` (kết quả đã trả của version mới nhất có kết quả đã trả). `ProgressService` chuyển sang dùng `people`, để ma trận tiến độ và thống kê luôn cùng một tập sinh viên.
+- Test: tách phần dựng dữ liệu (lớp, bài nhiều phần, nộp, chấm, trả bài) ra [StatsTestSupport](backend/src/test/java/com/ltmtu/ielts/stats/StatsTestSupport.java); `ProgressIntegrationTest` viết lại trên lớp này (nội dung kiểm tra giữ nguyên).
+- Tài liệu: `docs/05` A.6 (mô tả + ví dụ mới, thêm `?classId`), [stats.http](backend/http/stats.http); xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- Dạng dữ liệu khác ví dụ cũ: `overallAverage` → object `overall {count, averageBand, bandDistribution}`; thêm `students`, `topErrors`, và ở mỗi phần thêm `orderNo`, `title`, `taskType`, `lateCount`, `returnedCount`, tiêu chí thêm `code`, `count`.
+- Thêm lọc `?classId` (cùng nghĩa với ma trận tiến độ) — tài liệu cũ không có.
+- **Chỉ tính kết quả đã trả**, lấy theo version mới nhất có kết quả đã trả (giống màn kết quả của sinh viên). Bản sửa đang chấm nháp không làm đổi thống kê cho tới khi trả. "Chấm 0" được tính (kéo trung bình xuống) vì đó là điểm thật.
+- "Nộp đúng hạn" xét **lần nộp đầu tiên** của mỗi phần; bản sửa nộp muộn so với hạn sửa không tính vào đây.
+- Trung bình giữ 2 chữ số thập phân, không làm tròn kiểu IELTS (đây là số liệu lớp, không phải band của một bài). Chưa có dữ liệu → `null`, không phải 0.
+- Phân bố band đếm theo band **đã làm tròn hiển thị** (bước 0.5).
+
+**Kiểm tra:** `mvn test`: **403 lượt pass** (398 + 5). `AssignmentStatsIntegrationTest` (5), dữ liệu: bài Task 1 (TA, GRA) + Task 2 (TR, GRA); 5 sinh viên gồm người đã trả cả 2 phần, người "Cần sửa" có bản sửa đang chấm nháp 9/9, người "Chấm 0", người nộp muộn, người chưa làm:
+- theo phần: Task 1 nộp 4, đúng hạn 100%, trung bình 4.50 (bản nháp 9/9 không tính, "Chấm 0" có tính), phân bố 0.0 / 5.0 / 6.0 / 7.0; Task 2 nộp 3, muộn 1, tỉ lệ 2/3, trung bình 5.75, TR 6.00, GRA 5.50;
+- band cả bài: chỉ 2 người đủ phần, (6.33 + 5.0) / 2 = 5.67 — Task 2 trọng số 2;
+- mã lỗi: VT ×3 (1 sinh viên, tên "Thì động từ", nhóm GRA) → ART → SP; không có GOOD;
+- lọc lớp: chỉ 1 sinh viên, phần chưa có dữ liệu trả `null`, `topErrors` rỗng;
+- bài của GV khác → 404, lớp của GV khác → 400, sinh viên → 403.
+
+### 2026-10-22 · B8c — Kết quả học tập của một sinh viên (giáo viên xem + sinh viên tự xem)
+**Người dùng chốt:** tập trung hoàn thiện **backend trước**, frontend để sau (đã sửa "thứ tự đề xuất" trong PLAN).
+**Tách lại phần còn của B8 (báo trước khi làm):** B8c một sinh viên + kết quả học tập · B8d thống kê lớp + xếp hạng · B8e xuất Excel.
+
+**Đã làm**
+- [StudentStatsService](backend/src/main/java/com/ltmtu/ielts/stats/StudentStatsService.java) + DTO [StudentStatsDtos](backend/src/main/java/com/ltmtu/ielts/stats/dto/StudentStatsDtos.java), một cách tính cho hai API:
+  - `GET /api/teacher/stats/students/{id}` (FR-64) — trên **các bài của giáo viên**. Sinh viên phải thuộc giáo viên (ở lớp của mình / được giao trực tiếp / có bài làm trong bài của mình), nếu không → 404;
+  - `GET /api/student/results` (UC-28, [StudentStatsController](backend/src/main/java/com/ltmtu/ielts/stats/StudentStatsController.java)) — trên **các bài sinh viên được thấy**, lấy qua cửa `StudentAssignmentAccess.visibleAssignments` (BR-04, BR-05);
+  - nội dung: số phần đã nộp / nộp muộn / đã trả, band trung bình các bài đủ phần, band từng bài và từng phần theo thời gian, trung bình theo mã tiêu chí, **hồ sơ lỗi** (10 mã hay gặp);
+  - 4 câu SQL cố định.
+- `StatsSql` tổng quát hơn: `latestReturned(where)` dựng CTE cho một bài hoặc nhiều bài; `TOP_ERRORS` + `ERROR_COUNT` dùng chung cho thống kê bài và hồ sơ lỗi; tên mã lỗi tra theo **bộ mã của người chấm** (`grader_id`), giống màn kết quả (A.8), thay cho `:teacherId` ở B8b. Thêm `StatsSql.instant`.
+- [StatsMath](backend/src/main/java/com/ltmtu/ielts/stats/StatsMath.java) (class thuần): trung bình 2 chữ số, phân bố band — chuyển từ `AssignmentStatsService` sang để dùng chung.
+- Tài liệu: `docs/05` A.6 + A.8 (mục "Kết quả học tập — `StudentStats`"), `stats.http`, `student.http`; xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- Hai API dùng **chung một dạng dữ liệu** `StudentStats`; khác nhau ở tập bài tập.
+- Phía sinh viên chỉ tính bài **đang được thấy**: nếu rời lớp, kết quả của bài giao qua lớp đó cũng không còn trong trang này (đúng như việc không mở được bài đó nữa, BR-04).
+- "Band theo thời gian" dùng **thời điểm trả bài**, không dùng hạn nộp, vì band chỉ có từ lúc trả.
+- Trung bình theo tiêu chí gộp theo **mã** (TA, TR, CC, LR, GRA) qua mọi bài; tiêu chí tự định nghĩa không có mã nên không tính.
+
+**Kiểm tra:** `mvn test`: **407 lượt pass** (403 + 4). `StudentStatsIntegrationTest` (4), dữ liệu: X1 (đủ 2 phần), X2 (giao qua lớp, nộp muộn, 1 phần đã trả + 1 phần chấm nháp 9), X3 của giáo viên khác:
+- giáo viên: chỉ X1, X2; nộp 4 / muộn 2 / đã trả 3; band TB 6.17 (chỉ X1 đủ phần, Task 2 trọng số 2); X2 chưa đủ phần → `band` null; band từng phần 5.5 → 6.5 → 4.0 theo thời gian; TA 5.00 / TR 7.00 / CC 5.50; mã lỗi VT ×3, ART (không có GOOD, không có mã của X3);
+- sinh viên: thêm X3; band TB 7.08; thứ tự bài X1 → X3 → X2 theo lúc trả; **điểm nháp 9 không xuất hiện (BR-13)**; mã lỗi thêm SP;
+- sinh viên mới chưa có bài → số liệu rỗng, `null`;
+- sinh viên không thuộc giáo viên / id của giáo viên / giáo viên khác → 404; sai vai trò → 403.
+
+### 2026-10-22 · B8d — Thống kê lớp và bảng xếp hạng
+**Người dùng yêu cầu làm liền các bước B8d → 13** (không dừng giữa các bước); mỗi bước vẫn chạy test, cập nhật tài liệu, ghi nhật ký như cũ.
+
+**Đã làm**
+- `GET /api/teacher/stats/classes/{id}` (FR-65) — [ClassStatsService](backend/src/main/java/com/ltmtu/ielts/stats/ClassStatsService.java), DTO [ClassStatsDtos](backend/src/main/java/com/ltmtu/ielts/stats/dto/ClassStatsDtos.java):
+  - các bài giao cho lớp: số thành viên nộp đủ, tỉ lệ, số người được trả đủ, band trung bình;
+  - **bảng xếp hạng** thành viên theo band trung bình các bài đủ phần, xếp hạng kiểu thi đấu (1, 1, 3), người chưa có band không có hạng, đứng cuối;
+  - band trung bình của cả lớp;
+  - kiểm tra sở hữu qua cửa `ClassroomService.detail` (lớp của người khác → 404); 4 câu SQL cố định, dùng lại `StatsSql.latestReturned`, `StatsMath`.
+- Tài liệu: `docs/05` A.6 (mục "Thống kê lớp" + ví dụ), `stats.http`.
+
+**Khác so với tài liệu / quyết định**
+- Chỉ tính bài **giao theo lớp** và **thành viên hiện tại**: bài giao trực tiếp cho một vài người trong lớp không tính, người được giao trực tiếp mà không ở lớp không tính. Lý do: so sánh trong lớp phải trên cùng một bộ bài.
+- Hạng tính trên band trung bình đã làm tròn 2 chữ số (bằng nhau ở 2 chữ số thì cùng hạng).
+
+**Kiểm tra:** `mvn test`: **412 lượt pass** (407 + 5).
+- `ClassStatsIntegrationTest` (3): lớp 4 người + 1 người giao trực tiếp ngoài lớp + 1 bài chỉ giao cá nhân. Bài 1: nộp đủ 3/4 (có người nộp muộn), trả đủ 2, TB 6.67; bài 2: TB 4.50; lớp TB 5.58; xếp hạng Q 6.67 (1) → P 5.83 (2) → R 4.00 (3, 1 phần muộn) → U không hạng. Điểm 9 của người ngoài lớp và bài cá nhân không ảnh hưởng. Lớp của GV khác → 404, sinh viên → 403.
+- `ClassRankingTest` (2, unit): cùng band cùng hạng, hạng sau nhảy (1, 2, 2, 4); chưa có band đứng cuối theo mã SV.
+
+### 2026-10-22 · B8e — Xuất bảng điểm Excel (hoàn tất bước 8)
+**Đã làm**
+- `GET /api/teacher/assignments/{id}/export?classId` (UC-19, FR-66) — [GradebookExportService](backend/src/main/java/com/ltmtu/ielts/stats/GradebookExportService.java) + class thuần dựng file [GradebookWorkbook](backend/src/main/java/com/ltmtu/ielts/stats/GradebookWorkbook.java) (Apache POI, đã có sẵn):
+  - sheet "Bảng điểm": STT, Mã SV (ô dạng chữ), Họ tên; mỗi phần: điểm từng tiêu chí, band phần, trạng thái tiếng Việt (+ "(muộn)"); band cả bài, số phần nộp muộn; cố định 3 cột đầu + dòng tiêu đề;
+  - sheet "Thông tin": tên bài, giờ xuất / hạn nộp theo giờ Việt Nam, phạm vi, ghi chú cách tính;
+  - danh sách sinh viên + trạng thái lấy lại từ `ProgressService` (cùng tập sinh viên, cùng thứ tự với ma trận); điểm lấy bằng 1 câu SQL qua `StatsSql.LATEST_RETURNED`.
+- Tài liệu: `docs/05` A.6 (mục "Xuất bảng điểm"), `stats.http`; xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- Điểm lấy từ **lần nộp gần nhất đã được trả** (giống màn kết quả sinh viên và các thống kê), nên sinh viên đã nộp bản sửa mà chưa chấm vẫn có điểm của lần trả trước, trạng thái ghi "Đã nộp". Ma trận tiến độ thì chỉ hiện band của **version hiện tại** — hai màn có mục đích khác nhau (theo dõi vs. bảng điểm).
+- Ô chưa có điểm **để trống**, không ghi 0 — để không lẫn với "Chấm 0".
+- Thêm cột điểm từng tiêu chí (tài liệu cũ chỉ ghi "bảng điểm").
+
+**Kiểm tra:** `mvn test`: **415 lượt pass** (412 + 3). `GradebookExportIntegrationTest` (3) tải file thật qua API rồi mở lại bằng POI:
+- header, kiểu nội dung, tên file; đúng 12 cột; người đã trả đủ (band bài 7.0, Task 2 hiện 7 dù đang chờ chấm bản sửa); người "Chấm 0" ghi 0 và phần nộp muộn ghi "Đã nộp (muộn)", band bài trống; người chưa làm: ô trống, "Chưa làm";
+- sheet "Thông tin" có tên bài, số sinh viên;
+- lọc lớp: chỉ thành viên, tên file có mã lớp; bài của GV khác → 404, sinh viên → 403.
+
+### 2026-10-22 · Bước 11 — Server TCP import sinh viên + admin-cli (Mức 2)
+**Đã làm**
+- **Server** trong backend, gói `tcpgateway` (docs/05 phần C):
+  - [TcpImportServer](backend/src/main/java/com/ltmtu/ielts/tcpgateway/TcpImportServer.java): `ServerSocket` + một luồng `accept()` + `ExecutorService` cỡ cố định; `Semaphore` giới hạn số phiên, hết chỗ → `ERR 503` ngay; bật / tắt theo `SmartLifecycle`;
+  - [TcpImportSession](backend/src/main/java/com/ltmtu/ielts/tcpgateway/TcpImportSession.java): máy trạng thái C.5 (CONNECTED → AUTHENTICATED → nhận CSV → xử lý); `AUTH` dùng chung `AccessTokenVerifier` với REST / WebSocket (phiên chưa thu hồi, tài khoản còn hoạt động; STUDENT hoặc phải đổi mật khẩu → 403); timeout đọc + giới hạn thời gian phiên → `ERR 408`; lỗi 400 khi đã xác thực thì giữ kết nối;
+  - class thuần để unit test: [TcpCommand](backend/src/main/java/com/ltmtu/ielts/tcpgateway/TcpCommand.java) (phân tích lệnh), [FrameReader](backend/src/main/java/com/ltmtu/ielts/tcpgateway/FrameReader.java) (đọc dòng tới `\n` + đúng `n` byte CSV).
+- `StudentImportService` tách lõi xử lý dòng dùng chung cho 2 cửa: `importFile` (HTTP, giữ file tài khoản tải một lần) và mới `requireImportableClass` + `importCsv` (TCP: tra lớp theo mã, giáo viên chỉ lớp của mình → 403, admin mọi lớp; tài khoản mới trả thẳng cho client, không lưu).
+- Cấu hình `app.tcp` (`enabled`, `port` 9090, `threads` 16, `read-timeout` 30s, `session-timeout` 5m, `max-payload` 5 MB) → `AppProperties.Tcp`; profile test: cổng 0, 3 luồng, timeout 2s.
+- **Client** [admin-cli/](admin-cli/README.md) — project Maven riêng, Java 21 thuần, không thư viện ngoài: lệnh `import` và `ping`; đăng nhập qua `POST /api/auth/login` (hoặc `--token`), nhập mật khẩu ẩn bằng `Console`; thanh tiến trình theo `PROGRESS`; lưu `CRED` ra CSV có BOM; mã thoát 0 / 1 / 2.
+- Tài liệu: `docs/05` C.1 + C.7 (viết lại theo cách cài), `docs/03` SD-04 (vẽ lại: kiểm tra lớp trước khi nhận CSV, nhánh 503), `docs/02` UC-12 (lệnh mới, ngoại lệ 404 / 413 / 415 / 408 / 503), `admin-cli/README.md`, `CLAUDE.md` (bản đồ thư mục + lệnh), coding rules mục TCP; xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- **Giới hạn phiên bằng `Semaphore`** thay vì để pool tự từ chối: với `SynchronousQueue`, luồng vừa xong việc chưa kịp quay lại chờ thì kết nối mới vẫn bị 503 oan. `Semaphore` nhả chỗ đúng lúc phiên kết thúc nên kết quả chắc chắn.
+- **Kiểm tra lớp và quyền ngay khi nhận dòng `IMPORT`**, trước khi đọc phần CSV (SD-04 cũ vẽ sau khi nhận dữ liệu) — từ chối sớm, không phải nhận cả file.
+- Qua TCP chỉ nhận **CSV UTF-8** (đúng C.1); file Excel dùng giao diện web.
+- Từ khoá lệnh không phân biệt hoa thường; mã lớp cũng vậy.
+- Ghi audit log (IP client) để bước 12, khi có bảng `audit_logs`.
+
+**Kiểm tra:** `mvn test` backend: **440 lượt pass** (415 + 25). `admin-cli`: `mvn package` → 6 test pass, tạo `target/admin-cli.jar`.
+- `TcpCommandTest` (14) + `FrameReaderTest` (4): cú pháp đúng / sai, dòng quá dài, CRLF, chữ có dấu, thiếu byte.
+- `TcpImportIntegrationTest` (7, socket thật, cổng ngẫu nhiên): phiên đầy đủ (PROGRESS 1/4…4/4, DONE, ERRLINE, 2 CRED, END; tài khoản mới đăng nhập được bằng mật khẩu tạm; email gửi đúng người; lớp có 3 thành viên); token sai 401 / sinh viên 403 / phải đổi mật khẩu 403 / lệnh trước AUTH 400 (đều đóng); lỗi 400 sau AUTH giữ kết nối, QUIT → BYE; lớp người khác 403, không có lớp 404, quá 5 MB 413, thiếu cột 415; admin import lớp bất kỳ; im lặng → 408; 3 phiên đang chạy → kết nối thứ 4 nhận 503, phiên xong thì nhận lại.
+- `ImportClientTest` (2, server giả) + `OptionsTest` (4) trong admin-cli.
+- **Chạy thật đầu-cuối**: bật backend (profile dev) → `admin-cli ping` (PONG 0.4 ms) → `admin-cli import` 3 dòng vào lớp `DEMO-36D7` bằng tài khoản admin: tạo 2, lỗi 1, thanh tiến trình, file tài khoản; lớp không tồn tại → "Server từ chối (404)", mã thoát 1. File tài khoản thử nghiệm đã xoá.
+
+**Lỗi gặp khi làm:** test 408 không nhận được `ERR` vì `try (socket)` đóng socket **trước** khi khối `catch` gửi lỗi. Đã sửa: đóng socket trong `finally` (ghi vào coding rules).
+**Thay đổi dữ liệu dev:** DB `ielts` có thêm 2 sinh viên `CLI…1`, `CLI…2` trong lớp `DEMO-36D7` (từ lần chạy thử).
+
+### 2026-10-22 · Bước 12 — Bảo mật mạng: nhật ký hệ thống, giới hạn tần suất, nginx HTTPS/WSS
+**Đã làm**
+- **Nhật ký hệ thống** (UC-07, FR-08) — module mới `audit/` ở tầng dưới cùng (chỉ phụ thuộc `common`):
+  - migration [V6__audit_logs.sql](backend/src/main/resources/db/migration/V6__audit_logs.sql), entity `AuditLog` (cột `detail` JSONB ghi bằng `@ColumnTransformer(write = "?::jsonb")`), enum `AuditAction`;
+  - `AuditService.record` (cùng transaction với thao tác) / `recordAlone` (transaction riêng, cho việc thất bại vẫn phải lưu và cho TCP); IP lấy từ filter `RequestIp` (ThreadLocal), service không đọc `HttpServletRequest`;
+  - ghi ở: đăng nhập (`LOGIN`, `LOGIN_FAILED` kèm lý do, `LOGIN_BLOCKED`), admin (`CREATE_TEACHER`, `LOCK_USER`, `UNLOCK_USER`, `RESET_PASSWORD`), import HTTP (`IMPORT_STUDENTS`) và TCP (`TCP_IMPORT`, IP của socket), phát hành bài, trả bài, yêu cầu sửa. `detail` chỉ có số liệu tóm tắt;
+  - `GET /api/admin/audit-logs?actorId&action&ip&from&to&page&size` ([AdminAuditController](backend/src/main/java/com/ltmtu/ielts/audit/AdminAuditController.java)): mới nhất trước, kèm tên người thực hiện, `ip` lọc theo tiền tố.
+- **Giới hạn tần suất trong bộ nhớ** — class thuần [SlidingWindowLimiter](backend/src/main/java/com/ltmtu/ielts/common/SlidingWindowLimiter.java) (cửa sổ trượt, theo `Clock`, tự dọn khoá hết hạn khi quá 10 000 khoá):
+  - [LoginThrottle](backend/src/main/java/com/ltmtu/ielts/user/LoginThrottle.java) (NFR-09): 5 lần sai / 5 phút, đếm **riêng theo IP và theo tài khoản** → `429 RATE_LIMITED` "… thử lại sau N phút"; đăng nhập đúng chỉ xoá bộ đếm của tài khoản;
+  - [RemindThrottle](backend/src/main/java/com/ltmtu/ielts/assignment/RemindThrottle.java): nhắc thủ công 3 lần / 10 phút cho mỗi (giáo viên, bài); yêu cầu sai không bị tính;
+  - cấu hình `app.rate-limit`; lớp nền test xoá bộ đếm trước mỗi test.
+- **nginx HTTPS/WSS** — [deploy/nginx/default.conf](deploy/nginx/default.conf): HTTP → 301 HTTPS; TLS 1.2 / 1.3, HTTP/2; `/api`, `/uploads`, `/ws` (Upgrade, giữ kết nối 1 giờ) → backend, `/` → frontend; header bảo mật cơ bản; `X-Forwarded-*`. Script [gen-cert.sh](deploy/nginx/gen-cert.sh) tạo chứng chỉ tự ký (SAN localhost, 127.0.0.1) vào `deploy/nginx/certs/` (đã thêm vào `.gitignore`). Profile `docker` bật `server.forward-headers-strategy: framework` để IP trong nhật ký / rate limit là IP thật sau nginx.
+- `AdminUserService.createTeacher` / `unlock` nhận thêm admin đang thao tác (để ghi người thực hiện).
+- Tài liệu: `docs/04` (lộ trình migration tách V6 / V7 / V8, Mức 3 → V9+; mô tả đủ cột `audit_logs`), `docs/05` (mã 429, mục giới hạn đăng nhập ở A.2, A.3 nhật ký, A.6 nhắc thủ công), `docs/03` SD-01 (nhánh 429 + ghi nhật ký), `docs/02` UC-01 E3, coding rules (sơ đồ phụ thuộc có `audit`, quy tắc nhật ký + rate limit, dòng 429 trong bảng mã HTTP), `PLAN.md`, `CLAUDE.md`, `admin.http`; xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- **Tách migration Mức 2 theo bước** (V6 audit, V7 chat, V8 `draft_version`) thay vì một V6 gộp: mỗi bước tự chứa bảng + entity của mình đúng quy tắc mục 9; Mức 3 dời sang V9 trở đi (đã sửa các chỗ ghi "(V6)" trong docs/04, gồm cả cột chế độ thi vốn là Mức 3).
+- `action` **không có CHECK** trong DB (danh sách mở theo enum trong code) — ghi rõ lý do trong migration.
+- Thêm hành động `LOGIN_BLOCKED`, `UNLOCK_USER`, `RESET_PASSWORD`, `CREATE_TEACHER`, `REQUEST_REVISION` so với danh sách mẫu.
+- Nhắc thủ công: chọn **3 lần / 10 phút cho mỗi (giáo viên, bài)** (tài liệu chưa có con số).
+- Cổng TCP 9090 không đi qua nginx (TCP thuần, không phải HTTP) — docker compose mở thẳng cổng của backend ở bước 13.
+- Ảnh Wireshark so sánh HTTP / HTTPS (tiêu chí nghiệm thu của PLAN) cần người dùng tự chụp khi chạy docker compose.
+
+**Kiểm tra:** `mvn test`: **451 lượt pass** (440 + 11). `gen-cert.sh` chạy được, chứng chỉ có SAN đúng; `git status` không thấy `certs/`.
+- `SlidingWindowLimiterTest` (2, unit): chặn khi đủ lần, mở lại khi lần cũ ra khỏi cửa sổ, `retryAfter` đúng, `reset` / `clear`.
+- `RateLimitIntegrationTest` (5): sai 5 lần một tài khoản → lần 6 bị 429 dù đúng mật khẩu và khác IP, sau 5 phút đăng nhập được; một IP sai 5 lần trên nhiều tài khoản → IP đó bị chặn, IP khác vẫn vào; sai 4 + đúng 1 + sai 4 → chưa chặn; nhắc thủ công lần 4 → 429, yêu cầu sai không tính, sau 10 phút nhắc lại được; API khác không bị ảnh hưởng.
+- `AuditIntegrationTest` (4): đăng nhập sai / bị chặn / thành công đều có nhật ký (IP, tên đăng nhập, tên người, **không có mật khẩu**); import HTTP ghi số liệu nhưng **không có mã SV / tên**; khoá / mở khoá; lọc thời gian, `from ≥ to` → 400, không phải admin → 403; thao tác lỗi (phát hành bài không tồn tại) → không có nhật ký.
+- `TcpImportIntegrationTest` thêm kiểm tra nhật ký `TCP_IMPORT` có IP `127.0.0.1` và số liệu.
+
+### 2026-10-22 · Bước 9a — Một tài khoản một phiên, online, tiến độ live (Mức 2)
+**Cách tách bước 9:** 9a (một phiên + `FORCE_LOGOUT`, online / đang mở phần nào, tiến độ live, phân quyền kênh `/topic`) · 9b (chat theo bài nộp và theo lớp, migration V7).
+
+**Đã làm**
+- **Một tài khoản một phiên (FR-06):** [SessionRevoker](backend/src/main/java/com/ltmtu/ielts/user/SessionRevoker.java) là chỗ duy nhất thu hồi hàng loạt phiên (đăng nhập mới `NEW_LOGIN`, đổi mật khẩu, khoá, đặt lại mật khẩu, dùng lại refresh token cũ) và phát `UserEvents.SessionsRevoked`. Bật / tắt bằng `app.session.single-login` (mặc định bật).
+  - Module mới `realtime`: [WsSessionRegistry](backend/src/main/java/com/ltmtu/ielts/realtime/WsSessionRegistry.java) giữ các kết nối WebSocket (decorator ở tầng transport) và phiên đăng nhập của từng kết nối; [SessionKickListener](backend/src/main/java/com/ltmtu/ielts/realtime/SessionKickListener.java) (sau commit) gửi `FORCE_LOGOUT` **riêng tới từng kết nối của phiên cũ** (theo `simpSessionId`) rồi đóng kết nối sau 0,5 giây.
+- **Phân quyền kênh `/topic` theo kiểu đảo phụ thuộc:** interface [StompAccessRule](backend/src/main/java/com/ltmtu/ielts/security/StompAccessRule.java) ở `security`; `StompAuthInterceptor` hỏi các luật; [AssignmentChannelRule](backend/src/main/java/com/ltmtu/ielts/realtime/AssignmentChannelRule.java): chỉ giáo viên chủ bài nghe `progress` / `presence`, chỉ sinh viên gửi `/app/presence/viewing`. Thêm `TeacherAssignmentAccess.isOwned`.
+- **Tiến độ live (FR-61):** [ProgressPushListener](backend/src/main/java/com/ltmtu/ielts/realtime/ProgressPushListener.java) đẩy sau commit khi lưu nháp lần đầu (sự kiện mới `SubmissionEvents.DraftStarted`), nộp, trả bài, yêu cầu sửa.
+- **Online / đang mở phần nào (FR-54):** [PresenceService](backend/src/main/java/com/ltmtu/ielts/realtime/PresenceService.java) giữ trong bộ nhớ; kết nối đầu / mất kết nối cuối báo tới kênh của mọi bài sinh viên được giao; `/app/presence/viewing` ([PresenceController](backend/src/main/java/com/ltmtu/ielts/realtime/PresenceController.java)) kiểm tra bài / phần sinh viên được thấy, sai thì bỏ qua. Ma trận tiến độ REST có thêm `online`, `viewingPartId` mỗi hàng.
+- Test: helper [StompTestClient](backend/src/test/java/com/ltmtu/ielts/support/StompTestClient.java) dùng chung cho test WebSocket.
+- Tài liệu: `docs/05` B.2 (đánh dấu kênh đã cài, mục "Một tài khoản một phiên", "Tiến độ live và online", payload `progress` thêm `submissionId`), A.6 (`online`, `viewingPartId`); `docs/03` SD-01; `docs/02` UC-01 bước 4, UC-16 bước 3; coding rules mục 10.
+
+**Khác so với tài liệu / quyết định**
+- `FORCE_LOGOUT` gửi **theo từng kết nối** của phiên bị thu hồi (không gửi chung cho cả tài khoản), nên thiết bị vừa đăng nhập không nhận nhầm; server **chủ động đóng** kết nối cũ, không chỉ dựa vào client.
+- Áp dụng cho mọi kiểu thu hồi (đổi mật khẩu, khoá, đặt lại mật khẩu, nghi đánh cắp token), không chỉ đăng nhập mới.
+- Profile test tắt `single-login` (test lấy token nhiều lần cho cùng một người); lớp `SingleSessionIntegrationTest` bật riêng bằng `@TestPropertySource`.
+- Lưu chấm nháp (`GRADED`) **không** đẩy tiến độ live — chỉ giáo viên đó thấy, ở màn chấm.
+- Bài / phần sinh viên không được thấy trong `/app/presence/viewing` → bỏ qua im lặng (không trả lỗi để không lộ bài tồn tại).
+
+**Kiểm tra:** `mvn test`: **458 lượt pass** (451 + 7), gồm các test WebSocket cũ (5) vẫn pass.
+- `RealtimeIntegrationTest` (4, server thật): giáo viên chủ bài nhận DRAFT (lưu nháp lần đầu; lần sau không đẩy) → SUBMITTED → RETURNED 6.0; sinh viên kết nối → online, mở phần → `viewingPartId`, ma trận REST cũng thấy, ngắt → offline; sinh viên ngoài bài / phần sai → không có tin; giáo viên khác và sinh viên SUBSCRIBE kênh bài → ERROR, giáo viên gửi `/app/presence/viewing` → ERROR.
+- `SingleSessionIntegrationTest` (3, bật `single-login`): đăng nhập máy 2 → máy 1 nhận `FORCE_LOGOUT` `NEW_LOGIN` và bị đóng kết nối, token cũ REST 401 và không CONNECT lại được, máy 2 không nhận gì; admin khoá → `ACCOUNT_LOCKED`; đổi mật khẩu → phiên đang đổi không bị đá.
+
+### 2026-10-22 · Bước 9b — Chat theo bài nộp và theo lớp (Mức 2, hoàn tất bước 9)
+**Đã làm**
+- Migration [V7__chat.sql](backend/src/main/resources/db/migration/V7__chat.sql): `chat_messages` (CHECK loại kênh khớp đúng một khoá ngoại, UNIQUE `(sender_id, client_msg_id)`, index một phần theo kênh), `chat_read_markers`.
+- Module mới `chat/`:
+  - entity `ChatMessage` (giữ id dạng số, không quan hệ entity sang module khác), `ChatReadMarker` (`@EmbeddedId`); upsert "đã đọc" bằng `ON CONFLICT … DO UPDATE SET … GREATEST(…)` — mốc chỉ tăng;
+  - [ChatQueries](backend/src/main/java/com/ltmtu/ielts/chat/ChatQueries.java): truy vấn chỉ-đọc — thành viên kênh, lịch sử, mốc đã đọc của người khác, danh sách kênh kèm tin cuối và số chưa đọc (1 câu SQL);
+  - [ChatService](backend/src/main/java/com/ltmtu/ielts/chat/ChatService.java): gửi (bỏ khoảng trắng hai đầu, 1–4000 ký tự; cùng `clientMsgId` không lưu lần hai, phát lại tin đã lưu), "đang gõ" (không lưu, bỏ bớt nếu dày hơn 2 giây), "đã xem"; phát tin **sau commit**;
+  - REST [ChatController](backend/src/main/java/com/ltmtu/ielts/chat/ChatController.java): `GET /api/chat/channels`, `GET /api/chat/{channelId}/messages?beforeId&size`;
+  - STOMP [ChatSocketController](backend/src/main/java/com/ltmtu/ielts/chat/ChatSocketController.java): `/app/chat/{id}/send|typing|read`; lỗi dữ liệu → riêng người gửi trên `/user/queue/errors` (`@MessageExceptionHandler` + `@SendToUser`);
+  - [ChatChannelRule](backend/src/main/java/com/ltmtu/ielts/chat/ChatChannelRule.java): chỉ thành viên kênh SUBSCRIBE / SEND.
+- `StompAuthInterceptor` cho SUBSCRIBE thêm `/user/queue/errors`.
+- Tài liệu: `docs/05` A.9 (mục "Chat") + B.2 (đánh dấu ✅, thêm `/user/queue/errors`, `MESSAGE` có `channelId`), `docs/04` (V7 ✅, mô tả ràng buộc), `docs/03` SD-12 (vẽ lại: kiểm quyền ở interceptor, lỗi riêng người gửi, chống trùng, phát sau commit), `docs/02` UC-29 E2–E3, coding rules (module `chat`, luật kênh không được phụ thuộc `SimpMessagingTemplate`), `PLAN.md`, [chat.http](backend/http/chat.http); xuất lại Word (gồm cả SD-01 sửa ở 9a).
+
+**Khác so với tài liệu / quyết định**
+- Chat là **module riêng `chat/`** (tài liệu cũ gộp vào `realtime`), vì phụ thuộc bài nộp + lớp + người dùng; `realtime` giữ online / tiến độ / một phiên.
+- `GET …/messages` trả `{messages, reads}` (tài liệu cũ chỉ ghi "lịch sử") để client hiện "Đã xem" ngay khi mở kênh; tin **mới nhất trước**.
+- Danh sách kênh: lớp luôn có (kể cả chưa có tin); kênh bài nộp **chỉ hiện khi đã có tin** (không thì giáo viên sẽ có hàng trăm kênh rỗng).
+- Thêm kênh `/user/queue/errors` cho lỗi của lệnh STOMP (tài liệu cũ chưa có cách báo lỗi khi gửi tin).
+
+**Kiểm tra:** `mvn test`: **462 lượt pass** (458 + 4). `ChatIntegrationTest` (4, WebSocket thật):
+- kênh bài nộp: sinh viên gửi → cả hai bên nhận (đã bỏ khoảng trắng, đúng tên người gửi); gửi lại cùng `clientMsgId` → cùng id, lịch sử vẫn 1 tin; danh sách kênh của giáo viên: tiêu đề "bài – phần · tên SV", 1 chưa đọc, xem trước tin cuối; giáo viên "đang gõ" → sinh viên nhận, lần thứ hai ngay sau bị bỏ; giáo viên "đã xem" → sinh viên nhận READ, số chưa đọc về 0, lịch sử phía sinh viên có mốc đã đọc của giáo viên;
+- người ngoài kênh SUBSCRIBE / SEND → ERROR, xem lịch sử → 404; mã kênh sai / lớp không tồn tại → 404;
+- kênh lớp: lịch sử mới nhất trước, `beforeId` tải tiếp đúng; kênh lớp có trong danh sách kể cả khi chưa có tin; 3 chưa đọc;
+- tin rỗng / 4001 ký tự → lỗi `VALIDATION_ERROR` trên `/user/queue/errors`, không phát, không lưu.
+
+**Lỗi gặp khi làm:**
+- Vòng phụ thuộc bean `ChatChannelRule → ChatService → SimpMessagingTemplate → cấu hình WebSocket → StompAuthInterceptor → các luật`. Sửa: luật chỉ dùng `ChatQueries` (đã ghi vào coding rules).
+- Lúc ghi nhật ký, script ghi PROGRESS chạy với nội dung cũ nên chèn trùng mục 9a và lặp các dòng tồn đọng; đã dọn lại (mục tồn đọng đã xong ở bước 12 được đánh dấu xong).
+
+### 2026-10-23 · Bước 10 — Khoá lạc quan bản nháp, 409 DRAFT_CONFLICT (Mức 2, phần backend)
+**Đã làm**
+- Migration [V8__draft_version.sql](backend/src/main/resources/db/migration/V8__draft_version.sql): `submissions.draft_version INT NOT NULL DEFAULT 0 CHECK (≥ 0)`; entity `Submission.draftVersion`.
+- `PUT /api/student/parts/{partId}/draft {content, draftVersion}`: khoá dòng (`FOR UPDATE`, có sẵn) rồi so số; lệch → `409 DRAFT_CONFLICT` kèm `data: {serverContent, draftVersion, savedAt}` (record `DraftConflict`); lưu thành công thì tăng số và trả `{savedAt, wordCount, draftVersion}`. `GET …/draft` trả thêm `draftVersion`. Bỏ trống `draftVersion` = không kiểm tra (giữ hành vi Mức 1); số âm → 400.
+- `ApiException` có thêm trường `data` (tuỳ chọn) → `GlobalExceptionHandler` đưa vào `data` của body lỗi; `ErrorResponse.of(…, data)`.
+- Lần lưu nháp đầu chạy song song (chưa có dòng bài làm, vi phạm UNIQUE) giờ trả `DRAFT_CONFLICT` thay vì `VERSION_CONFLICT` (nộp bài vẫn là `VERSION_CONFLICT`).
+- `GET /api/time` (SD-11) đã có từ trước — thêm test.
+- Test: dọn kết nối STOMP trong `WebSocketIntegrationTest` và `StompTestClient` chịu được trường hợp server vừa đóng kết nối (xem "Lỗi gặp").
+- Tài liệu: `docs/05` (mã `DRAFT_CONFLICT`, bảng A.8, mục "Khoá lạc quan bản nháp"), `docs/03` SD-06, `docs/04` (V8 ✅, cột `draft_version`), `student.http`; xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- `draftVersion` **không bắt buộc**: bỏ trống thì lưu đè như Mức 1 (frontend chưa có, client cũ / công cụ thử vẫn dùng được).
+- Bản trên server trả trong `data` của **body lỗi** chuẩn (không tạo dạng body riêng cho 409).
+- Phần IndexedDB, hộp thoại chọn bản, đồng hồ theo giờ server là **frontend** — để lúc làm giao diện (người dùng chốt làm backend trước).
+
+**Kiểm tra:** `mvn test`: **466 lượt pass** (462 + 4). `DraftConflictIntegrationTest` (4):
+- lưu với 0 → 1 → 2; tab khác gửi 1 → 409 kèm "Tab A lần 2", số 2, `savedAt`; GET vẫn là bản tab A; chọn bản tab B và gửi số 2 → lưu được (3);
+- lần đầu gửi số 5 → 409 (bản rỗng, số 0); bỏ trống số → lưu được, vẫn tăng; số âm → 400;
+- **2 lần lưu đồng thời cùng số → đúng 1 thành công, 1 bị 409**, số cuối là 2;
+- `GET /api/time` không cần đăng nhập, đúng giờ server.
+- `StudentSubmissionIntegrationTest` (10) cũ vẫn pass.
+
+**Lỗi gặp khi chạy test:** một lượt `mvn test` có 1 lỗi ở `WebSocketIntegrationTest.forbiddenDestinations` — không phải lỗi sản phẩm: sau khung ERROR server đóng kết nối, client chưa kịp cập nhật `isConnected()` nên `disconnect()` ở `@AfterEach` ném lỗi. Đã cho phần dọn dẹp bỏ qua lỗi này; chạy lại toàn bộ: 466 pass.
+
+### 2026-10-23 · Bước 13 — Docker hoá toàn bộ hệ thống (Mức 2)
+**Đã làm**
+- [docker-compose.yml](docker-compose.yml) ở thư mục gốc — 5 service: `postgres:18-alpine` (volume `pgdata`, healthcheck `pg_isready`), `mailpit` (UI 8025), `backend` (build `./backend`, profile `docker`, volume `uploads`, mở cổng **9090** cho TCP, healthcheck `/actuator/health` bằng bash `/dev/tcp` vì ảnh JRE không có curl), `frontend` (build `./frontend`), `nginx:1.27-alpine` (80 / 443). Backend 8080 và PostgreSQL **không mở ra ngoài**.
+- [backend/Dockerfile](backend/Dockerfile): 2 giai đoạn (Maven + Temurin 21 → JRE 21), tải thư viện trước để cache, chạy bằng user thường; [frontend/Dockerfile](frontend/Dockerfile): Node 22, `NEXT_PUBLIC_*` truyền qua build args (API gọi tương đối `/api…` sau nginx, WS `wss://localhost/ws`); `.dockerignore` cho cả hai.
+- [.env.example](.env.example): `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_PASSWORD`, `PUBLIC_URL`, `PUBLIC_WS_URL`, `ANTHROPIC_API_KEY`; compose báo lỗi rõ nếu thiếu biến bắt buộc.
+- nginx: tách [proxy_headers.conf](deploy/nginx/proxy_headers.conf) và `include` trong **từng** `location` (xem "Lỗi gặp"); header bảo mật của nginx chỉ áp cho trang web (API đã có header của Spring Security).
+- `admin-cli` thêm cờ `--insecure` để đăng nhập qua `https://localhost` có chứng chỉ tự ký (in cảnh báo khi bật).
+- Hướng dẫn chạy [deploy/README.md](deploy/README.md); tài liệu: `docs/01` mục 7 (triển khai, PostgreSQL 18), `CLAUDE.md` (bản đồ thư mục + lệnh Docker), coding rules (biến môi trường mới phải thêm vào compose + `.env.example`), `admin-cli/README.md`; xuất lại Word.
+
+**Khác so với tài liệu / quyết định**
+- Server TCP 9090 mở thẳng từ container backend, không qua nginx (TCP thuần, không phải HTTP) — đúng ghi chú ở bước 12.
+- `ADMIN_PASSWORD` chỉ dùng khi tạo admin lần đầu; admin bị **bắt đổi mật khẩu** ngay lần đăng nhập đầu (BR-02) — ghi rõ trong `deploy/README.md`.
+- Prometheus / Grafana (tuỳ chọn trong docs/01) chưa thêm.
+
+**Kiểm tra** (Docker Desktop 29.9, chạy thật trên máy):
+- `docker compose build` (backend + frontend) và `docker compose up --build -d`: cả 5 container lên, backend / postgres `healthy`; DB trong container chạy đủ migration V1 → V8; `nginx -t` hợp lệ.
+- `http://localhost` → 301 sang HTTPS; `https://localhost/api/time` qua nginx; `https://localhost/` → trang `/dang-nhap` (200); **WebSocket bắt tay qua `wss://localhost/ws` → 101**; Mailpit 200; `localhost:8080` **không** truy cập được từ ngoài.
+- Kịch bản đầu-cuối qua container (script tạm, không lưu mật khẩu): admin đăng nhập HTTPS → bị bắt đổi mật khẩu → tạo giáo viên → giáo viên đổi mật khẩu, tạo lớp → **`admin-cli import --api https://localhost --insecure` qua TCP 9090**: tạo 2, lỗi 1 → nhật ký `TCP_IMPORT` có IP và số liệu → nhật ký `LOGIN` có **IP client thật** (không phải IP container nginx) → **Mailpit nhận email tài khoản**. File tài khoản thử nghiệm đã xoá.
+- `docker compose restart backend`: healthy lại sau ~12 giây, dữ liệu còn nguyên (đăng nhập bằng mật khẩu đã đổi, `admin-cli ping` → PONG).
+- `mvn test` backend không đổi mã nguồn ở bước này (vẫn 466 pass ở bước 10); `admin-cli`: `mvn package` 6 test pass.
+
+**Lỗi gặp khi làm:**
+- Nhật ký ghi IP của **container nginx** thay vì IP client: `proxy_set_header` khai báo ở mức `server` không được kế thừa vào `location` đã có `proxy_set_header` riêng (`Connection`, `Upgrade`) → nginx không gửi `X-Forwarded-For`. Sửa bằng file `proxy_headers.conf` include trong từng `location`; chạy lại kịch bản đầu-cuối: đạt.
+- Header `X-Frame-Options`, `X-Content-Type-Options` bị lặp 2 lần ở API (nginx + Spring Security) → chỉ để nginx thêm cho trang web.
+- Lượt build hôm 22/10 dừng giữa chừng do hết phiên làm việc nhưng thực ra đã build xong; Docker Desktop không tự bật lại sau khi khởi động máy.
+
+### 2026-10-23 · Bước 20a — Profile `demo`: dữ liệu mẫu (làm trước bước 14 vì kiểm thử tải cần tài khoản biết mật khẩu)
+**Đã làm**
+- Module mới `demo/` (tầng trên cùng): [DemoSeeder.java](backend/src/main/java/com/ltmtu/ielts/demo/DemoSeeder.java) (`@Profile("demo")`, `ApplicationRunner`) + [DemoTexts.java](backend/src/main/java/com/ltmtu/ielts/demo/DemoTexts.java) (đề và bài làm mẫu tự soạn, họ tên tiếng Việt). Tạo: giáo viên `gv.demo`; lớp `DEMO-A` (`DEMO001`…`DEMO010`), `DEMO-B` (`DEMO011`…`DEMO020`); bài "Tuần 1" (Task 1 + Task 2, rubric IELTS mẫu của hệ thống, hạn +7 ngày) giao cho 2 lớp, `DEMO001`…`DEMO006` đã nộp Task 1, 3 người có nháp Task 2; bài "Tuần 2" (Task 2) còn nháp để phát hành trong buổi demo. `DEMO_LOAD_STUDENTS > 0` → thêm lớp `DEMO-LOAD` với `DEMO-T0001`…
+- Mọi thứ đi qua service nghiệp vụ (`ClassroomService`, `AssignmentService`, `PublishService`, `StudentSubmissionService`) trong **một** transaction (`TransactionTemplate`): lỗi giữa chừng không để dữ liệu dở. Đã có `gv.<prefix>` thì bỏ qua (khởi động lại không trùng).
+- `user/DemoAccountService`: tạo tài khoản mẫu với mật khẩu biết trước, `mustChangePassword = false`; **BCrypt một lần** cho cả nhóm (500 tài khoản tải mà mã hoá từng cái thì khởi động chậm thêm gần một phút).
+- Cấu hình `app.demo` (`prefix`, `password`, `students-per-class`, `load-students`) → `AppProperties.Demo`; biến `SPRING_PROFILES_ACTIVE`, `DEMO_PASSWORD`, `DEMO_LOAD_STUDENTS` thêm vào `docker-compose.yml` và `.env.example`.
+
+**Khác so với tài liệu / quyết định**
+- PLAN ghi bước 20 thuộc Mức 3; làm ngay sau Mức 2 vì cần cho buổi demo và cho bước 14.
+- Tài khoản mẫu **không** bắt đổi mật khẩu lần đầu (khác BR-02) — chỉ ở profile demo, README ghi rõ không bật cho hệ thống thật. Mọi tài khoản mẫu dùng chung một hash.
+- Thêm module `demo` vào sơ đồ phụ thuộc (`PLAN.md`, `backend/AI-CODING-RULES.md` mục 3).
+
+**Kiểm tra:** `DemoSeederIntegrationTest` (2): giáo viên / sinh viên mẫu đăng nhập được, không bắt đổi mật khẩu; 3 lớp đúng số thành viên; bài Tuần 1 `PUBLISHED`, 14 người nhận, 6 phần chờ chấm; Tuần 2 `DRAFT`; sinh viên thấy bài ở tab "Cần làm"; chạy lần 2 → bỏ qua, không trùng lớp / bài. Chạy thật trong Docker (profile `docker,demo`, 500 sinh viên tải): nạp xong trong ~3 giây sau khi khởi động.
+
+### 2026-10-23 · Bước 14 — Kiểm thử tải bằng k6 (Mức 2, hoàn tất Mức 2 phần backend)
+**Đã làm**
+- [loadtest/](loadtest/): `lib/api.js` (đăng nhập, giáo viên tạo + giao bài Task 2 với rubric mẫu, lấy danh sách thành viên), `lib/stomp.js` (khung STOMP 1.2 trên WebSocket thuần), [submit-rush.js](loadtest/submit-rush.js) (NFR-01), [ws-connections.js](loadtest/ws-connections.js) (NFR-02 + NFR-03), [compose.loadtest.yml](loadtest/compose.loadtest.yml) (backend profile `docker,demo` + 500 sinh viên; service `k6` image `grafana/k6:0.54.0` trong mạng compose, gọi `https://nginx` / `wss://nginx/ws`).
+- `submit-rush`: 200 sinh viên, bài hạn +6 phút; đăng nhập trong 30 giây đầu, tự lưu nháp mỗi 3–5 giây có `draftVersion`, nộp ở thời điểm ngẫu nhiên phút 1 → 4.8, xem lịch sử; một giáo viên mở ma trận tiến độ mỗi 5 giây.
+- `ws-connections`: 500 kết nối STOMP mở dần trong 60 giây, giữ tới giây 160; giây 100 giáo viên "Nhắc nhở" cả 500 người → đo độ trễ = giờ nhận − `createdAt`.
+- Ngưỡng đạt / không đạt khai báo trong `options.thresholds` khớp NFR. Tài liệu kết quả mới [docs/09-kiem-thu-tai.md](docs/09-kiem-thu-tai.md); `docs/01` (cột kiểm chứng NFR-01/02/03, mục 7 triển khai), `CLAUDE.md` (bản đồ thư mục, lệnh), `deploy/README.md`; xuất lại Word (`01`, `09`, file gộp 9 tài liệu).
+
+**Kết quả** (Docker Desktop trên laptop i5-12450HX, k6 cùng máy, qua nginx HTTPS / WSS):
+| Kịch bản | Kết quả |
+|---|---|
+| submit-rush (NFR-01) | 9 031 request / 5 phút, **p95 9,9 ms**, p99 71,7 ms, **0% lỗi**; 200 / 200 bài nộp, không bài nào muộn; lưu nháp p95 8,4 ms, nộp p95 10,5 ms |
+| ws-connections (NFR-02, NFR-03) | **500 / 500** kết nối STOMP, 0 khung ERROR; nhắc 500 người (request 243 ms) → **500 / 500** nhận, độ trễ **p95 228 ms** |
+| Tài nguyên lúc cao điểm | backend ~7% CPU, 840 MB RAM; PostgreSQL ~3% CPU |
+
+**Khác so với tài liệu / quyết định**
+- NFR-02 trong docs/01 ghi "k6 + số liệu Actuator" → đổi thành đo bằng k6: đếm `CONNECTED` và việc **cả 500 kết nối cùng nhận** thông báo khi đang mở đồng thời (Actuator chỉ mở `health`, không mở thêm endpoint).
+- k6 chạy bằng Docker image (không cài vào máy, không thêm thư viện vào dự án).
+- Đo bằng project Docker riêng `-p ielts-lt` rồi `down -v --rmi local` — không đụng volume `ielts_*` đang có.
+
+**Kiểm tra:** 2 kịch bản đều đạt toàn bộ ngưỡng (ws: 1 002 / 1 002 check; submit: 9 227 / 9 227 check). `mvn clean test` backend: **468 lượt pass** (466 + 2 của `DemoSeederIntegrationTest`).
+
+**Lỗi gặp khi làm:** lần chạy `ws-connections` đầu được 499 / 500 — script lấy tài khoản theo `__VU`, nhưng số VU đánh chung cho mọi scenario nên một VU nhận số 501 (`DEMO-T0501` không tồn tại → 401). Sửa bằng `exec.scenario.iterationInTest` (số thứ tự trong scenario); chạy lại đạt 500 / 500. Lần đầu viết test seeder đọc nhầm `data.items` cho API phân trang — danh sách nằm thẳng trong `data` (`ApiResponse.page`).
+
+### 2026-10-23 · Bước 20b — README, hướng dẫn Wireshark, tài liệu báo cáo
+**Đã làm**
+- [README.md](README.md) ở thư mục gốc: giới thiệu, trạng thái từng phần, kiến trúc, thư mục, chạy bằng Docker, **bảng tài khoản dữ liệu mẫu**, chạy khi dev, kiểm thử (468 test, admin-cli, k6), **hướng dẫn chụp Wireshark** (HTTP lộ mật khẩu ở cổng 8080, HTTPS 443 chỉ thấy dữ liệu mã hoá, TCP 9090 của admin-cli là text thuần — lộ token và mật khẩu tạm ở dòng `CRED`, lý do có bước 19), danh mục tài liệu.
+- `PLAN.md`: trạng thái bước 14, 20, số test, kịch bản demo dùng profile demo, thứ tự còn lại (frontend → Mức 3).
+- File Word gộp `docx/00-tai-lieu-phan-tich-thiet-ke.docx` có thêm chương 09.
+
+**Khác so với tài liệu / quyết định:** ảnh Wireshark phải chụp trên máy người dùng (cần cài Wireshark + Npcap) — chỉ viết hướng dẫn. Profile `demo` có 1 bài đã giao + 1 bài nháp (PLAN ghi "2 bài") để buổi demo vẫn có bước "giáo viên phát hành, sinh viên online nhận thông báo".
+
+**Kiểm tra:** link trong README trỏ đúng file; lệnh chạy Docker / k6 trong README và docs/09 là đúng lệnh đã chạy ở bước 14.
+
+### 2026-10-24 · F1a — Đăng nhập, đổi mật khẩu, khung app theo thiết kế Figma Make
+**Nguồn thiết kế:** người dùng tải code Figma Make về thư mục `Review attached content figma/` (Vite + React + antd 6, các màn Prompt 1 → 10). Link Figma Make cần đăng nhập nên agent không tự đọc được → quy ước từ nay: lấy thiết kế từ code tải về. Thiết kế khớp `docs/07` (cùng token màu, font, sidebar 240 / 72 px) nên làm theo, chỉ viết lại theo cấu trúc Next.js + Tailwind token, không chép CSS / dữ liệu mẫu.
+
+**Đã làm**
+- [lib/apiError.ts](frontend/lib/apiError.ts) mới: `ApiError` (`code`, `status`, `fieldErrors`) + `getErrorMessage`. [axiosClient](frontend/lib/axiosClient.ts) reject bằng `ApiError` thay cho `Error` → trang xử lý được theo `code` như quy tắc frontend mục 4 đã yêu cầu (trước đây `code` bị mất).
+- [Đăng nhập](frontend/app/dang-nhap/index.tsx): bố cục 2 cột (panel giới thiệu màu brand từ màn lg, form trong card), lỗi hiện ngay trên form thay cho toast — `RATE_LIMITED` màu vàng, lỗi khác màu đỏ, nội dung lấy từ server. `authApi.login` tắt toast.
+- [Đổi mật khẩu](frontend/app/doi-mat-khau/index.tsx): card có icon, Alert "lần đăng nhập đầu", danh sách điều kiện tick xanh theo thời gian thực (≥ 8 ký tự, có chữ và số, khác mật khẩu hiện tại — khớp `SAME_PASSWORD` của server); nút "Quay lại" khi đổi chủ động.
+- [Layout có sidebar](frontend/app/(admin)/layout.tsx) + [AppSidebar](frontend/app/(admin)/AppSidebar.tsx): sidebar cố định từ màn lg, thu gọn còn icon (72 px); nhỏ hơn lg → nút menu mở Drawer. Header: tiêu đề trang (`findPageTitle` trong `const.tsx`), nút thông báo, menu tài khoản có avatar chữ cái đầu + họ tên + vai trò ([AppHeaderActions](frontend/components/AppHeaderActions.tsx)). Token Menu trong `antdTheme.ts` (cao 40, cách 4, bỏ viền).
+- [BrandMark](frontend/components/BrandMark.tsx) (logo "IW") dùng ở đăng nhập và sidebar. Layout toàn màn hình `(main)` thêm viền dưới header cho đồng bộ.
+
+**Khác so với thiết kế**
+- Bỏ khối "Cần trợ giúp? Xem hướng dẫn sử dụng" ở chân sidebar và số đếm trên mục menu (Chấm bài 12…) — chưa có trang hướng dẫn / API đếm riêng; số đếm làm cùng F5. Bỏ dòng "Đại học Việt Nam" (tên trường giả) ở bản quyền.
+- Thiết kế khoá nút Đăng nhập khi bị tạm khoá; ở đây không khoá vì server đã chặn và message ghi số phút phải chờ.
+- Trạng thái kết nối ("Trực tuyến / Mất kết nối"), banner mất kết nối, modal "Tài khoản vừa đăng nhập ở nơi khác", trang thông báo → F1b (cần WebSocket).
+
+**Kiểm tra:** `npm run lint`, `tsc --noEmit`, `npm run build` sạch; `npm run test:unit` 14 / 14 pass. Chạy thử với backend thật (`dev,demo`) bằng Edge headless điều khiển qua DevTools Protocol (script tạm ở scratchpad, không thêm thư viện): sai mật khẩu → Alert "Tên đăng nhập hoặc mật khẩu không đúng"; `gv.demo` đăng nhập → `/giao-vien/tong-quan`, sidebar đúng mục active, thu gọn, Drawer trên màn 420 px, menu tài khoản; `DEMO020` (tạm bật `must_change_password` rồi trả lại) → chuyển `/doi-mat-khau`, danh sách điều kiện cập nhật khi gõ.
+
+**Lỗi gặp khi làm:** form đổi mật khẩu lúc đầu vừa hiện từng lỗi validate vừa hiện danh sách điều kiện (lặp ý) → gộp thành một dòng "Mật khẩu mới chưa đạt các điều kiện bên dưới". Edge headless không thu cửa sổ nhỏ hơn 496 px nên ảnh mobile phải chụp bằng `Emulation.setDeviceMetricsOverride`. `frontend/.env.local` chưa có (API gọi nhầm sang cổng 3000) → tạo từ `.env.example` (không commit).
+
+### 2026-10-24 · Đổi tên trường body lỗi: `errorCode`, `errorMessage`
+**Yêu cầu người dùng:** mọi API bọc trong một khung response, lỗi ghi trong `errorCode` / `errorMessage`. Ý ban đầu là luôn trả HTTP 200; sau khi xem ảnh hưởng (refresh token dựa vào `401`, 387 chỗ kiểm tra status trong test, k6, nginx, admin-cli), người dùng chốt **giữ HTTP status thật, chỉ đổi tên trường**.
+
+**Đã làm**
+- [ErrorResponse](backend/src/main/java/com/ltmtu/ielts/common/ErrorResponse.java): `code` → `errorCode`, `message` → `errorMessage` (các trường khác giữ nguyên: `success`, `data`, `status`, `path`, `timestamp`, `fieldErrors`). Áp dụng cho mọi lỗi: `GlobalExceptionHandler`, lỗi của Spring Security (`SecurityErrorWriter`), rate limit. Response thành công không đổi (`message` vẫn là câu thông báo thành công).
+- Lỗi chat qua STOMP `/user/queue/errors` (`ChatError`) đổi cùng tên trường cho đồng bộ.
+- Client: frontend `ApiErrorBody` + `axiosClient` đọc `errorCode` / `errorMessage`; `admin-cli` (`HttpLogin`) đọc `errorMessage`. k6 không đọc body lỗi nên không phải sửa.
+- Test: 39 chỗ `jsonPath("$.code" / "$.message")` → `$.errorCode` / `$.errorMessage`, 3 chỗ đọc qua `JsonNode` (Auth, Chat).
+- Tài liệu: `docs/05` mục A.1 (ví dụ body lỗi, giải thích vì sao giữ HTTP status, cột `errorCode` ở các bảng mã lỗi, kênh `/user/queue/errors`), quy tắc code backend + frontend; xuất lại Word.
+
+**Khác so với tài liệu:** tên `errorCode` cũng là tên trường "mã lỗi ngữ pháp" trong nhận xét inline (`data.…comments[].errorCode`) — khác cấp nên không lẫn, giữ nguyên.
+
+**Kiểm tra:** `mvn test` backend pass hết (0 failures, 0 errors); `npm run lint`, `tsc` frontend sạch; `admin-cli` `mvn package` được. Chạy thật: `POST /api/auth/login` sai mật khẩu → `401 {"errorCode":"BAD_CREDENTIALS","errorMessage":"Tên đăng nhập hoặc mật khẩu không đúng",…}`, gọi API không token → `401 UNAUTHORIZED`; trang đăng nhập vẫn hiện đúng câu lỗi.
+
+### 2026-10-24 · HTTP status luôn là 200 (đổi quyết định của mục trên)
+**Yêu cầu người dùng:** sau khi đổi tên trường, người dùng chốt lại **mọi response trả HTTP 200**; kết quả đọc trong body (`success`, `errorCode`, `errorMessage`, `status`).
+
+**Đã làm**
+- Backend: `GlobalExceptionHandler` trả `ResponseEntity.ok(ErrorResponse…)`; `SecurityErrorWriter` (401 chưa đăng nhập, 403 không có quyền / phải đổi mật khẩu, 429 rate limit đăng nhập) đặt HTTP 200. Bỏ `@ResponseStatus(HttpStatus.CREATED)` ở 8 endpoint tạo mới → trả 200. Trường `status` trong body lỗi giữ mã kiểu HTTP để phân loại.
+- Test: thêm [support/ApiStatus.java](backend/src/test/java/com/ltmtu/ielts/support/ApiStatus.java) — `apiStatus(n)` kiểm tra **HTTP đúng 200** và mã trong body (`n` 2xx = thành công, body không phải lỗi), `apiStatusOf(result)` cho test đồng thời. Thay toàn bộ `status().isXxx()` (387 chỗ, 32 file); 2 test nộp đồng thời đổi kỳ vọng `201, 409` → `200, 409`.
+- Frontend [axiosClient](frontend/lib/axiosClient.ts): lỗi giờ đi qua nhánh thành công của axios → gom vào `handleFailure`: đọc `status` trong body, `401` → refresh token một lần rồi gửi lại; file tải về (blob) mà server trả JSON lỗi cũng được đọc ra. Nhánh lỗi của axios chỉ còn lỗi mạng / nginx.
+- k6: hàm `apiOk(r)` (`status === 200` **và** `success === true`) thay cho so `r.status === 200/201` — nếu không thì lỗi nghiệp vụ cũng được tính là đạt. `http_req_failed` giờ chỉ đếm lỗi mạng / nginx; ngưỡng `checks > 99%` vẫn bắt được lỗi ứng dụng. admin-cli không đổi (đã kiểm tra `statusCode == 200` **và** có `accessToken`).
+- Tài liệu: `docs/05` mục A.1 (quy ước HTTP 200, ý nghĩa `status`, bảng mã lỗi cột `status`, bỏ `201`), quy tắc code backend mục 6 + frontend; xuất lại Word.
+
+**Khác so với tài liệu cũ:** đảo quyết định "giữ HTTP status" vừa ghi ở mục trên. Ngoại lệ: lỗi ngoài ứng dụng (nginx 502/504, `/actuator/health` 503, bắt tay WebSocket 101) vẫn là HTTP thật. Lưu ý khi demo Wireshark: mọi response API đều là `HTTP/1.1 200`, phải mở body mới thấy lỗi.
+
+**Kiểm tra:** `mvn test` 466 test case, 0 failures, 0 errors (mọi test giờ kiểm tra luôn HTTP = 200). Frontend `lint`, `tsc`, `build` sạch, `test:unit` 14 / 14. Chạy thật: đăng nhập sai, gọi API không token, đường dẫn không tồn tại → đều `HTTP 200` với `status: 401` trong body; đăng nhập `gv.demo`, làm hỏng access token trong localStorage rồi tải lại trang → app tự refresh và ở lại `/giao-vien/lop-hoc` (không bị đẩy về đăng nhập).
+
+### 2026-10-24 · F1b — Thông báo realtime: STOMP client, chuông, trang Thông báo, mất kết nối, bị đăng xuất
+**Thiết kế:** Figma Make Prompt 2 → tab "App shell" (chấm Trực tuyến / Mất kết nối, banner, modal đăng xuất) và "Thông báo".
+
+**Đã làm**
+- [lib/realtime.ts](frontend/lib/realtime.ts): **một** STOMP client cho cả app (`@stomp/stompjs` đã có sẵn). Heartbeat 10 s mỗi chiều; kết nối lại theo `ReconnectionTimeMode.EXPONENTIAL` 1 s → 30 s; `beforeConnect` refresh token khi access token còn < 30 s (đọc `exp` trong JWT, dùng `refreshAccessToken` của axiosClient — nay export); khung `ERROR` → gọi `/api/auth/me` để axiosClient tự refresh hoặc về trang đăng nhập. Kênh đăng ký qua `subscribeRealtime` được giữ và SUBSCRIBE lại sau mỗi lần kết nối; kết nối lại → trạng thái `SYNCING` → gọi lấy bù → `CONNECTED` (docs/06 mục 6, SD-09).
+- Store: [useRealtimeStore](frontend/stores/useRealtimeStore.tsx) (trạng thái, số lần thử, lý do bị đăng xuất), [useNotificationStore](frontend/stores/useNotificationStore.tsx) (20 thông báo gần nhất, số chưa đọc, `sync()` gọi `GET /api/notifications?after=<createdAt mới nhất>`, `incoming` cho trang Thông báo). API [lib/api/notification.ts](frontend/lib/api/notification.ts), kiểu [lib/types/notification.ts](frontend/lib/types/notification.ts), màu theo loại `NOTIFICATION_TYPE_META` trong `status.ts`.
+- [RealtimeBridge](frontend/components/RealtimeBridge.tsx) (đặt trong `providers.tsx`): có phiên và đã đổi mật khẩu lần đầu → nạp chuông + kết nối; thông báo mới → thông báo bật lên (antd `notification`, nằm dưới header, bấm → đánh dấu đã đọc + mở `link`); `FORCE_LOGOUT` → đóng kết nối, xoá phiên, hộp thoại theo lý do (`NEW_LOGIN` "Tài khoản vừa đăng nhập ở nơi khác", đổi mật khẩu, bị khoá…) → "Đăng nhập lại".
+- Header: [ConnectionStatus](frontend/components/ConnectionStatus.tsx) (chấm + chữ, ẩn dưới md), [NotificationBell](frontend/components/NotificationBell.tsx) (badge, 6 thông báo mới nhất, "Đánh dấu đã đọc tất cả", "Xem tất cả"). [ConnectionBanner](frontend/components/ConnectionBanner.tsx) dưới header ở cả 2 layout: vàng "Mất kết nối… đang thử lại (lần n)", xanh "Đã kết nối lại" 3 giây.
+- [Trang Thông báo](frontend/app/(admin)/thong-bao/index.tsx): tab Tất cả / Chưa đọc (n), nhóm Hôm nay / Hôm qua / Trước đó, "Xem thêm" 20 / lần, thông báo mới và thông báo lấy bù được chèn lên đầu; có Skeleton, Empty.
+- Hàm thuần [lib/utils/notifications.ts](frontend/lib/utils/notifications.ts) (`mergeNotifications`, `latestCreatedAt`, `groupByDay`) + 4 test.
+
+**Khác so với thiết kế / tài liệu**
+- Thiết kế có ô "Đã kết nối lại" và toast tự viết; ở đây dùng `Alert banner` và `notification` của antd (cùng bố cục, đỡ code).
+- Bị đăng xuất: xoá phiên ngay rồi mới hiện hộp thoại (hộp thoại nằm ở providers nên vẫn hiện trên trang đăng nhập) — để không còn request nào dùng token đã thu hồi.
+- Thông báo có nhiều loại hơn thiết kế (6 loại theo docs/05 A.9), mỗi loại một icon + màu.
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch; `test:unit` **18 / 18** (thêm 4). Chạy thật với backend `dev,demo` bằng script Edge + CDP (scratchpad): `DEMO001` đăng nhập → "Trực tuyến"; giáo viên nhắc qua REST → thông báo bật lên + badge tăng ngay; chuông và trang hiện đúng; **tắt backend** → banner "Mất kết nối… đang thử lại (lần 5)", chấm vàng; **bật lại** rồi nhắc ngay lúc client còn chờ backoff → client tự kết nối, lấy bù được thông báo bị lỡ (badge 4 → 5, trang có thêm dòng); đăng nhập `DEMO001` ở "máy khác" → máy này về trang đăng nhập với hộp thoại "Tài khoản vừa đăng nhập ở nơi khác". Dữ liệu dev: `DEMO001` có thêm 4 thông báo "nhắc nhở" do chạy thử.
+
+**Lỗi gặp khi làm:** lint `react-hooks/set-state-in-effect` ở trang Thông báo → tải trang đầu trong `.then` của promise, "đang tải" suy ra từ `loadedTab !== tab`, nghe store bằng `subscribe`. Lần chạy thử đầu: thông báo lấy bù chỉ vào chuông, không vào trang (store mới báo `lastReceived` cho WebSocket) → đổi thành `incoming` (lô) cho cả hai đường. Toast antd che chuông → đặt `top` dưới header. Nút "Xem thêm" thừa do React StrictMode gọi updater 2 lần làm `total` cộng đôi → bỏ `total`, dùng `hasMore` theo trang vừa tải.
+
+### 2026-10-24 · F2a — Màn quản trị: tổng quan, giáo viên, người dùng, nhật ký, phiên đăng nhập
+**Thiết kế:** Figma Make Prompt 9 (bảng có bộ lọc, Drawer thêm giáo viên, modal mật khẩu tạm, nhật ký mở dòng xem JSON).
+
+**Đã làm**
+- API + kiểu: [lib/api/admin.ts](frontend/lib/api/admin.ts), [lib/types/admin.ts](frontend/lib/types/admin.ts) (khớp `AdminUserDtos`, `SystemStats`, `AuditLogDto` của backend).
+- Hook [`useServerList`](frontend/lib/utils/hooks.ts): tải danh sách phân trang theo query (lọc + trang), `loading` suy ra từ query, `reload()` sau khi sửa — dùng lại cho các bảng ở F2b → F6.
+- Component dùng chung (tên theo docs/07 mục 7.2): `PageHeader`, `StatCard`, `AccountStatusTag`, `TemporaryPasswordModal` (mật khẩu tạm chỉ trong state, nút sao chép), `useAccountActions` (menu "…": sửa / đặt lại mật khẩu / khoá / mở khoá, đều có hộp thoại xác nhận; không cho tự khoá mình).
+- [Tổng quan](frontend/app/(admin)/quan-tri/tong-quan/index.tsx): 4 `StatCard` (người dùng theo vai trò + bị khoá, lớp, bài tập theo trạng thái, bài nộp hôm nay + phiên đang hoạt động) + [biểu đồ cột 14 ngày](frontend/app/(admin)/quan-tri/tong-quan/SubmissionsChart.tsx) viết bằng CSS (một chuỗi một màu brand, tooltip từng cột, chỉ ghi số ở cột cao nhất + hôm nay, có bản chữ cho trình đọc màn hình) — không thêm thư viện biểu đồ.
+- [Giáo viên](frontend/app/(admin)/quan-tri/giao-vien/index.tsx): tìm kiếm, lọc trạng thái, phân trang server; [Drawer thêm / sửa](frontend/app/(admin)/quan-tri/giao-vien/TeacherFormDrawer.tsx) cùng quy tắc tên đăng nhập với server, lỗi `fieldErrors` / `DUPLICATE` hiện dưới ô; tạo xong hiện mật khẩu tạm.
+- [Người dùng](frontend/app/(admin)/quan-tri/nguoi-dung/index.tsx): tìm, lọc vai trò + trạng thái, bấm dòng mở [Drawer chi tiết](frontend/app/(admin)/quan-tri/nguoi-dung/UserDetailDrawer.tsx) (số phiên đang hoạt động…), menu khoá / mở / đặt lại mật khẩu.
+- [Nhật ký](frontend/app/(admin)/quan-tri/nhat-ky/index.tsx): lọc hành động (nhãn tiếng Việt), tiền tố IP, khoảng ngày (giờ máy → `from`/`to` ISO); mở dòng xem `detail`.
+- [Phiên đăng nhập](frontend/app/(admin)/quan-tri/phien-dang-nhap/index.tsx): API danh sách / buộc đăng xuất từng phiên là **Mức 3, backend chưa có** → trang hiện số phiên đang hoạt động (`/api/admin/stats`) và hướng dẫn khoá / đặt lại mật khẩu để đăng xuất một người.
+
+**Khác so với thiết kế:** thiết kế gộp 5 tab trong một trang "Quản trị hệ thống" → giữ 5 trang theo menu sidebar đã có (mỗi mục một đường dẫn). Bỏ nút "Xuất" nhật ký và nút "Thêm người dùng" ở trang Người dùng (không có API; sinh viên được tạo khi giáo viên import). Bảng phiên đăng nhập chờ Mức 3.
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch, `test:unit` 18 / 18. Chạy thật bằng Edge + CDP với tài khoản admin **tạm** `admin.test` (tạo trong DB dev bằng cách chép mã băm mật khẩu của tài khoản demo — người dùng đồng ý; mật khẩu `admin` thật không biết nên không đụng tới): tổng quan đúng số liệu (34 người dùng, 6 bài nộp hôm nay); thêm giáo viên trùng `gv.demo` → lỗi dưới ô "Tên đăng nhập 'gv.demo' đã tồn tại"; tạo `gv.test.f2a` → modal mật khẩu tạm; khoá → xác nhận → "Đã khoá"; nhật ký có dòng "Tạo giáo viên", "Khoá tài khoản" (mở xem `revokedSessions`); drawer chi tiết `DEMO020`; giao diện 420 px. Xong thì **xoá** `admin.test` và `gv.test.f2a` (nhật ký của chúng còn, người thực hiện thành "Không xác định").
+
+**Lỗi gặp khi làm:** `form.setFields` cần tên trường đúng kiểu → ép `keyof TeacherFormValues`. Tên tài khoản tạm bị lỗi dấu do gõ SQL qua Git Bash (chỉ dữ liệu thử, đã xoá).
+
+### 2026-10-24 · F2b — Giáo viên: lớp học, thành viên, import sinh viên
+**Thiết kế:** Figma Make Prompt 3 (lưới thẻ lớp, Drawer tạo lớp, chi tiết lớp + bảng thành viên, hộp thoại import 3 bước, hỏi lại khi đóng mà chưa tải file tài khoản).
+
+**Đã làm**
+- API + kiểu: [lib/api/classroom.ts](frontend/lib/api/classroom.ts) (lớp, thành viên, import multipart có `onUploadProgress`, tải file tài khoản / file mẫu dạng blob), [lib/types/classroom.ts](frontend/lib/types/classroom.ts). Hàm thuần [`filenameFromDisposition`](frontend/lib/utils/download.ts) (đọc tên file tiếng Việt `filename*=UTF-8''…`) + `saveBlob`, 3 test.
+- [Danh sách lớp](frontend/app/(admin)/giao-vien/lop-hoc/index.tsx): thẻ lớp (mã, mô tả, số sinh viên, số bài đang mở), tìm kiếm, menu sửa / xoá (xác nhận: không xoá tài khoản sinh viên), trống → nút tạo lớp. Tạo xong chuyển thẳng vào lớp để import.
+- [ClassFormDrawer](frontend/components/ClassFormDrawer.tsx) (dùng ở danh sách + chi tiết): quy tắc mã lớp giống server; `DUPLICATE` / `fieldErrors` hiện dưới ô.
+- [Chi tiết lớp](frontend/app/(admin)/giao-vien/lop-hoc/[id]/index.tsx): tiêu đề (mã, số SV, số bài đang mở, mô tả), bảng thành viên (tìm, phân trang 50, xoá khỏi lớp có Popconfirm), lớp không tồn tại / của người khác → trang 404. Thêm sinh viên đã có tài khoản theo mã ([AddMembersModal](frontend/app/(admin)/giao-vien/lop-hoc/[id]/AddMembersModal.tsx), báo mã không tìm thấy).
+- [ImportModal](frontend/app/(admin)/giao-vien/lop-hoc/[id]/ImportModal.tsx): kéo thả .xlsx / .csv (chặn > 10 MB ở client), tải file mẫu Excel / CSV, tuỳ chọn gửi email; đang xử lý: % tải lên rồi "đang kiểm tra từng dòng"; lỗi cả file (`BAD_FILE`) → quay lại bước chọn file, hiện lý do. [ImportResult](frontend/app/(admin)/giao-vien/lop-hoc/[id]/ImportResult.tsx) (tên theo docs/07): 4 số, bảng lỗi (dòng, mã, lý do), nút tải file tài khoản (chỉ một lần, ghi giờ hết hạn). Đóng khi còn file chưa tải → hộp thoại "Bạn chưa tải file tài khoản". Client không đọc / không log nội dung file (CLAUDE.md ràng buộc 4).
+
+**Khác so với thiết kế:** bỏ tab "Bài tập" / "Thống kê" trong chi tiết lớp (thuộc F3 / F6) và chấm online cạnh avatar (presence theo lớp chưa có kênh; có ở ma trận tiến độ F6). Bước "đang xử lý" hiện % tải lên thật thay cho "28/45 dòng" (server xử lý trong một request, không báo từng dòng).
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch, `test:unit` **21 / 21**. Chạy thật (Edge + CDP, `gv.demo`): tạo lớp `demo-a` → "Mã lớp 'DEMO-A' đã tồn tại"; tạo `test-f2b` → vào trang lớp trống; import CSV 4 dòng (2 mới, `DEMO001` đã có, `21A` sai) → 2 / 1 / 0 / 1 + bảng lỗi dòng 5; bấm Xong khi chưa tải → hỏi lại; tải → nhận file `tai-khoan-test-f2b.xlsx`; thêm `DEMO012` + `KHONGCO99` → thêm 1, báo không tìm thấy 1; màn 420 px. Dọn: xoá lớp `TEST-F2B` (qua API), 2 tài khoản `F2BTEST01/02` (SQL), file tài khoản đã tải và file CSV thử trong scratchpad.
+
+**Lỗi gặp khi làm:** file nhỏ hiện "0 KB" → hàm `formatSize` (B / KB / MB).
+
+### 2026-10-24 · F3a — Bài tập: danh sách, chi tiết, cài đặt, giao bài và phát hành
+**Thiết kế:** Figma Make Prompt 4 (bảng bài tập có lọc trạng thái, hạn nộp + đếm ngược, tiến độ nộp, chờ chấm; bước "Giao bài" của trình soạn). Trình soạn nhiều bước để F3b.
+
+**Đã làm**
+- API + kiểu: [lib/api/assignment.ts](frontend/lib/api/assignment.ts) (đủ các endpoint A.5, kể cả tạo / sửa nháp, rubric mẫu cho F3b), [lib/types/assignment.ts](frontend/lib/types/assignment.ts). `TASK_TYPE_LABEL`, `fileUrl()` (ảnh `/uploads/…` khi frontend khác origin) trong `lib/constants`.
+- Component dùng chung: `StatusTag` (docs/07, màu từ `status.ts`), `CountdownTimer` (docs/07: > 24 giờ "Còn n ngày", ≤ 24 giờ hh:mm:ss, < 2 giờ vàng, < 15 phút đỏ, quá hạn) dựa trên hàm thuần [`describeDue`](frontend/lib/utils/due.ts) + 3 test; [`AssignTargetsModal`](frontend/components/AssignTargetsModal.tsx) (chọn lớp, tìm sinh viên theo mã / tên, ước tính số người nhận; `NOT_READY` hiện thành danh sách vấn đề; chế độ giao thêm khoá lớp / người đã giao); [`useAssignmentActions`](frontend/components/AssignmentActions.tsx) (sửa nội dung / nhân bản / đóng / mở lại / xoá theo trạng thái, có xác nhận).
+- [Danh sách](frontend/app/(admin)/giao-vien/bai-tap/index.tsx): lọc Tất cả / Nháp / Đang mở / Đã đóng, tìm kiếm, cột hạn nộp + đếm ngược, "đã nộp đủ" (thanh tiến độ), "chờ chấm", nút Tiến độ / Chấm bài.
+- [Chi tiết](frontend/app/(admin)/giao-vien/bai-tap/[id]/index.tsx): tab từng phần ([PartView](frontend/app/(admin)/giao-vien/bai-tap/[id]/PartView.tsx): loại, số từ, thời gian gợi ý, hạn riêng, trọng số, đề HTML đã lọc + ảnh, tiêu chí kèm checklist, mục Giới hạn điểm có tag "Tối đa n"); thời gian & tuỳ chọn; đã giao cho (lớp, cá nhân, tổng đã loại trùng); nháp → "Giao bài & phát hành", đang mở → "Giao thêm"; [Cài đặt](frontend/app/(admin)/giao-vien/bai-tap/[id]/SettingsDrawer.tsx) (PATCH mọi trạng thái: tên, mô tả, hạn nộp, hạn riêng từng phần, nộp muộn, số lần sửa, ẩn / hiện gợi ý — BR-06); bài của người khác → 404.
+
+**Khác so với thiết kế / tài liệu**
+- Cột "Giao cho" (tên lớp) trong bảng không có vì `AssignmentSummary` không trả danh sách lớp — xem ở trang chi tiết.
+- `CountdownTimer` chưa bù độ lệch giờ máy theo `GET /api/time` (SD-11) → làm cùng F4 (màn làm bài).
+- Nút "Tiến độ" / "Chấm bài" trỏ tới trang của F5 / F6 (đang là khung chờ). "Sửa nội dung" trỏ tới trình soạn F3b (`/giao-vien/bai-tap/tao-moi?id=`).
+
+**Kiểm tra:** `lint`, `tsc`, `build` sạch, `test:unit` **24 / 24**. Chạy thật (Edge + CDP, `gv.demo`): danh sách 2 bài demo; chi tiết "Tuần 1"; nhân bản → bản nháp mới; phát hành ngay → "Chưa phát hành được · chưa đặt hạn nộp"; Cài đặt đặt hạn 30/11; giao riêng `DEMO020` (tìm bằng mã) → phát hành, "giao cho 1 sinh viên"; đóng bài → xác nhận → "Đã đóng". Không đụng bài "Tuần 2" (để demo phát hành). Dọn: xoá bài thử (id 3) và thông báo `DEMO020` nhận từ bài đó.
+
+**Lỗi gặp khi làm:** hai dòng import trùng module ở trang chi tiết → gộp. Xoá bài thử bằng SQL theo tên bị lỗi dấu (Git Bash) → xoá theo id sau khi kiểm tra.
+
 ---
 
 ## Tồn đọng / việc cần làm tiếp
-- [ ] Docker: chưa cần khi phát triển (đã có PostgreSQL trên máy). `docker-compose.yml` + `.env.example` làm ở bước 13 (Docker hoá).
+- [x] Docker: `docker-compose.yml` + `.env.example` — xong ở bước 13 (xem `deploy/README.md`).
 - [x] Git: commit đầu tiên `bd9c7cf` (bước 1 → B7b) đã push lên https://github.com/duckkthoi/ielts-system (nhánh `main`). Từ nay commit khi người dùng yêu cầu.
 - [ ] (tuỳ chọn) File mẫu `tools/docs-export/reference.docx` theo định dạng báo cáo của trường.
-- [ ] Người dùng chạy các prompt trên Figma Make, gửi lại link Figma để code giao diện theo thiết kế.
-- [ ] Audit log cho import (IP, số dòng) — làm cùng bảng `audit_logs` ở Mức 2.
+- [x] Thiết kế Figma Make: người dùng đã tải code về `Review attached content figma/` (24/10). Cần chốt có commit thư mục này không (có `CLAUDE.md` / `AGENTS.md` riêng của Figma Make, dễ làm agent đọc nhầm) — đề xuất thêm vào `.gitignore` hoặc chuyển vào `design/figma-make/`.
+- [x] Audit log cho import (IP, số dòng) — xong ở bước 12 (`IMPORT_STUDENTS`, `TCP_IMPORT`).
 - [ ] Trường `grades.updated_at` dùng auditing của Spring Data (giờ hệ thống), không qua bean `Clock` (giống mọi bảng khác từ B1). Chưa ảnh hưởng nghiệp vụ; nếu cần test theo giờ thì cấu hình `DateTimeProvider` dùng `Clock`.
 - [ ] Frontend (khi có thiết kế Figma): so sánh 2 version (diff) ở màn chấm và màn kết quả, dùng nội dung từ `…/submissions/{id}?versionNo` và `…/versions/{n}`.
-- [ ] Nhắc thủ công chưa có giới hạn tần suất — xem lại ở bước 12 (rate limit).
-- [ ] **Bước tiếp theo:** B8 — tiến độ, thống kê, xuất Excel (UC-16, UC-19, UC-28; docs/05 A.6):
-  - ma trận tiến độ `GET /api/teacher/assignments/{id}/progress?classId&status` (sinh viên × phần: trạng thái, muộn, band);
-  - thống kê một bài `…/stats` (tỉ lệ nộp đúng hạn, band trung bình, theo tiêu chí, phân bố band, **mã lỗi hay gặp**);
-  - thống kê lớp / sinh viên `GET /api/teacher/stats/classes/{id}`, `/students/{id}`; kết quả học tập của sinh viên `GET /api/student/results`;
-  - xuất bảng điểm `.xlsx` (Apache POI).
+- [x] Giới hạn tần suất nhắc thủ công — xong ở bước 12 (`RemindThrottle`, 3 lần / 10 phút).
+- [ ] `AdminUserService` (module `user`) đang gọi `ClassroomService` (module `classroom`) để đếm số lớp của giáo viên — ngược hướng phụ thuộc `user ← classroom` (có từ bước 2). Nên chuyển phần đếm sang truy vấn chỉ-đọc. Chưa gây lỗi.
+- [ ] Frontend cho bước 10: lưu nháp IndexedDB khi mất mạng, hộp thoại chọn bản khi `409 DRAFT_CONFLICT`, đồng hồ đếm ngược theo `GET /api/time` (SD-11).
+- [x] Commit + push các bước B8a → 14, 20 (người dùng yêu cầu 23/10).
+- [ ] Ảnh Wireshark HTTP / HTTPS / TCP 9090 cho báo cáo — người dùng tự chụp theo README mục "Ảnh Wireshark".
+- [ ] **Bước tiếp theo:** F3b — Trình soạn bài nhiều bước (`/giao-vien/bai-tap/tao-moi`, `?id=` để sửa nháp): thông tin chung → các phần (loại, đề, ảnh upload `POST /api/files`, số từ, thời gian, hạn riêng, trọng số) → tiêu chí + checklist (nạp rubric mẫu, Đạt / Giới hạn điểm) → giao bài (dùng lại `AssignTargetsModal`). Thiết kế: Prompt 4 Wizard. Sau đó F4–F6, 2 tồn đọng nhỏ backend, Mức 3.
+- [ ] `CountdownTimer` (F3a) chưa bù độ lệch giờ máy theo `GET /api/time` (SD-11) — làm ở F4.
+- [x] Mật khẩu `admin` trên DB dev bị đổi (22/10), không ai nhớ → 24/10 người dùng đồng ý xoá tài khoản `admin` (phiên, thông báo xoá theo; nhật ký giữ, người thực hiện thành "Không xác định"), khởi động lại backend → `AdminSeeder` tạo lại `admin` / `Admin@123`, bắt đổi mật khẩu lần đầu.

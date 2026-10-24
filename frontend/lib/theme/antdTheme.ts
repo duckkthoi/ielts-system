@@ -57,7 +57,13 @@ export const antdTheme: ThemeConfig = {
       itemSelectedBg: BRAND[50],
       itemSelectedColor: BRAND[700],
       itemHoverBg: NEUTRAL[25],
-      itemBorderRadius: RADIUS.md
+      itemBorderRadius: RADIUS.md,
+      itemHeight: 40,
+      itemMarginInline: 0,
+      itemMarginBlock: 4,
+      activeBarBorderWidth: 0,
+      // Sidebar thu gọn rộng 72px, menu nằm trong lề 12px mỗi bên (app/(admin)/AppSidebar.tsx).
+      collapsedWidth: LAYOUT.siderCollapsedWidth - 24
     },
     Table: {
       headerBg: NEUTRAL[50],

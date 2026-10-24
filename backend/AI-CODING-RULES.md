@@ -48,14 +48,21 @@ com.ltmtu.ielts
 ├─ grading/       chấm điểm, mã lỗi, ngân hàng nhận xét, BandCalculator, kết quả phía sinh viên
 ├─ notification/  thông báo, email, WebSocket push, job nhắc hạn
 ├─ stats/         tiến độ, thống kê, xuất Excel (chỉ đọc)
-├─ realtime/ · tcpgateway/ (Mức 2) · exam/ · plagiarism/ (Mức 3)
+├─ audit/        nhật ký hệ thống (AuditService, RequestIp) — tầng dưới cùng
+├─ tcpgateway/   server TCP import sinh viên (Mức 2)
+├─ realtime/     một phiên + FORCE_LOGOUT, online, tiến độ live (Mức 2)
+├─ chat/         chat theo bài nộp / lớp (Mức 2)
+├─ demo/        dữ liệu mẫu khi bật profile demo (bước 20, lớp kiểm thử tải bước 14) — tầng trên cùng
+├─ exam/ · plagiarism/ (Mức 3)
 ```
 
 **Hướng phụ thuộc — PHẢI giữ một chiều, KHÔNG được vòng:**
 ```
+common, audit  ←  (mọi module đều dùng được)
 user ← classroom ← assignment ← submission ← grading ← notification
+                                                  ↖ stats (chỉ đọc), tcpgateway, realtime, chat
 ```
-Module bên phải được dùng module bên trái; module bên trái KHÔNG import module bên phải. Cần báo ngược lại thì **phát sự kiện** (mục 10).
+Module bên phải được dùng module bên trái; module bên trái KHÔNG import module bên phải. Cần báo ngược lại thì **phát sự kiện** (mục 10). `demo` nằm trên tất cả: chỉ gọi service "cửa" / service nghiệp vụ (tạo lớp, tạo bài, phát hành, nộp bài) để dữ liệu mẫu đi qua đúng các kiểm tra; tài khoản mẫu (mật khẩu biết trước, không bắt đổi) tạo qua `user/DemoAccountService`. KHÔNG module nào gọi vào `demo`.
 
 **Gọi sang module khác — chỉ qua service "cửa", KHÔNG gọi repository của module khác:**
 
@@ -63,12 +70,13 @@ Module bên phải được dùng module bên trái; module bên trái KHÔNG im
 |---|---|
 | Người dùng theo id / mã SV | `user/UserQueryService` |
 | Lớp của giáo viên | `classroom/ClassroomService.requireOwnedClassrooms` |
+| Bài **của giáo viên** (BR-15, khác chủ → 404) | `assignment/TeacherAssignmentAccess` |
 | Bài / phần **sinh viên được thấy** (BR-04, BR-05) | `assignment/StudentAssignmentAccess` |
 | Bài làm của chính sinh viên | `submission/StudentSubmissionAccess` |
 | Bài nộp phía giáo viên (sở hữu, khoá dòng, chuyển trạng thái) | `submission/TeacherSubmissionAccess` |
 | Tạo thông báo | `notification/NotificationService.notify` (thường qua sự kiện, không gọi thẳng) |
 
-Ngoại lệ được phép: **truy vấn chỉ-đọc** viết bằng SQL/JPQL trong repository của module mình có thể đọc bảng của module khác (vd `AssignmentRepository.progressCounts`, `ReminderLogRepository.findCandidates`). KHÔNG ghi chéo module.
+Ngoại lệ được phép: **truy vấn chỉ-đọc** viết bằng SQL/JPQL trong repository của module mình có thể đọc bảng của module khác (vd `AssignmentRepository.progressCounts`, `ReminderLogRepository.findCandidates`, truy vấn tổng hợp bằng `NamedParameterJdbcTemplate` trong `stats/ProgressService`). KHÔNG ghi chéo module. Kiểm tra sở hữu vẫn đi qua service cửa trước khi chạy truy vấn đó.
 
 Bên trong module: file đặt phẳng; tách `dto/` khi có từ 5 DTO. KHÔNG tạo package chung kiểu `utils/`, `helpers/`.
 
@@ -92,7 +100,7 @@ Bên trong module: file đặt phẳng; tách `dto/` khi có từ 5 DTO. KHÔNG 
 ## 5. API và DTO
 
 - Đường dẫn, method, quyền, dạng dữ liệu PHẢI đúng `docs/05-api.md`. Thêm / đổi endpoint thì cập nhật file đó và thêm request vào `backend/http/<module>.http`.
-- Response luôn bọc `ApiResponse`: `ApiResponse.ok(data)`, `ApiResponse.ok(data, "Đã lưu…")`, `ApiResponse.page(page)`, `ApiResponse.message("Đã xoá…")`. Tạo mới trả `201` (`@ResponseStatus(HttpStatus.CREATED)`).
+- Response luôn bọc `ApiResponse`: `ApiResponse.ok(data)`, `ApiResponse.ok(data, "Đã lưu…")`, `ApiResponse.page(page)`, `ApiResponse.message("Đã xoá…")`. HTTP status **luôn là 200** (kể cả tạo mới — KHÔNG dùng `@ResponseStatus`); lỗi trả 200 với body `ErrorResponse`.
 - DTO là **record**, gom theo nhóm trong một class `XxxDtos` (vd `grading/dto/GradingDtos.java`). KHÔNG trả entity ra API. Ánh xạ bằng `static from(entity)` hoặc class `XxxMapper` có hàm static.
 - **Request record KHÔNG dùng kiểu nguyên thuỷ** cho trường client có thể bỏ trống: Jackson 3 báo 400 khi thiếu. Dùng `Integer`, `Boolean`, xử lý null (`Boolean.TRUE.equals(x)`).
 - Validate bằng Jakarta Validation, **message tiếng Việt**: `@NotBlank(message = "Vui lòng nhập mã lớp")`.
@@ -102,11 +110,11 @@ Bên trong module: file đặt phẳng; tách `dto/` khi có từ 5 DTO. KHÔNG 
 
 ---
 
-## 6. Lỗi — chọn mã HTTP theo bảng này
+## 6. Lỗi — chọn mã `status` theo bảng này
 
-Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflict`, hoặc `new ApiException(status, code, message)`), message tiếng Việt hiển thị thẳng cho người dùng. Mã `code` PHẢI có trong bảng mã lỗi `docs/05` A.1 (mã mới thì thêm vào đó).
+Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflict`, hoặc `new ApiException(status, code, message)`), message tiếng Việt hiển thị thẳng cho người dùng. Mã `code` (trả cho client trong trường `errorCode`, message trong `errorMessage`) PHẢI có trong bảng mã lỗi `docs/05` A.1 (mã mới thì thêm vào đó). HTTP status của response luôn là 200; mã trong bảng dưới là trường `status` của body lỗi (`GlobalExceptionHandler`, `SecurityErrorWriter` đã lo). Test kiểm tra bằng `apiStatus(409)` / `apiStatusOf(result)` trong `support/ApiStatus` — KHÔNG dùng `status().isConflict()`.
 
-| Tình huống | HTTP · code | Ví dụ thật |
+| Tình huống | `status` · code | Ví dụ thật |
 |---|---|---|
 | Dữ liệu gửi lên sai: thiếu trường, sai định dạng, id tham chiếu không hợp lệ | `400 VALIDATION_ERROR` | điểm sai bước; `classId` không phải lớp của mình |
 | Chưa đăng nhập / token sai | `401` | do `JwtAuthFilter` |
@@ -114,6 +122,7 @@ Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflic
 | Không tồn tại, hoặc **thuộc người khác** | `404 NOT_FOUND` | giáo viên mở bài của giáo viên khác — KHÔNG dùng 403, để không lộ tài nguyên tồn tại |
 | Sai trạng thái / xung đột | `409` `INVALID_STATE` · `VERSION_CONFLICT` · `ALREADY_SUBMITTED` · `DUPLICATE` | trả bài khi chưa chấm; nộp trùng |
 | Đúng định dạng nhưng vi phạm quy tắc nghiệp vụ theo giá trị | `422` `DEADLINE_PASSED` · `REVISION_LIMIT` · `SCORE_LIMITED` | điểm vượt giới hạn checklist |
+| Gọi quá nhiều lần trong thời gian ngắn | `429 RATE_LIMITED` | đăng nhập sai 6 lần / 5 phút; nhắc thủ công lần 4 / 10 phút |
 
 - KHÔNG trả `null` / `Optional` rỗng để báo lỗi cho controller. KHÔNG bắt `Exception` chung trong service — để `GlobalExceptionHandler` lo (log + 500).
 - Lỗi ràng buộc UNIQUE do đua request thì bắt `DataIntegrityViolationException` ở đúng chỗ lưu và đổi thành 409 (xem `StudentSubmissionService.saveNew`).
@@ -126,6 +135,8 @@ Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflic
 - Kiểm tra **sở hữu ở service**, bằng `me.id()` lấy từ token — KHÔNG tin id người dùng client gửi.
 - Phía sinh viên, mọi truy cập bài tập PHẢI qua `StudentAssignmentAccess` / `StudentSubmissionAccess` (BR-04, BR-05). Sinh viên chỉ thấy điểm khi `grades.status = RETURNED` (BR-13) — kiểm tra ở service.
 - Xác thực token dùng chung `AccessTokenVerifier` cho REST và WebSocket: kiểm tra chữ ký, hạn, **phiên chưa bị thu hồi**, tài khoản còn hoạt động. Tài khoản `mustChangePassword` chỉ gọi được `/api/auth/**` và không CONNECT WebSocket được.
+- **Nhật ký (audit, bước 12):** thao tác quan trọng gọi `AuditService.record(actorId, AuditAction.X, targetType, targetId, detail)` — ghi **cùng transaction** (rollback thì không có nhật ký "ma"), IP lấy từ `RequestIp` (filter), service không đọc `HttpServletRequest`. Việc thất bại vẫn phải lưu (đăng nhập sai, bị chặn) hoặc ngoài request HTTP (TCP) dùng `recordAlone(…, ip, …)` (transaction riêng). `detail` chỉ chứa số liệu tóm tắt — KHÔNG mật khẩu, token, mã SV / tên trong file import, nội dung bài.
+- **Giới hạn tần suất (bước 12):** dùng `common/SlidingWindowLimiter` (trong bộ nhớ, theo `Clock`), bọc trong một `@Component` riêng có hàm `clear()` (vd `LoginThrottle`, `RemindThrottle`); lớp nền test gọi `clear()` trước mỗi test. Vượt giới hạn → `429 RATE_LIMITED`, message ghi số phút phải chờ. Cấu hình ở `app.rate-limit`.
 - Mật khẩu: BCrypt. Refresh token: chỉ lưu SHA-256. HTML người dùng nhập (đề bài) PHẢI qua `HtmlSanitizer`. Upload: nhận diện loại file theo byte đầu (`FileStorageService`).
 - KHÔNG log mật khẩu, token, nội dung file import, nội dung bài làm. Log chỉ id.
 
@@ -174,20 +185,22 @@ Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflic
 2. `NotificationEventListener` nghe bằng `@TransactionalEventListener(phase = BEFORE_COMMIT)` → gọi `NotificationService.notify`: thông báo được **lưu trong cùng transaction** — rollback thì không có thông báo "ma".
 3. `NotificationService` đăng ký `afterCommit` để **sau commit** mới đẩy WebSocket (`convertAndSendToUser(username, "/queue/notifications", dto)`) rồi gửi email `@Async`. Lỗi đẩy / email chỉ ghi log.
 - KHÔNG ghi DB trong listener `AFTER_COMMIT` (transaction đã đóng, dễ mất dữ liệu).
-- Kênh STOMP PHẢI đúng bảng `docs/05` phần B; quyền SUBSCRIBE / SEND kiểm tra trong `StompAuthInterceptor`. Kênh mới (Mức 2) phải thêm luật quyền ở đó trước.
+- Kênh STOMP PHẢI đúng bảng `docs/05` phần B. Quyền SUBSCRIBE / SEND: `StompAuthInterceptor` hỏi các bean `StompAccessRule`. Kênh mới PHẢI có luật (một class `…ChannelRule` trong module của kênh, xem `realtime/AssignmentChannelRule`, `chat/ChatChannelRule`); không luật nào nhận → từ chối. Luật KHÔNG được phụ thuộc (trực tiếp hay gián tiếp) `SimpMessagingTemplate` — luật được tạo cùng cấu hình WebSocket nên sẽ vòng phụ thuộc bean; chỉ dùng service / truy vấn đọc.
+- Việc chỉ đẩy tin (không ghi DB) sau một thao tác: `@TransactionalEventListener(phase = AFTER_COMMIT)` (xem `realtime/ProgressPushListener`, `SessionKickListener`). Trạng thái tạm (online, phần đang mở) giữ trong bộ nhớ (`PresenceService`), không lưu DB.
+- Thu hồi nhiều phiên của một người PHẢI qua `user/SessionRevoker` (để thiết bị đang mở nhận `FORCE_LOGOUT`).
 - Client mất kết nối lấy thông báo bị lỡ bằng `GET /api/notifications?after=` — không có cơ chế nào khác.
 
 **Job định kỳ**
 - Lớp lập lịch (`notification/ScheduledJobs`) **chỉ gọi service**, không chứa logic; bật / tắt bằng `app.reminders.enabled`. Logic job nằm trong service gọi được trực tiếp từ test với đồng hồ giả.
 - Job PHẢI chạy đúng khi nhiều lượt chồng nhau (dùng mẫu chống trùng ở trên) và chia transaction theo nhóm nhỏ, để lỗi một nhóm không làm hỏng cả lượt.
 
-**Server TCP** (`tcpgateway`, Mức 2): giao thức đúng `docs/05` phần C; chỉ `ServerSocket` / `Socket` + `ExecutorService` cấu hình được; khởi động / dừng bằng `SmartLifecycle`; mỗi socket `setSoTimeout`; tái dùng `StudentImportService`; phần phân tích khung tin là class thuần để unit test.
+**Server TCP** (`tcpgateway`, đã cài ở bước 11): giao thức đúng `docs/05` phần C; chỉ `ServerSocket` / `Socket` + `ExecutorService` cấu hình được (`app.tcp`); giới hạn số phiên bằng `Semaphore`, hết chỗ → `ERR 503` ngay; khởi động / dừng bằng `SmartLifecycle`; mỗi socket `setSoTimeout`; tái dùng `StudentImportService` (`requireImportableClass`, `importCsv`); phân tích lệnh (`TcpCommand`) và đọc khung tin (`FrameReader`) là class thuần để unit test. Socket phải còn mở khi gửi `ERR` trong khối `catch` — không bọc socket bằng try-with-resources ở chỗ đó.
 
 ---
 
 ## 11. Cấu hình, log, phong cách
 
-- Hằng số cấu hình (thời hạn, giới hạn, cổng, chu kỳ) đặt trong `application.yml` → record `AppProperties`. Thêm trường vào `AppProperties` thì sửa cả chỗ tạo tay trong `JwtServiceTest`. Profile test tắt những gì chạy nền (`app.reminders.enabled: false`).
+- Hằng số cấu hình (thời hạn, giới hạn, cổng, chu kỳ) đặt trong `application.yml` → record `AppProperties`. Giá trị khác nhau theo môi trường đọc từ biến môi trường có mặc định (`${JWT_SECRET:…}`); profile `docker` (`application-docker.yml`) chỉ đổi tên host và bật `forward-headers-strategy` — thêm biến mới thì thêm cả vào `docker-compose.yml` và `.env.example` ở thư mục gốc. Thêm trường vào `AppProperties` thì sửa cả chỗ tạo tay trong `JwtServiceTest`. Profile test tắt những gì chạy nền (`app.reminders.enabled: false`).
 - `@Slf4j`: `info` cho sự kiện nghiệp vụ (đăng nhập, phát hành, trả bài), `warn` cho bất thường xử lý được, `error` + stack trace cho lỗi không mong muốn. Log có id, không có dữ liệu nhạy cảm.
 - Thụt lề **tab**. File ≤ 400 dòng (quá thì tách class quy tắc / mapper). Tên tiếng Anh; **comment và Javadoc tiếng Việt**, giải thích *vì sao*, không lặp lại code. KHÔNG để code chết, code comment, `System.out.println`, TODO không có mã việc trong PROGRESS.
 - Viết giống code xung quanh: đặt tên, độ dày comment, cách chia section (`// ─── Tiêu đề ───`).

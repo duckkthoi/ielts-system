@@ -3,7 +3,7 @@
 > Đồ án môn **Lập trình mạng** (LTMTU). File này nói **làm gì, theo thứ tự nào, xong thì kiểm tra ra sao**.
 > Chi tiết kỹ thuật (bảng, API, trạng thái, quy tắc nghiệp vụ) nằm trong [`docs/`](docs/) — **`docs/` là bản chuẩn**, chỗ nào lệch thì theo `docs/`.
 > Tiến độ thực tế, từng bước đã làm gì: [`PROGRESS.md`](PROGRESS.md). Quy tắc viết code: [`CLAUDE.md`](CLAUDE.md).
-> Cập nhật lần cuối: 22/10/2026, sau bước B7b.
+> Cập nhật lần cuối: 23/10/2026, sau bước 14 và 20.
 
 ---
 
@@ -36,7 +36,7 @@
 | Phần | Công nghệ |
 |---|---|
 | Backend | Spring Boot **4.0** (Java 21, máy dev JDK 24), Spring Security + JWT (jjwt), Data JPA (Hibernate 7), WebSocket STOMP, Mail, Flyway, Jackson 3, Apache POI, Commons CSV, jsoup, springdoc |
-| CSDL | PostgreSQL **18** cài trên máy (`localhost:5432`): DB `ielts` (dev), `ielts_test` (test). Docker để bước 13 |
+| CSDL | PostgreSQL **18** cài trên máy (`localhost:5432`): DB `ielts` (dev), `ielts_test` (test); trong Docker dùng container `postgres:18` (bước 13) |
 | Frontend | Next.js **16** (App Router), React 19, Ant Design 6, Tailwind CSS 4, Zustand 5, axios, dayjs, `@stomp/stompjs` |
 | Email khi dev | Mailpit (`tools/mailpit/`, SMTP 1025, giao diện 8025) |
 | Tài liệu | Markdown + Mermaid trong `docs/`, xuất Word bằng `tools/docs-export/export_docx.py` (pandoc + mermaid-cli) |
@@ -44,8 +44,10 @@
 **Kiến trúc: monolith** — một ứng dụng Spring Boot chứa REST, WebSocket, server TCP, job định kỳ. Không microservice, không Redis, không chạy nhiều instance. Bên trong chia **module theo nghiệp vụ**, phụ thuộc chỉ đi một chiều:
 
 ```
+common, audit  ←  (mọi module đều dùng được)
 user ← classroom ← assignment ← submission ← grading ← notification
-                                                 ↖ stats (chỉ đọc)
+                                                 ↖ stats (chỉ đọc), tcpgateway, realtime, chat
+demo (dữ liệu mẫu, profile demo) — trên cùng, chỉ gọi service của các module khác
 ```
 Module sau gọi module trước qua **service "cửa"** (vd `StudentAssignmentAccess`, `TeacherSubmissionAccess`); module trước báo cho module sau qua **sự kiện** (`AssignmentEvents`, `SubmissionEvents`, `GradingEvents`).
 
@@ -60,12 +62,13 @@ Module sau gọi module trước qua **service "cửa"** (vd `StudentAssignmentA
 | 1–5 | Khung dự án · đăng nhập JWT · lớp + import sinh viên · bài tập + rubric + giao bài · làm bài, nộp, version | ✅ backend |
 | 6 | Chấm bài: checklist giới hạn band, mã lỗi, nhận xét inline, ngân hàng nhận xét, BandCalculator, trả bài / yêu cầu sửa, kết quả phía sinh viên | ✅ backend |
 | 7 | Thông báo (DB + WebSocket + email), job nhắc hạn, bài hẹn giờ mở, nhắc thủ công | ✅ backend |
-| 8 | Tiến độ, thống kê, xuất Excel | ⬜ **bước tiếp theo** |
-| F | Giao diện frontend | ⬜ chờ thiết kế Figma |
-| 9–14 | Mức 2 | ⬜ |
-| 15–20 | Mức 3 | ⬜ |
+| 8 | Tiến độ, thống kê, xuất Excel | ✅ backend (B8a–B8e) |
+| F | Giao diện frontend (thiết kế: code Figma Make trong `Review attached content figma/`) | 🟡 F1 ✅ (khung app, đăng nhập, thông báo realtime) · F2 ✅ (quản trị, lớp học + import) · F3a ✅ (danh sách, chi tiết, giao bài) · F3b → F6 ⬜ |
+| 9–14 | Mức 2 | ✅ backend: 11 (TCP + admin-cli) · 12 (nhật ký, rate limit, nginx) · 9 (một phiên, online, tiến độ live, chat) · 10 (khoá lạc quan bản nháp; IndexedDB ở frontend) · 13 (Docker) · 14 (k6: NFR-01/02/03 đạt — [docs/09](docs/09-kiem-thu-tai.md)) |
+| 20 | README, dữ liệu demo, tài liệu | ✅ `README.md`, profile `demo`, `docs/09`; ảnh Wireshark người dùng tự chụp (hướng dẫn trong README) |
+| 15–19 | Mức 3 | ⬜ làm khi còn thời gian |
 
-Backend hiện có **394 lượt test tự động**, tất cả pass.
+Backend hiện có **468 lượt test tự động** (+ 6 test của `admin-cli`), tất cả pass.
 
 ---
 
@@ -76,9 +79,11 @@ Mỗi bước ghi: **làm gì** → **xong khi nào** (điều kiện nghiệm t
 ### Mức 1
 
 **B8 — Tiến độ, thống kê, xuất Excel** (UC-16, UC-19, UC-28; [docs/05 A.6](docs/05-api.md))
-- B8a: ma trận tiến độ `GET /api/teacher/assignments/{id}/progress?classId&status` — hàng = sinh viên nhận bài, cột = phần, ô = trạng thái + muộn + band (nếu đã trả); tóm tắt tỉ lệ hoàn thành, số nộp muộn.
-- B8b: thống kê một bài `…/stats` (tỉ lệ nộp đúng hạn, band trung bình từng phần và từng tiêu chí, phân bố band, **mã lỗi hay gặp**); thống kê lớp `GET /api/teacher/stats/classes/{id}` (bảng xếp hạng), một sinh viên `…/students/{id}`; trang "Kết quả học tập" `GET /api/student/results` (band theo thời gian, theo tiêu chí, **hồ sơ lỗi**).
-- B8c: xuất bảng điểm `GET /api/teacher/assignments/{id}/export` (`.xlsx`, Apache POI).
+- B8a ✅: ma trận tiến độ `GET /api/teacher/assignments/{id}/progress?classId&status` — hàng = sinh viên nhận bài, cột = phần, ô = trạng thái + muộn + band (nếu đã trả); tóm tắt tỉ lệ hoàn thành, số nộp muộn.
+- B8b ✅: thống kê một bài `…/stats?classId` (số nộp, tỉ lệ nộp đúng hạn, band trung bình từng phần và từng tiêu chí, phân bố band, band cả bài, **mã lỗi hay gặp**).
+- B8c ✅: kết quả học tập của một sinh viên — giáo viên xem `GET /api/teacher/stats/students/{id}` (chỉ bài của mình), sinh viên xem `GET /api/student/results` (band theo thời gian, theo tiêu chí, số nộp muộn, **hồ sơ lỗi**).
+- B8d ✅: thống kê lớp `GET /api/teacher/stats/classes/{id}` (các bài giao cho lớp, bảng xếp hạng).
+- B8e ✅: xuất bảng điểm `GET /api/teacher/assignments/{id}/export` (`.xlsx`, Apache POI).
 - *Xong khi:* số liệu đúng với dữ liệu test dựng sẵn (kể cả người chưa nộp, nộp muộn, đang "Cần sửa", "Chấm 0"); sinh viên chỉ thấy điểm đã trả (BR-13); file Excel mở được, đúng cột; truy vấn thống kê không N+1.
 
 ### Frontend (làm khi có thiết kế Figma — người dùng gửi link)
@@ -105,7 +110,7 @@ Phần backend của Mức 2 làm được trước khi có Figma; phần giao d
 | **11** Server TCP + admin-cli | `TcpImportServer` (`ServerSocket` + thread pool, `SmartLifecycle`, timeout), giao thức text theo [docs/05 phần C](docs/05-api.md); project `admin-cli` (Java thuần); parser khung tin tách riêng để unit test | `java -jar admin-cli.jar import …` chạy có tiến trình; token sai → `ERR 401`; dòng lỗi → `ERR 400 <dòng>`; tái dùng `StudentImportService` |
 | **12** Bảo mật mạng | nginx HTTPS/WSS (chứng chỉ tự ký, HTTP → HTTPS); rate limit trong bộ nhớ (đăng nhập sai 5 lần / 5 phút → `429`, nhắc thủ công); bảng `audit_logs` (V6) | Đăng nhập sai lần 6 → 429; ảnh Wireshark HTTP lộ mật khẩu vs HTTPS không lộ |
 | **13** Docker hoá | `docker-compose.yml`: postgres, mailpit, backend, frontend, nginx; `.env.example`; profile `docker` | `docker compose up --build` chạy đủ luồng demo; `docker compose restart backend` → client tự kết nối lại, không mất thông báo (NFR-04) |
-| **14** Load test | k6: 200 sinh viên nộp trong 5 phút cuối + 500 kết nối WebSocket | p95 < 500 ms, lỗi < 1%; kết quả ghi vào `docs/` |
+| **14** Load test ✅ | k6: 200 sinh viên nộp trong 5 phút cuối + 500 kết nối WebSocket | p95 < 500 ms, lỗi < 1%; kết quả ghi vào `docs/` — đã đạt: p95 9,9 ms, 0% lỗi; 500 / 500 kết nối, thông báo p95 228 ms ([docs/09](docs/09-kiem-thu-tai.md)) |
 
 ### Mức 3 — Mở rộng (mỗi mục độc lập, migration V7)
 15. Chế độ thi tính giờ: `exam_sessions`, tự nộp khi hết giờ, ghi sự kiện chuyển tab / dán / mất kết nối.
@@ -113,15 +118,15 @@ Phần backend của Mức 2 làm được trước khi có Figma; phần giao d
 17. Ngân hàng đề + tag dạng đề.
 18. Gợi ý chấm bằng AI (Claude API, chỉ khi có `ANTHROPIC_API_KEY`; chỉ gợi ý, giáo viên quyết định).
 19. TCP qua TLS (`SSLServerSocket`) + bản NIO (`Selector`) để so sánh hiệu năng.
-20. README, profile `demo` (1 giáo viên, 2 lớp, 20 sinh viên, 2 bài), ảnh Wireshark, tài liệu báo cáo.
+20. ✅ README, profile `demo` (1 giáo viên, 2 lớp, 20 sinh viên, 2 bài), hướng dẫn chụp ảnh Wireshark, tài liệu báo cáo (`docs/09` + file Word gộp). Ảnh Wireshark do người dùng tự chụp. *(Làm trước Mức 3 vì cần cho nộp đồ án.)*
 
-**Thứ tự đề xuất:** B8 → (nếu đã có Figma) F1… song song với phần backend của 11, 12, 9, 10 → 13 → 14 → Mức 3.
+**Thứ tự đề xuất (người dùng chốt 22/10: hoàn thiện backend trước, frontend để sau):** B8 → phần backend của 11, 12, 9, 10 → 13 → 14 → 20 (đã xong 23/10) → frontend F1–F6 khi có Figma → Mức 3 (15–19) nếu còn thời gian.
 
 ---
 
 ## 6. Kịch bản demo / nghiệm thu cuối
 
-1. `docker compose up --build`, mở `https://localhost`.
+1. `docker compose up --build` (`.env`: `SPRING_PROFILES_ACTIVE=docker,demo` để có sẵn giáo viên `gv.demo`, 2 lớp, 20 sinh viên — README), mở `https://localhost`.
 2. Admin tạo giáo viên. Giáo viên tạo lớp, **import file sinh viên** (qua web và qua **admin-cli TCP**), Mailpit nhận email tài khoản.
 3. Giáo viên tạo bài 2 phần (Task 1 + Task 2, rubric IELTS), giao cho lớp. Sinh viên đang online nhận thông báo realtime.
 4. Sinh viên đăng nhập bằng mã SV, đổi mật khẩu, làm bài; **tắt mạng khi đang gõ** rồi bật lại — nháp không mất. Nộp Task 1.

@@ -1,0 +1,18 @@
+### API chat (bước 9b) — gửi tin đi qua STOMP /app/chat/{channelId}/send, ở đây chỉ đọc
+
+@baseUrl = http://localhost:8080
+@channelId = class-1
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.hanh", "password": "MatKhauMoi123" }
+
+### Các kênh của tôi (tin cuối + số chưa đọc)
+GET {{baseUrl}}/api/chat/channels
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Lịch sử (mới nhất trước); thêm beforeId=<id tin cũ nhất đang có> để tải tiếp
+GET {{baseUrl}}/api/chat/{{channelId}}/messages?size=50
+Authorization: Bearer {{login.response.body.data.accessToken}}

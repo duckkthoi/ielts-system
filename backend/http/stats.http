@@ -1,0 +1,44 @@
+### API tiến độ, thống kê của giáo viên (B8) — docs/05-api.md mục A.6
+
+@baseUrl = http://localhost:8080
+@assignmentId = 1
+@classId = 1
+@studentId = 1
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.hanh", "password": "MatKhauMoi123" }
+
+### Ma trận tiến độ (sinh viên × phần)
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/progress
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chỉ một lớp
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/progress?classId={{classId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chỉ những sinh viên có phần chưa làm (để chọn rồi nhắc nhở)
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/progress?status=NOT_STARTED
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thống kê một bài: số nộp, tỉ lệ đúng hạn, band trung bình phần / tiêu chí, phân bố band, mã lỗi hay gặp
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/stats
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thống kê một bài, chỉ một lớp
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/stats?classId={{classId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thống kê một sinh viên trên các bài của tôi (sinh viên phải thuộc lớp / bài của tôi, nếu không → 404)
+GET {{baseUrl}}/api/teacher/stats/students/{{studentId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thống kê lớp: các bài giao cho lớp + bảng xếp hạng
+GET {{baseUrl}}/api/teacher/stats/classes/{{classId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Xuất bảng điểm .xlsx (bỏ classId = mọi người nhận bài)
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/export?classId={{classId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}

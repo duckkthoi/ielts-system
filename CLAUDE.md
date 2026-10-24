@@ -39,19 +39,25 @@ Không tự ý: commit / push (chỉ khi người dùng bảo), thêm thư việ
 ```
 LTMTU/
 ├─ CLAUDE.md, AGENTS.md     ← file này
+├─ README.md                giới thiệu, cách chạy, dữ liệu mẫu (profile demo), ảnh Wireshark
 ├─ PLAN.md                  kế hoạch, lộ trình, kịch bản demo
 ├─ PROGRESS.md              nhật ký từng bước + tồn đọng + bước tiếp theo
 ├─ docs/                    TÀI LIỆU CHUẨN (Markdown + Mermaid)
 │   ├─ 01-tong-quan.md      FR, NFR, quy tắc nghiệp vụ BR-01 → BR-22
 │   ├─ 02-use-case.md       32 use case    · 03-sequence.md  sơ đồ tuần tự SD-01 → SD-13
-│   ├─ 04-erd.md            bảng, cột, lộ trình migration V1 → V7
+│   ├─ 04-erd.md            bảng, cột, lộ trình migration V1 → V8 (Mức 3 từ V9)
 │   ├─ 05-api.md            REST, WebSocket, giao thức TCP, mã lỗi
 │   ├─ 06-trang-thai.md     sơ đồ trạng thái · 07-design-system.md · 08-nghiep-vu-cham-ielts.md
+│   ├─ 09-kiem-thu-tai.md   kết quả kiểm thử tải k6 (NFR-01/02/03)
 ├─ docx/                    bản Word sinh từ docs/ (không sửa tay)
 ├─ design/                  prompt cho Figma Make
 ├─ shared/                  dữ liệu dùng chung FE + BE (vd bộ ca đếm từ)
 ├─ backend/                 Spring Boot 4 (xem backend/AI-CODING-RULES.md)
 ├─ frontend/                Next.js 16 (xem frontend/AI-CODING-RULES.md)
+├─ admin-cli/               client TCP import sinh viên (Java thuần, xem admin-cli/README.md)
+├─ loadtest/                script k6 + compose.loadtest.yml (bước 14, xem docs/09)
+├─ deploy/                  README chạy bằng Docker; nginx/ (HTTPS/WSS, script tạo chứng chỉ tự ký — certs/ không commit)
+├─ docker-compose.yml       postgres + mailpit + backend + frontend + nginx (bước 13); biến môi trường: .env.example
 └─ tools/docs-export/       script xuất Word
 ```
 
@@ -67,6 +73,10 @@ Thứ tự ưu tiên khi các nguồn lệch nhau: **`docs/` > code hiện có >
 | Test backend | `cd backend` → `mvn test` (DB `ielts_test`). Gặp `NoClassDefFoundError` lạ → `mvn clean test` |
 | Chạy frontend | `cd frontend` → `npm run dev` (http://localhost:3000) |
 | Kiểm tra frontend | `npm run lint` · `npm run build` · `npm run test:unit` |
+| Build / chạy admin-cli | `cd admin-cli` → `mvn package` → `java -jar target/admin-cli.jar import --class <mã lớp> --file <ds.csv> --user <tên>` (backend phải đang chạy, TCP cổng 9090) |
+| Chạy toàn bộ bằng Docker | `cp .env.example .env` (sửa mật khẩu) → `sh deploy/nginx/gen-cert.sh` → `docker compose up --build -d` → https://localhost (xem `deploy/README.md`) |
+| Dữ liệu mẫu (profile `demo`) | `mvn spring-boot:run -Dspring-boot.run.profiles=dev,demo`; Docker: `SPRING_PROFILES_ACTIVE=docker,demo` trong `.env` (tài khoản: README) |
+| Kiểm thử tải k6 | `docker compose -f docker-compose.yml -f loadtest/compose.loadtest.yml up --build -d` → `… run --rm k6 run submit-rush.js` / `ws-connections.js` (docs/09 mục 6) |
 | Email khi dev | `tools\mailpit\mailpit.exe` → xem thư ở http://localhost:8025 |
 | Xuất Word | `python tools/docs-export/export_docx.py <tên-file-không-đuôi>` rồi `… --merge`. **Chạy bằng PowerShell** (Git Bash không in được ký tự `✔`) |
 

@@ -1,6 +1,9 @@
 // ─── Trạng thái → nhãn + màu ─────────────────────────────────────────────────
 // Nguồn: docs/07-design-system.md mục 2.4 – 2.6. Mọi tag / ô / biểu đồ lấy màu qua đây.
 
+import type { NotificationType } from '@/lib/types/notification';
+
+import { BRAND, SEMANTIC } from './tokens';
 import type { ColorSet, SolidColorSet } from './tokens';
 
 // ─── Bài nộp ──────────────────────────────────────────────────────────────────
@@ -89,3 +92,15 @@ export function getBandLevel(band: number): BandLevel {
 export function formatBand(band: number | null | undefined): string {
   return band === null || band === undefined ? '—' : band.toFixed(1);
 }
+
+// ─── Thông báo ────────────────────────────────────────────────────────────────
+// Màu ô icon trong chuông / trang Thông báo theo loại (docs/05 mục A.9).
+
+export const NOTIFICATION_TYPE_META: Record<NotificationType, ColorSet & { label: string }> = {
+  ASSIGNMENT_PUBLISHED: { label: 'Bài tập mới', text: BRAND[600], bg: BRAND[50], border: BRAND[200] },
+  SUBMISSION_RECEIVED: { label: 'Bài nộp mới', ...SEMANTIC.info },
+  GRADE_RETURNED: { label: 'Đã có kết quả', ...SEMANTIC.success },
+  REVISION_REQUESTED: { label: 'Cần sửa bài', ...SEMANTIC.error },
+  DEADLINE_REMINDER: { label: 'Sắp đến hạn', ...SEMANTIC.warning },
+  MANUAL_REMINDER: { label: 'Nhắc nhở', ...SEMANTIC.warning }
+};

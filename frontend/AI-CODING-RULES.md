@@ -84,8 +84,8 @@ stores/                                zustand: useAuthStore, useAppStore (+ sto
   | `isAuthCall: true` | Chỉ cho đăng nhập / refresh |
   | `rawResponse: true` | Tải file (blob), vd xuất Excel, file tài khoản import |
 
-- **Lỗi:** mặc định `axiosClient` đã toast `message` tiếng Việt của server → component chỉ `try { … } catch { /* đã toast */ }`. Lỗi validate có `fieldErrors` → gán vào form (`form.setFields`). Lỗi nghiệp vụ cần xử lý riêng thì xem `code` (vd `VERSION_CONFLICT` → tải lại trạng thái; `SCORE_LIMITED` → hiện lý do cạnh ô điểm).
-- 401 được `axiosClient` tự refresh token **một lần cho mọi request đang chờ**; refresh thất bại → về trang đăng nhập. KHÔNG tự viết lại logic này ở chỗ khác.
+- **Lỗi:** mặc định `axiosClient` đã toast `errorMessage` tiếng Việt của server và reject bằng `ApiError` (`lib/apiError.ts`: `message`, `code` = `errorCode` của server, `status`, `fieldErrors`) → component chỉ `try { … } catch { /* đã toast */ }`. Lỗi validate có `fieldErrors` → gán vào form (`form.setFields`). Lỗi nghiệp vụ cần xử lý riêng thì xem `code` (vd `VERSION_CONFLICT` → tải lại trạng thái; `SCORE_LIMITED` → hiện lý do cạnh ô điểm).
+- Server luôn trả HTTP 200; lỗi là body `success: false` với `status` (mã kiểu HTTP). `status` 401 được `axiosClient` tự refresh token **một lần cho mọi request đang chờ**; refresh thất bại → về trang đăng nhập. KHÔNG tự viết lại logic này ở chỗ khác.
 
 ---
 
@@ -102,7 +102,7 @@ stores/                                zustand: useAuthStore, useAppStore (+ sto
 |---|---|
 | Phiên đăng nhập, người dùng hiện tại | `useAuthStore` |
 | Loading toàn cục, instance `message` của antd | `useAppStore` |
-| Thông báo (danh sách mới nhất, số chưa đọc), trạng thái kết nối WebSocket | store riêng khi làm F1 |
+| Thông báo (danh sách mới nhất, số chưa đọc), trạng thái kết nối WebSocket | `useNotificationStore`, `useRealtimeStore` (F1b) |
 | Dữ liệu của một trang (danh sách, chi tiết, form) | state / hook trong trang — KHÔNG đưa vào store |
 
 - Chọn từng phần store: `useAuthStore((s) => s.user)`, KHÔNG lấy cả store.
@@ -134,7 +134,9 @@ stores/                                zustand: useAuthStore, useAppStore (+ sto
 | Nhận xét inline | Offset theo `String` của JavaScript (UTF-16) trên **đúng nội dung version** | Gửi kèm `quote`; server từ chối nếu lệch |
 | Gợi ý sửa khi "Cần sửa" | Hiển thị theo `suggestionsHidden` | Server đã ẩn (BR-21); không tự đoán |
 
-## 9. Realtime (WebSocket STOMP) — làm ở F1
+## 9. Realtime (WebSocket STOMP) — đã cài ở F1b
+
+Nghe kênh bằng `subscribeRealtime(destination, handler)` (trả hàm huỷ, gọi trong `useEffect`), gửi bằng `publishRealtime` — cả hai trong `lib/realtime.ts`. KHÔNG tạo `Client` STOMP mới; `RealtimeBridge` (trong `providers.tsx`) lo kết nối / đóng theo phiên đăng nhập.
 
 - **Một** STOMP client cho cả app (một module trong `lib/`, khởi tạo sau khi đăng nhập, đóng khi đăng xuất).
 - CONNECT tới `NEXT_PUBLIC_WS_URL` với header `Authorization: Bearer <accessToken>`, heartbeat 10 giây mỗi chiều; chỉ SUBSCRIBE kênh có trong `docs/05` phần B.

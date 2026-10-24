@@ -2,7 +2,6 @@ package com.ltmtu.ielts.grading;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ltmtu.ielts.common.ApiResponse;
@@ -42,7 +40,6 @@ public class TeacherFeedbackController {
 	}
 
 	@PostMapping("/error-codes")
-	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<ErrorCodeDto> createErrorCode(@AuthenticationPrincipal AuthPrincipal me,
 			@Valid @RequestBody ErrorCodeRequest body) {
 		return ApiResponse.ok(feedbackLibraryService.createErrorCode(me.id(), body), "Đã thêm mã lỗi");
@@ -67,7 +64,6 @@ public class TeacherFeedbackController {
 	}
 
 	@PostMapping("/comment-bank")
-	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<CommentBankDto> createComment(@AuthenticationPrincipal AuthPrincipal me,
 			@Valid @RequestBody CommentBankRequest body) {
 		return ApiResponse.ok(feedbackLibraryService.createComment(me.id(), body), "Đã thêm nhận xét");

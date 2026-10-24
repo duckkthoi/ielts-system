@@ -15,11 +15,19 @@ public final class DeadlineRules {
 	 * của phần; nếu không → hạn của bài. {@code null} = không có hạn.
 	 */
 	public static Instant effectiveDue(AssignmentPart part, Submission submission) {
-		if (submission != null && submission.getStatus() == SubmissionStatus.REVISION_REQUESTED
-				&& submission.getRevisionDueAt() != null) {
-			return submission.getRevisionDueAt();
+		return submission == null
+				? effectiveDue(part.getAssignment().getDueAt(), part.getPartDueAt(), SubmissionStatus.NOT_STARTED, null)
+				: effectiveDue(part.getAssignment().getDueAt(), part.getPartDueAt(), submission.getStatus(),
+						submission.getRevisionDueAt());
+	}
+
+	/** Như trên, cho truy vấn tổng hợp đọc thẳng các cột (không tải entity). */
+	public static Instant effectiveDue(Instant assignmentDue, Instant partDue, SubmissionStatus status,
+			Instant revisionDue) {
+		if (status == SubmissionStatus.REVISION_REQUESTED && revisionDue != null) {
+			return revisionDue;
 		}
-		return part.getPartDueAt() != null ? part.getPartDueAt() : part.getAssignment().getDueAt();
+		return partDue != null ? partDue : assignmentDue;
 	}
 
 	public static boolean isPastDue(Instant due, Instant now) {

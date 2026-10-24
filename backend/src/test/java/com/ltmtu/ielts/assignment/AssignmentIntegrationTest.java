@@ -1,5 +1,6 @@
 package com.ltmtu.ielts.assignment;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
@@ -10,7 +11,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -57,7 +57,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 	}
 
 	private JsonNode createOk(Object body) throws Exception {
-		return json.readTree(create(body).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString())
+		return json.readTree(create(body).andExpect(apiStatus(201)).andReturn().getResponse().getContentAsString())
 				.get("data");
 	}
 
@@ -123,7 +123,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 		@DisplayName("BR-11 + BR-16: rubric mẫu Task 2 có mã TR/CC/LR/GRA, bước 1, có mục Giới hạn điểm kèm band tối đa")
 		void task2Template() throws Exception {
 			String body = mvc.perform(as(get("/api/teacher/rubric-templates").param("taskType", "WRITING_TASK2")))
-					.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+					.andExpect(apiStatus(200)).andReturn().getResponse().getContentAsString();
 			JsonNode tpl = json.readTree(body).get("data").get(0);
 			assertThat(tpl.get("system").asBoolean()).isTrue();
 			List<String> codes = new ArrayList<>();
@@ -158,7 +158,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 		@DisplayName("Bảng mô tả band thu gọn: Task 2 có TR/CC/LR/GRA (không có TA), đủ 10 mức, kèm link ielts.org")
 		void descriptors() throws Exception {
 			mvc.perform(as(get("/api/teacher/rubric-templates/descriptors").param("taskType", "WRITING_TASK2")))
-					.andExpect(status().isOk())
+					.andExpect(apiStatus(200))
 					.andExpect(jsonPath("$.data.source.url", containsString("ielts.org")))
 					.andExpect(jsonPath("$.data.criteria.TR.bands.9").exists())
 					.andExpect(jsonPath("$.data.criteria.GRA.bands.0").exists())
@@ -217,17 +217,17 @@ class AssignmentIntegrationTest extends IntegrationTest {
 					criterion(Map.of("checklist", List.of(Map.of("content", "X", "kind", "LIMIT", "maxBand", 4.5)))));
 			for (Map<String, Object> c : bad) {
 				create(assignment("Sai rubric", List.of(part("P1", "CUSTOM", "<p>Đề</p>", List.of(c)))))
-						.andExpect(status().isBadRequest())
-						.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+						.andExpect(apiStatus(400))
+						.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
 			}
 			create(assignment("Lặp mã", List.of(part("P1", "WRITING_TASK2", "<p>Đề</p>",
 					List.of(criterion(Map.of("code", "CC")), criterion(Map.of("code", "CC")))))))
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.message", containsString("bị lặp")));
+					.andExpect(apiStatus(400))
+					.andExpect(jsonPath("$.errorMessage", containsString("bị lặp")));
 			// Bước 0.5 thì band tối đa 4.5 hợp lệ.
 			create(assignment("Bước 0.5", List.of(part("P1", "CUSTOM", "<p>Đề</p>", List.of(criterion(Map.of("step", 0.5,
 					"checklist", List.of(Map.of("content", "X", "kind", "LIMIT", "maxBand", 4.5)))))))))
-					.andExpect(status().isCreated());
+					.andExpect(apiStatus(201));
 		}
 
 		@Test
@@ -235,19 +235,19 @@ class AssignmentIntegrationTest extends IntegrationTest {
 		void otherValidation() throws Exception {
 			Map<String, Object> wrongDates = assignment("Ngày sai", List.of());
 			wrongDates.put("openAt", Instant.now().plus(Duration.ofDays(8)).toString());
-			create(wrongDates).andExpect(status().isBadRequest()).andExpect(jsonPath("$.message", containsString("Thời điểm mở")));
+			create(wrongDates).andExpect(apiStatus(400)).andExpect(jsonPath("$.errorMessage", containsString("Thời điểm mở")));
 
 			Map<String, Object> p = part("P1", "CUSTOM", "<p>Đề</p>", List.of());
 			p.put("imageUrl", "javascript:alert(1)");
-			create(assignment("Ảnh", List.of(p))).andExpect(status().isBadRequest());
+			create(assignment("Ảnh", List.of(p))).andExpect(apiStatus(400));
 
 			create(assignment("Script", List.of(part("P1", "CUSTOM", "<script>x()</script>", List.of()))))
-					.andExpect(status().isBadRequest()).andExpect(jsonPath("$.message", containsString("đề bài trống")));
+					.andExpect(apiStatus(400)).andExpect(jsonPath("$.errorMessage", containsString("đề bài trống")));
 
 			Map<String, Object> noType = part("P1", "CUSTOM", "<p>Đề</p>", List.of());
 			noType.remove("taskType");
 			create(assignment("Thiếu loại", List.of(noType)))
-					.andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors['parts[0].taskType']").exists());
+					.andExpect(apiStatus(400)).andExpect(jsonPath("$.fieldErrors['parts[0].taskType']").exists());
 		}
 
 		@Test
@@ -262,7 +262,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 					part("B mới", "WRITING_TASK2", "<p>b2</p>", List.of(criterion(Map.of("code", "TR")), criterion(Map.of("code", "CC")))),
 					part("A mới", "WRITING_TASK1", "<p>a2</p>", List.of()),
 					part("C", "CUSTOM", "<p>c</p>", List.of()))))
-					.andExpect(status().isOk())
+					.andExpect(apiStatus(200))
 					.andExpect(jsonPath("$.data.title").value("Bản 2"))
 					.andExpect(jsonPath("$.data.parts[*].title", contains("B mới", "A mới", "C")))
 					.andExpect(jsonPath("$.data.parts[0].orderNo").value(1))
@@ -285,28 +285,28 @@ class AssignmentIntegrationTest extends IntegrationTest {
 			assignmentRepository.save(entity);
 
 			putJson("/api/teacher/assignments/" + id, assignment("Sửa", List.of()))
-					.andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("INVALID_STATE"));
+					.andExpect(apiStatus(409)).andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
 			mvc.perform(as(delete("/api/teacher/assignments/" + id)))
-					.andExpect(status().isConflict());
+					.andExpect(apiStatus(409));
 
 			String newDue = Instant.now().plus(Duration.ofDays(14)).toString();
 			patchJson("/api/teacher/assignments/" + id + "/settings", Map.of("title", "Đã giao (gia hạn)", "dueAt", newDue,
 					"allowLate", true, "partDueAts", Map.of(String.valueOf(partId), newDue)))
-					.andExpect(status().isOk())
+					.andExpect(apiStatus(200))
 					.andExpect(jsonPath("$.data.title").value("Đã giao (gia hạn)"))
 					.andExpect(jsonPath("$.data.allowLate").value(true))
 					.andExpect(jsonPath("$.data.parts[0].partDueAt").exists());
 
 			patchJson("/api/teacher/assignments/" + id + "/settings", Map.of("partDueAts", Map.of("999999999", newDue)))
-					.andExpect(status().isBadRequest());
+					.andExpect(apiStatus(400));
 		}
 
 		@Test
 		@DisplayName("Xoá bài nháp → 200, sau đó 404")
 		void deleteDraft() throws Exception {
 			long id = createOk(assignment("Nháp xoá", List.of())).get("id").asLong();
-			mvc.perform(as(delete("/api/teacher/assignments/" + id))).andExpect(status().isOk());
-			mvc.perform(as(get("/api/teacher/assignments/" + id))).andExpect(status().isNotFound());
+			mvc.perform(as(delete("/api/teacher/assignments/" + id))).andExpect(apiStatus(200));
+			mvc.perform(as(get("/api/teacher/assignments/" + id))).andExpect(apiStatus(404));
 		}
 
 		@Test
@@ -319,7 +319,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 							.content(json.writeValueAsString(assignment("X", List.of()))),
 					patch("/api/teacher/assignments/" + mine + "/settings").contentType(MediaType.APPLICATION_JSON).content("{}"),
 					delete("/api/teacher/assignments/" + mine))) {
-				mvc.perform(req.header(HttpHeaders.AUTHORIZATION, bearer(other))).andExpect(status().isNotFound());
+				mvc.perform(req.header(HttpHeaders.AUTHORIZATION, bearer(other))).andExpect(apiStatus(404));
 			}
 			mvc.perform(get("/api/teacher/assignments").param("size", "100").header(HttpHeaders.AUTHORIZATION, bearer(other)))
 					.andExpect(jsonPath("$.data[*].id", not(hasItem((int) mine))));
@@ -333,7 +333,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 			createOk(assignment("Tuần 7 – Map", List.of()));
 
 			mvc.perform(as(get("/api/teacher/assignments").param("status", "DRAFT").param("keyword", "bar chart")))
-					.andExpect(status().isOk())
+					.andExpect(apiStatus(200))
 					.andExpect(jsonPath("$.totalRecord").value(1))
 					.andExpect(jsonPath("$.data[0].partCount").value(2));
 			mvc.perform(as(get("/api/teacher/assignments").param("status", "PUBLISHED")))
@@ -344,7 +344,7 @@ class AssignmentIntegrationTest extends IntegrationTest {
 		@DisplayName("Sinh viên gọi API bài tập của giáo viên → 403")
 		void studentForbidden() throws Exception {
 			mvc.perform(get("/api/teacher/assignments").header(HttpHeaders.AUTHORIZATION, bearer(accessToken(newUser(Role.STUDENT)))))
-					.andExpect(status().isForbidden());
+					.andExpect(apiStatus(403));
 		}
 	}
 }

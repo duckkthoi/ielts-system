@@ -51,18 +51,24 @@ sequenceDiagram
     U->>FE: Nhập tên đăng nhập, mật khẩu
     FE->>C: POST /api/auth/login
     C->>S: login(username, password, ip)
+    S->>S: LoginThrottle: IP hoặc tài khoản đã sai ≥ 5 lần / 5 phút?
     S->>DB: Tìm user theo username
     DB-->>S: User (password_hash, active, role)
-    alt Không tồn tại / sai mật khẩu
+    alt Đã sai quá nhiều lần (Mức 2)
+        S->>DB: audit_logs LOGIN_BLOCKED (transaction riêng)
+        S-->>FE: 429 "Bạn đã đăng nhập sai quá nhiều lần…"
+    else Không tồn tại / sai mật khẩu
+        S->>S: Tăng bộ đếm sai của IP và tài khoản
+        S->>DB: audit_logs LOGIN_FAILED (transaction riêng)
         S-->>FE: 401 "Tên đăng nhập hoặc mật khẩu không đúng"
     else Tài khoản bị khoá
         S-->>FE: 403 "Tài khoản đã bị khoá"
     else Hợp lệ
         S->>J: Tạo access token (30 phút) + refresh token (7 ngày)
-        S->>DB: Lưu refresh token (dạng hash), cập nhật last_login_at
-        opt Mức 2 — một tài khoản một phiên
-            S->>DB: Thu hồi các phiên cũ của user
-            S->>WS: Gửi FORCE_LOGOUT tới /user/queue/session của phiên cũ
+        S->>DB: Lưu refresh token (dạng hash), cập nhật last_login_at, audit_logs LOGIN
+        opt Mức 2 — một tài khoản một phiên (bước 9a)
+            S->>DB: SessionRevoker: thu hồi các phiên cũ (NEW_LOGIN)
+            S->>WS: Sau commit: FORCE_LOGOUT tới từng kết nối của phiên cũ, rồi đóng kết nối đó
         end
         S-->>FE: 200 {accessToken, refreshToken, user}
         FE->>FE: Lưu token vào localStorage, lưu user vào store
@@ -179,40 +185,48 @@ sequenceDiagram
     participant I as StudentImportService
     participant DB as DB
 
-    GV->>CLI: admin-cli import --host h --class L01 --file sv.csv
+    GV->>CLI: admin-cli import --class L01 --file sv.csv --user gv
+    CLI->>CLI: POST /api/auth/login → accessToken
     CLI->>L: Mở kết nối TCP tới cổng 9090
-    L->>W: Giao socket cho một luồng trong ExecutorService
-    CLI->>W: AUTH <accessToken>\n
-    alt Token sai / hết hạn
-        W-->>CLI: ERR 401 Unauthorized\n
-        W->>W: Đóng socket
-    else Hợp lệ
-        W-->>CLI: OK\n
-        CLI->>W: IMPORT L01 <số byte>\n + nội dung CSV
-        W->>DB: Kiểm tra lớp L01 thuộc người dùng
-        alt Không có quyền
-            W-->>CLI: ERR 403 Forbidden\n
-        else
-            loop Mỗi dòng
-                W->>I: Xử lý 1 dòng (như SD-03)
-                I->>DB: INSERT ...
-                W-->>CLI: PROGRESS n/tổng\n
-                CLI->>CLI: Cập nhật thanh tiến trình
+    alt Đủ số phiên đồng thời (Semaphore hết chỗ)
+        L-->>CLI: ERR 503 Server bận\n
+        L->>L: Đóng socket
+    else Còn chỗ
+        L->>W: Giao socket cho một luồng trong ExecutorService
+        CLI->>W: AUTH <accessToken>\n
+        alt Token sai / hết hạn
+            W-->>CLI: ERR 401 Token sai hoặc hết hạn\n
+            W->>W: Đóng socket
+        else Hợp lệ (ADMIN / TEACHER)
+            W-->>CLI: OK\n
+            CLI->>W: IMPORT L01 <số byte> [EMAIL]\n
+            W->>DB: Tìm lớp L01, kiểm tra quyền (trước khi nhận dữ liệu)
+            alt Không có lớp / không có quyền / quá 5 MB
+                W-->>CLI: ERR 404 / 403 / 413\n
+            else
+                CLI->>W: Nội dung CSV (đúng <số byte>)
+                loop Mỗi dòng
+                    W->>I: Xử lý 1 dòng (như SD-03)
+                    I->>DB: INSERT ... (transaction riêng)
+                    W-->>CLI: PROGRESS n/tổng\n
+                    CLI->>CLI: Cập nhật thanh tiến trình
+                end
+                W-->>CLI: DONE created=.. existing=.. skipped=.. errors=..\n
+                W-->>CLI: ERRLINE <số dòng> <lý do>\n (mỗi dòng lỗi)
+                W-->>CLI: CRED <mã SV>|<họ tên>|<mật khẩu>\n (mỗi tài khoản mới)
+                W-->>CLI: END\n
             end
-            W-->>CLI: DONE created=.. existing=.. skipped=.. errors=..\n
-            W-->>CLI: ERRLINE <số dòng> <lý do>\n (mỗi dòng lỗi)
-            W-->>CLI: CRED <mã SV>|<họ tên>|<mật khẩu>\n (mỗi tài khoản mới)
-            W-->>CLI: END\n
+            W->>W: Đóng socket, ghi audit log (IP client — bước 12)
+            CLI->>GV: In báo cáo, lưu file tài khoản ra đĩa
         end
-        W->>W: Đóng socket, ghi audit log (IP client)
-        CLI->>GV: In báo cáo, lưu file tài khoản ra đĩa
     end
 ```
 
 **Ghi chú**
 - Giao thức dạng text. Mỗi khung tin kết thúc bằng `\n`. Riêng phần nội dung CSV gửi đúng số byte đã khai báo, nên server biết chính xác chỗ dừng.
 - Server có **timeout đọc** (ví dụ 30 giây). Client im lặng quá lâu thì server đóng kết nối, giải phóng luồng.
-- Mỗi kết nối được một luồng trong thread pool xử lý. Số luồng tối đa giới hạn bằng cấu hình.
+- Mỗi kết nối được một luồng trong thread pool xử lý. Số phiên đồng thời giới hạn bằng `Semaphore` (bằng số luồng, `app.tcp.threads`): hết chỗ thì trả ngay `ERR 503` thay vì để client chờ trong hàng đợi.
+- Lớp và quyền được kiểm tra **ngay khi nhận dòng `IMPORT`**, trước khi đọc phần CSV, để từ chối sớm mà không phải nhận cả file.
 - Đặc tả đầy đủ của giao thức nằm trong file 05.
 
 ---
@@ -269,9 +283,10 @@ sequenceDiagram
     FE->>IDB: Lưu nháp cục bộ (mỗi lần thay đổi)
     Note over FE: Chờ 3 giây không gõ (debounce)
     FE->>B: PUT /api/student/parts/{partId}/draft {content, draftVersion: 7}
+    B->>DB: SELECT … FOR UPDATE (khoá dòng bài làm)
     alt Online, draftVersion khớp DB
         B->>DB: UPDATE submissions SET draft_content, draft_version = 8, draft_saved_at
-        B-->>FE: 200 {draftVersion: 8, savedAt}
+        B-->>FE: 200 {savedAt, wordCount, draftVersion: 8}
         FE->>SV: "Đã lưu lúc 14:32"
     else Mất mạng
         FE--xB: Lỗi mạng
@@ -279,7 +294,7 @@ sequenceDiagram
         Note over FE: Nghe sự kiện "online" của trình duyệt
         FE->>B: Có mạng lại → gửi lại bản trong IndexedDB
     else Xung đột (Mức 2): tab/máy khác đã lưu bản mới hơn
-        B-->>FE: 409 {serverContent, draftVersion: 9}
+        B-->>FE: 409 DRAFT_CONFLICT, data = {serverContent, draftVersion: 9, savedAt}
         FE->>SV: Hộp thoại: giữ bản trên máy này / dùng bản trên server
         SV->>FE: Chọn một bản
         FE->>B: PUT …/draft {content đã chọn, draftVersion: 9}
@@ -288,7 +303,7 @@ sequenceDiagram
 
 **Ghi chú**
 - `draftVersion` là **optimistic locking**. Mỗi lần lưu thành công, server tăng số này. Client gửi số mình đang có; lệch với DB nghĩa là có nơi khác đã lưu, nên server trả 409 thay vì ghi đè.
-- Cột `draft_version` sẽ được thêm ở migration của Mức 2. Mức 1 chỉ lưu đè.
+- Cột `draft_version` thêm ở migration V8 (bước 10). Server khoá dòng rồi mới so số, nên 2 lần lưu đồng thời cùng số chỉ 1 lần thành công. Client không gửi `draftVersion` thì server lưu đè như Mức 1.
 
 ---
 
@@ -320,7 +335,7 @@ sequenceDiagram
     else Hợp lệ
         S->>DB: INSERT submission_versions (version_no = 2, word_count, is_late)
         S->>DB: UPDATE submissions SET status = SUBMITTED, current_version = 2, draft_content = NULL
-        S-->>FE: 201 {versionNo: 2, submittedAt, isLate}
+        S-->>FE: 201 {versionNo: 2, submittedAt, late}
         FE->>SV: "Đã nộp lúc 23:58"
         S->>N: notify(giáo viên, SUBMISSION_RECEIVED)
         N->>DB: INSERT notifications
@@ -489,25 +504,34 @@ sequenceDiagram
     actor A as Giáo viên
     participant FA as Frontend GV
     participant WS as STOMP broker
-    participant C as ChatController
+    participant R as ChatChannelRule (interceptor)
+    participant C as ChatSocketController / ChatService
     participant DB as DB
     participant FB as Frontend SV
 
     FA->>WS: SUBSCRIBE /topic/chat/{channelId}
-    WS->>C: Kiểm tra quyền vào kênh (interceptor)
+    WS->>R: Kiểm tra là thành viên kênh
     FB->>WS: SUBSCRIBE /topic/chat/{channelId}
+    FA->>C: GET /api/chat/{channelId}/messages (50 tin gần nhất + mốc "đã xem")
     A->>FA: Gõ tin nhắn
     FA->>WS: SEND /app/chat/{channelId}/typing
-    WS-->>FB: "Giáo viên đang gõ…"
+    WS->>C: @MessageMapping (bỏ bớt nếu dày hơn 2 giây)
+    C-->>FB: TYPING "Giáo viên đang gõ…"
     A->>FA: Bấm gửi
     FA->>WS: SEND /app/chat/{channelId}/send {content, clientMsgId}
+    WS->>R: Kiểm tra là thành viên kênh
     WS->>C: @MessageMapping
-    C->>DB: INSERT chat_messages
-    C->>WS: Phát tới /topic/chat/{channelId}
-    WS-->>FA: Tin nhắn (đánh dấu "đã gửi" theo clientMsgId)
-    WS-->>FB: Tin nhắn mới
+    alt Tin rỗng / quá 4000 ký tự
+        C-->>FA: /user/queue/errors {code, message}
+    else Hợp lệ
+        C->>DB: INSERT chat_messages (UNIQUE sender + clientMsgId: gửi lại thì dùng tin đã lưu)
+        C->>WS: Sau commit: phát MESSAGE tới /topic/chat/{channelId}
+        WS-->>FA: Tin nhắn (khớp clientMsgId → "đã gửi")
+        WS-->>FB: Tin nhắn mới
+    end
     FB->>WS: SEND /app/chat/{channelId}/read {lastMessageId}
-    WS-->>FA: "Đã xem"
+    WS->>C: Upsert chat_read_markers (GREATEST)
+    C-->>FA: Sau commit: READ → "Đã xem"
 ```
 
 ---
