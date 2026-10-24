@@ -1,10 +1,15 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import { Suspense } from 'react';
+
+import type { Metadata } from 'next';
+
+import AssignmentEditorPage from './index';
+
+export const metadata: Metadata = { title: 'Soạn bài tập — IELTS Writing' };
 
 export default function Page() {
   return (
-    <PagePlaceholder
-      title="Tạo bài tập"
-      description="Trình soạn nhiều bước: thông tin, các phần, tiêu chí & checklist, giao bài."
-    />
+    <Suspense>
+      <AssignmentEditorPage />
+    </Suspense>
   );
 }
