@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.chat;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -61,20 +61,20 @@ class ChatIntegrationTest extends IntegrationTest {
 		s2 = newUser(Role.STUDENT);
 		classCode = "CH-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 		classId = data(call(postJson("/api/teacher/classes", Map.of("code", classCode, "name", "Lớp chat")), teacher)
-				.andExpect(status().isCreated())).get("id").asLong();
+				.andExpect(apiStatus(201))).get("id").asLong();
 		call(postJson("/api/teacher/classes/" + classId + "/members",
 				Map.of("studentCodes", List.of(s1.getStudentCode(), s2.getStudentCode()))), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		Map<String, Object> part = Map.of("title", "Task 2", "taskType", "WRITING_TASK2", "prompt", "<p>Đề</p>",
 				"criteria", List.of(Map.of("code", "TR", "name", "Task Response", "step", "1", "checklist", List.of())));
 		JsonNode a = data(call(postJson("/api/teacher/assignments", Map.of("title", "Bài chat", "dueAt",
 				clock.instant().plus(Duration.ofDays(3)).toString(), "parts", List.of(part))), teacher)
-				.andExpect(status().isCreated()));
+				.andExpect(apiStatus(201)));
 		long partId = a.get("parts").get(0).get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish", Map.of("classIds", List.of(classId))),
-				teacher).andExpect(status().isOk());
+				teacher).andExpect(apiStatus(200));
 		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", ESSAY, "expectedVersion", 0)),
-				accessToken(s1)).andExpect(status().isCreated());
+				accessToken(s1)).andExpect(apiStatus(201));
 		long submissionId = data(call(get("/api/teacher/submissions").param("partId", String.valueOf(partId)), teacher))
 				.get(0).get("submissionId").asLong();
 		submissionChannel = "submission-" + submissionId;
@@ -137,14 +137,14 @@ class ChatIntegrationTest extends IntegrationTest {
 		c.session().subscribe("/topic/chat/" + submissionChannel, new StompSessionHandlerAdapter() {
 		});
 		assertThat(c.errors.poll(5, TimeUnit.SECONDS)).contains("Không có quyền nhận kênh");
-		call(get("/api/chat/" + submissionChannel + "/messages"), other).andExpect(status().isNotFound());
+		call(get("/api/chat/" + submissionChannel + "/messages"), other).andExpect(apiStatus(404));
 
 		String otherTeacher = accessToken(newUser(Role.TEACHER));
 		Connection t = stomp.connect(otherTeacher);
 		stomp.send(t, "/app/chat/" + classChannel + "/send", Map.of("content", "Xin chào"));
 		assertThat(t.errors.poll(5, TimeUnit.SECONDS)).contains("Không có quyền gửi");
-		call(get("/api/chat/abc/messages"), teacher).andExpect(status().isNotFound());
-		call(get("/api/chat/class-999999999/messages"), teacher).andExpect(status().isNotFound());
+		call(get("/api/chat/abc/messages"), teacher).andExpect(apiStatus(404));
+		call(get("/api/chat/class-999999999/messages"), teacher).andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -176,7 +176,7 @@ class ChatIntegrationTest extends IntegrationTest {
 		BlockingQueue<JsonNode> channel = stomp.subscribe(s, "/topic/chat/" + classChannel);
 		stomp.send(s, "/app/chat/" + classChannel + "/send", Map.of("content", "   "));
 		JsonNode err = errors.poll(5, TimeUnit.SECONDS);
-		assertThat(err.get("code").asString()).isEqualTo("VALIDATION_ERROR");
+		assertThat(err.get("errorCode").asString()).isEqualTo("VALIDATION_ERROR");
 		stomp.send(s, "/app/chat/" + classChannel + "/send", Map.of("content", "x".repeat(4001)));
 		assertThat(errors.poll(5, TimeUnit.SECONDS)).isNotNull();
 		assertThat(channel.poll(500, TimeUnit.MILLISECONDS)).isNull();
@@ -193,11 +193,11 @@ class ChatIntegrationTest extends IntegrationTest {
 		if (size != null) {
 			req.param("size", String.valueOf(size));
 		}
-		return data(call(req, token).andExpect(status().isOk()));
+		return data(call(req, token).andExpect(apiStatus(200)));
 	}
 
 	private JsonNode channel(String token, String channelId) throws Exception {
-		for (JsonNode c : data(call(get("/api/chat/channels"), token).andExpect(status().isOk()))) {
+		for (JsonNode c : data(call(get("/api/chat/channels"), token).andExpect(apiStatus(200)))) {
 			if (channelId.equals(c.get("channelId").asString())) {
 				return c;
 			}

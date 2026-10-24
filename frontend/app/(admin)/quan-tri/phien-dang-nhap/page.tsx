@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import SessionsPage from './index';
+
+export const metadata: Metadata = { title: 'Phiên đăng nhập — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Phiên đăng nhập" description="Danh sách phiên đang hoạt động, thu hồi phiên." />;
+  return <SessionsPage />;
 }

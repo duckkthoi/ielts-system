@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.stats;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.List;
@@ -114,8 +114,8 @@ class ClassStatsIntegrationTest extends StatsTestSupport {
 	@Test
 	@DisplayName("Phân quyền: lớp của giáo viên khác → 404, sinh viên → 403")
 	void access() throws Exception {
-		call(get(url()), accessToken(newUser(Role.TEACHER))).andExpect(status().isNotFound());
-		call(get(url()), accessToken(p)).andExpect(status().isForbidden());
+		call(get(url()), accessToken(newUser(Role.TEACHER))).andExpect(apiStatus(404));
+		call(get(url()), accessToken(p)).andExpect(apiStatus(403));
 	}
 
 	private String url() {
@@ -123,7 +123,7 @@ class ClassStatsIntegrationTest extends StatsTestSupport {
 	}
 
 	private JsonNode stats() throws Exception {
-		return data(call(get(url()), teacher).andExpect(status().isOk()));
+		return data(call(get(url()), teacher).andExpect(apiStatus(200)));
 	}
 
 	private static void assertRow(JsonNode row, int rank, User student, String band, int graded, int submitted, int late) {

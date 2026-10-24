@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.stats;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
@@ -67,7 +67,7 @@ class GradebookExportIntegrationTest extends StatsTestSupport {
 		grade(a2, Map.of(x.criterion(1, "TR"), 7));
 		call(postJson("/api/teacher/submissions/" + a2 + "/request-revision",
 				Map.of("dueAt", clock.instant().plus(Duration.ofDays(10)).toString())), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		submit(a, x.part(1), 1);
 
 		long b1 = submit(b, x.part(0));
@@ -83,7 +83,7 @@ class GradebookExportIntegrationTest extends StatsTestSupport {
 	@DisplayName("FR-66: file .xlsx mở được, đúng cột; điểm lấy từ lần trả gần nhất; ô chưa có điểm để trống, \"Chấm 0\" ghi 0")
 	void workbook() throws Exception {
 		MvcResult res = call(get(url()), teacher)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(header().string("Content-Type",
 						"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
 				.andReturn();
@@ -112,7 +112,7 @@ class GradebookExportIntegrationTest extends StatsTestSupport {
 	@DisplayName("Lọc theo lớp: chỉ thành viên lớp, tên file có mã lớp")
 	void byClass() throws Exception {
 		MvcResult res = call(get(url()).param("classId", String.valueOf(classId)), teacher)
-				.andExpect(status().isOk()).andReturn();
+				.andExpect(apiStatus(200)).andReturn();
 		assertThat(res.getResponse().getHeader("Content-Disposition")).contains("bang-diem-bai-" + assignmentId + "-ST-");
 		try (XSSFWorkbook wb = new XSSFWorkbook(new ByteArrayInputStream(res.getResponse().getContentAsByteArray()))) {
 			Sheet sheet = wb.getSheet("Bảng điểm");
@@ -124,8 +124,8 @@ class GradebookExportIntegrationTest extends StatsTestSupport {
 	@Test
 	@DisplayName("Phân quyền: bài của giáo viên khác → 404, sinh viên → 403")
 	void access() throws Exception {
-		call(get(url()), accessToken(newUser(Role.TEACHER))).andExpect(status().isNotFound());
-		call(get(url()), accessToken(a)).andExpect(status().isForbidden());
+		call(get(url()), accessToken(newUser(Role.TEACHER))).andExpect(apiStatus(404));
+		call(get(url()), accessToken(a)).andExpect(apiStatus(403));
 	}
 
 	private String url() {

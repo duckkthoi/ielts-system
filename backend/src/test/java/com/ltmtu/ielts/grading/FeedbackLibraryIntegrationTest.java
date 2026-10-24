@@ -1,12 +1,12 @@
 package com.ltmtu.ielts.grading;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,7 +69,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 	@Test
 	@DisplayName("BR-21: có sẵn 22 mã lỗi hệ thống theo thứ tự, kèm nhóm tiêu chí; mã riêng xếp sau và chỉ chủ thấy")
 	void systemAndOwnErrorCodes() throws Exception {
-		JsonNode before = data(call(get("/api/teacher/error-codes"), teacher).andExpect(status().isOk()));
+		JsonNode before = data(call(get("/api/teacher/error-codes"), teacher).andExpect(apiStatus(200)));
 		List<JsonNode> system = new ArrayList<>();
 		before.forEach(n -> {
 			if (n.get("system").asBoolean()) {
@@ -87,7 +87,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 		assertThat(irr.get("criterion").asString()).isEqualTo("TASK");
 
 		call(postJson("/api/teacher/error-codes", code(" para2 ", "Đoạn quá dài", "CC")), teacher)
-				.andExpect(status().isCreated())
+				.andExpect(apiStatus(201))
 				.andExpect(jsonPath("$.data.code").value("PARA2"))
 				.andExpect(jsonPath("$.data.system").value(false))
 				.andExpect(jsonPath("$.data.positive").value(false));
@@ -101,12 +101,12 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 	@DisplayName("BR-22: mã riêng không được trùng mã hệ thống / mã của mình (không phân biệt hoa thường); giáo viên khác dùng lại được")
 	void duplicateErrorCodes() throws Exception {
 		call(postJson("/api/teacher/error-codes", code("sp", "Chính tả 2", null)), teacher)
-				.andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DUPLICATE"));
-		call(postJson("/api/teacher/error-codes", code("TONE", "Giọng văn", "TASK")), teacher).andExpect(status().isCreated());
+				.andExpect(apiStatus(409)).andExpect(jsonPath("$.errorCode").value("DUPLICATE"));
+		call(postJson("/api/teacher/error-codes", code("TONE", "Giọng văn", "TASK")), teacher).andExpect(apiStatus(201));
 		call(postJson("/api/teacher/error-codes", code("tone", "Giọng văn", "TASK")), teacher)
-				.andExpect(status().isConflict());
+				.andExpect(apiStatus(409));
 		call(postJson("/api/teacher/error-codes", code("TONE", "Giọng văn", "TASK")), otherTeacher)
-				.andExpect(status().isCreated());
+				.andExpect(apiStatus(201));
 	}
 
 	@Test
@@ -115,17 +115,17 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 		long id = data(call(postJson("/api/teacher/error-codes", code("REG", "Văn phong", "LR")), teacher)).get("id").asLong();
 		// Giữ nguyên mã khi sửa không bị coi là trùng với chính nó.
 		call(putJson("/api/teacher/error-codes/" + id, code("REG", "Văn phong không trang trọng", "LR")), teacher)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.name").value("Văn phong không trang trọng"));
-		call(putJson("/api/teacher/error-codes/" + id, code("REG", "x", null)), otherTeacher).andExpect(status().isNotFound());
-		call(delete("/api/teacher/error-codes/" + id), otherTeacher).andExpect(status().isNotFound());
+		call(putJson("/api/teacher/error-codes/" + id, code("REG", "x", null)), otherTeacher).andExpect(apiStatus(404));
+		call(delete("/api/teacher/error-codes/" + id), otherTeacher).andExpect(apiStatus(404));
 
 		long systemId = data(call(get("/api/teacher/error-codes"), teacher)).get(0).get("id").asLong();
 		call(putJson("/api/teacher/error-codes/" + systemId, code("SP", "Đổi tên", "LR")), teacher)
-				.andExpect(status().isForbidden());
-		call(delete("/api/teacher/error-codes/" + systemId), teacher).andExpect(status().isForbidden());
+				.andExpect(apiStatus(403));
+		call(delete("/api/teacher/error-codes/" + systemId), teacher).andExpect(apiStatus(403));
 
-		call(delete("/api/teacher/error-codes/" + id), teacher).andExpect(status().isOk());
+		call(delete("/api/teacher/error-codes/" + id), teacher).andExpect(apiStatus(200));
 		assertThat(field(data(call(get("/api/teacher/error-codes"), teacher)), "code")).doesNotContain("REG");
 	}
 
@@ -133,11 +133,11 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 	@DisplayName("Validate mã lỗi: khoảng trắng / quá dài / thiếu tên / nhóm tiêu chí sai → 400")
 	void validateErrorCode() throws Exception {
 		call(postJson("/api/teacher/error-codes", code("A B", "Có khoảng trắng", null)), teacher)
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 		call(postJson("/api/teacher/error-codes", code("X".repeat(21), "Quá dài", null)), teacher)
-				.andExpect(status().isBadRequest());
-		call(postJson("/api/teacher/error-codes", Map.of("code", "OK")), teacher).andExpect(status().isBadRequest());
-		call(postJson("/api/teacher/error-codes", code("OK2", "Tên", "TR")), teacher).andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
+		call(postJson("/api/teacher/error-codes", Map.of("code", "OK")), teacher).andExpect(apiStatus(400));
+		call(postJson("/api/teacher/error-codes", code("OK2", "Tên", "TR")), teacher).andExpect(apiStatus(400));
 	}
 
 	// ─── Ngân hàng nhận xét ──────────────────────────────────────────────────
@@ -147,7 +147,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 		if (criterion != null) {
 			body.put("criterion", criterion);
 		}
-		return data(call(postJson("/api/teacher/comment-bank", body), token).andExpect(status().isCreated()))
+		return data(call(postJson("/api/teacher/comment-bank", body), token).andExpect(apiStatus(201)))
 				.get("id").asLong();
 	}
 
@@ -158,7 +158,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 		long shared = addComment(teacher, null, "Bài làm có tiến bộ so với lần trước");
 		addComment(teacher, "LR", "Dùng từ học thuật tốt");
 
-		JsonNode all = data(call(get("/api/teacher/comment-bank"), teacher).andExpect(status().isOk()));
+		JsonNode all = data(call(get("/api/teacher/comment-bank"), teacher).andExpect(apiStatus(200)));
 		long systemCount = 0;
 		for (JsonNode n : all) {
 			if (n.get("system").asBoolean()) {
@@ -199,7 +199,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 		long first = addComment(teacher, "TASK", "Nhận xét A");
 		long second = addComment(teacher, "TASK", "Nhận xét B");
 		call(post("/api/teacher/comment-bank/" + second + "/use"), teacher)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.useCount").value(1))
 				.andExpect(jsonPath("$.data.lastUsedAt").value(clock.instant().toString()));
 		JsonNode list = data(call(get("/api/teacher/comment-bank").param("criterion", "TASK"), teacher));
@@ -208,8 +208,8 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 
 		long systemId = list.get(list.size() - 1).get("id").asLong();
 		call(post("/api/teacher/comment-bank/" + systemId + "/use"), teacher)
-				.andExpect(status().isOk()).andExpect(jsonPath("$.data.useCount").value(0));
-		call(post("/api/teacher/comment-bank/" + second + "/use"), otherTeacher).andExpect(status().isNotFound());
+				.andExpect(apiStatus(200)).andExpect(jsonPath("$.data.useCount").value(0));
+		call(post("/api/teacher/comment-bank/" + second + "/use"), otherTeacher).andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -217,19 +217,19 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 	void editAndDeleteComments() throws Exception {
 		long id = addComment(teacher, "GRA", "Chú ý mạo từ");
 		call(putJson("/api/teacher/comment-bank/" + id, Map.of("criterion", "GRA", "content", "  Chú ý mạo từ 'the'  ")), teacher)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.content").value("Chú ý mạo từ 'the'"));
-		call(putJson("/api/teacher/comment-bank/" + id, Map.of("content", "x")), otherTeacher).andExpect(status().isNotFound());
-		call(putJson("/api/teacher/comment-bank/" + id, Map.of("content", " ")), teacher).andExpect(status().isBadRequest());
+		call(putJson("/api/teacher/comment-bank/" + id, Map.of("content", "x")), otherTeacher).andExpect(apiStatus(404));
+		call(putJson("/api/teacher/comment-bank/" + id, Map.of("content", " ")), teacher).andExpect(apiStatus(400));
 
 		JsonNode list = data(call(get("/api/teacher/comment-bank"), teacher));
 		long systemId = list.get(list.size() - 1).get("id").asLong();
 		call(putJson("/api/teacher/comment-bank/" + systemId, Map.of("content", "Sửa mẫu")), teacher)
-				.andExpect(status().isForbidden());
-		call(delete("/api/teacher/comment-bank/" + systemId), teacher).andExpect(status().isForbidden());
+				.andExpect(apiStatus(403));
+		call(delete("/api/teacher/comment-bank/" + systemId), teacher).andExpect(apiStatus(403));
 
-		call(delete("/api/teacher/comment-bank/" + id), otherTeacher).andExpect(status().isNotFound());
-		call(delete("/api/teacher/comment-bank/" + id), teacher).andExpect(status().isOk());
+		call(delete("/api/teacher/comment-bank/" + id), otherTeacher).andExpect(apiStatus(404));
+		call(delete("/api/teacher/comment-bank/" + id), teacher).andExpect(apiStatus(200));
 		assertThat(field(data(call(get("/api/teacher/comment-bank"), teacher)), "content")).doesNotContain("Chú ý mạo từ 'the'");
 	}
 
@@ -237,7 +237,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 	@DisplayName("Phân quyền: sinh viên gọi API mã lỗi / ngân hàng nhận xét → 403")
 	void studentForbidden() throws Exception {
 		String student = accessToken(newUser(Role.STUDENT));
-		call(get("/api/teacher/error-codes"), student).andExpect(status().isForbidden());
-		call(get("/api/teacher/comment-bank"), student).andExpect(status().isForbidden());
+		call(get("/api/teacher/error-codes"), student).andExpect(apiStatus(403));
+		call(get("/api/teacher/comment-bank"), student).andExpect(apiStatus(403));
 	}
 }

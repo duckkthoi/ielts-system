@@ -21,7 +21,7 @@ import javax.net.ssl.X509TrustManager;
 final class HttpLogin {
 
 	private static final Pattern ACCESS_TOKEN = Pattern.compile("\"accessToken\"\\s*:\\s*\"([^\"]+)\"");
-	private static final Pattern MESSAGE = Pattern.compile("\"message\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+	private static final Pattern MESSAGE = Pattern.compile("\"errorMessage\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
 
 	private HttpLogin() {
 	}

@@ -1,7 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import TeachersPage from './index';
+
+export const metadata: Metadata = { title: 'Giáo viên — IELTS Writing' };
 
 export default function Page() {
-  return (
-    <PagePlaceholder title="Quản lý giáo viên" description="Tạo, khoá/mở, đặt lại mật khẩu tài khoản giáo viên." />
-  );
+  return <TeachersPage />;
 }

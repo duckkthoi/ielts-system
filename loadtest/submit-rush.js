@@ -10,7 +10,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Trend } from 'k6/metrics';
-import { BASE_URL, TEACHER, auth, login, loadStudent, prepareAssignment } from './lib/api.js';
+import { BASE_URL, TEACHER, apiOk, auth, login, loadStudent, prepareAssignment } from './lib/api.js';
 
 const STUDENTS = parseInt(__ENV.STUDENTS || '200', 10);
 const WINDOW_S = 300;
@@ -66,13 +66,13 @@ export function student(data) {
 	const submitAt = data.startedAt + (60 + Math.random() * 228) * 1000;
 	const partId = data.partId;
 	const list = http.get(`${BASE_URL}/api/student/assignments?tab=TODO`, Object.assign(auth(token), { tags: { name: 'list' } }));
-	check(list, { 'danh sách bài 200': (r) => r.status === 200 });
+	check(list, { 'danh sách bài thành công': apiOk });
 	const detail = http.get(`${BASE_URL}/api/student/assignments/${data.assignmentId}`,
 		Object.assign(auth(token), { tags: { name: 'detail' } }));
-	check(detail, { 'chi tiết bài 200': (r) => r.status === 200 });
+	check(detail, { 'chi tiết bài thành công': apiOk });
 
 	const draft = http.get(`${BASE_URL}/api/student/parts/${partId}/draft`, Object.assign(auth(token), { tags: { name: 'draft-get' } }));
-	check(draft, { 'nạp nháp 200': (r) => r.status === 200 });
+	check(draft, { 'nạp nháp thành công': apiOk });
 	let draftVersion = draft.json('data.draftVersion');
 	let content = '';
 	let i = 0;
@@ -82,7 +82,7 @@ export function student(data) {
 		const res = http.put(`${BASE_URL}/api/student/parts/${partId}/draft`, JSON.stringify({ content, draftVersion }),
 			Object.assign(auth(token), { tags: { name: 'draft-save' } }));
 		draftTime.add(res.timings.duration);
-		if (check(res, { 'lưu nháp 200': (r) => r.status === 200 })) {
+		if (check(res, { 'lưu nháp thành công': apiOk })) {
 			draftVersion = res.json('data.draftVersion');
 		}
 	}
@@ -90,16 +90,16 @@ export function student(data) {
 	const res = http.post(`${BASE_URL}/api/student/parts/${partId}/submit`, JSON.stringify({ content, expectedVersion: 0 }),
 		Object.assign(auth(token), { tags: { name: 'submit' } }));
 	submitTime.add(res.timings.duration);
-	if (check(res, { 'nộp bài 201': (r) => r.status === 201, 'không bị tính muộn': (r) => r.json('data.late') === false })) {
+	if (check(res, { 'nộp bài thành công': apiOk, 'không bị tính muộn': (r) => r.json('data.late') === false })) {
 		submitted.add(1);
 	}
 	const versions = http.get(`${BASE_URL}/api/student/parts/${partId}/versions`, Object.assign(auth(token), { tags: { name: 'versions' } }));
-	check(versions, { 'lịch sử nộp 200': (r) => r.status === 200 });
+	check(versions, { 'lịch sử nộp thành công': apiOk });
 }
 
 export function teacher(data) {
 	const res = http.get(`${BASE_URL}/api/teacher/assignments/${data.assignmentId}/progress`,
 		Object.assign(auth(data.teacherToken), { tags: { name: 'progress' } }));
-	check(res, { 'ma trận tiến độ 200': (r) => r.status === 200 });
+	check(res, { 'ma trận tiến độ thành công': apiOk });
 	sleep(5);
 }

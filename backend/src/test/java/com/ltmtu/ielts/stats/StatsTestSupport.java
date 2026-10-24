@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.stats;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -62,14 +62,14 @@ abstract class StatsTestSupport extends IntegrationTest {
 	protected long createClass(String token, User... students) throws Exception {
 		long id = data(call(postJson("/api/teacher/classes",
 				Map.of("code", "st-" + UUID.randomUUID().toString().substring(0, 6), "name", "Lớp thống kê")), token)
-				.andExpect(status().isCreated())).get("id").asLong();
+				.andExpect(apiStatus(201))).get("id").asLong();
 		if (students.length > 0) {
 			List<String> codes = new ArrayList<>();
 			for (User s : students) {
 				codes.add(s.getStudentCode());
 			}
 			call(postJson("/api/teacher/classes/" + id + "/members", Map.of("studentCodes", codes)), token)
-					.andExpect(status().isOk());
+					.andExpect(apiStatus(200));
 		}
 		return id;
 	}
@@ -90,7 +90,7 @@ abstract class StatsTestSupport extends IntegrationTest {
 		JsonNode a = data(call(postJson("/api/teacher/assignments", Map.of(
 				"title", "Bài thống kê", "dueAt", clock.instant().plus(dueIn).toString(),
 				"allowLate", true, "maxRevisions", 2, "parts", parts)), teacher)
-				.andExpect(status().isCreated()));
+				.andExpect(apiStatus(201)));
 		List<Long> partIds = new ArrayList<>();
 		List<Map<String, Long>> criteria = new ArrayList<>();
 		for (JsonNode p : a.get("parts")) {
@@ -102,7 +102,7 @@ abstract class StatsTestSupport extends IntegrationTest {
 		long id = a.get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + id + "/publish",
 				Map.of("classIds", classIds, "studentIds", students.stream().map(User::getId).toList())), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		return new Created(id, partIds, criteria);
 	}
 
@@ -110,7 +110,7 @@ abstract class StatsTestSupport extends IntegrationTest {
 	protected long submit(User student, long partId, int expectedVersion) throws Exception {
 		call(postJson("/api/student/parts/" + partId + "/submit",
 				Map.of("content", ESSAY, "expectedVersion", expectedVersion)), accessToken(student))
-				.andExpect(status().isCreated());
+				.andExpect(apiStatus(201));
 		for (JsonNode q : data(call(get("/api/teacher/submissions").param("partId", String.valueOf(partId)), teacher))) {
 			if (q.get("student").get("id").asLong() == student.getId()) {
 				return q.get("submissionId").asLong();
@@ -142,7 +142,7 @@ abstract class StatsTestSupport extends IntegrationTest {
 			body.put("zeroReason", zeroReason);
 		}
 		call(put("/api/teacher/submissions/" + submissionId + "/grade").contentType(MediaType.APPLICATION_JSON)
-				.content(json.writeValueAsString(body)), teacher).andExpect(status().isOk());
+				.content(json.writeValueAsString(body)), teacher).andExpect(apiStatus(200));
 	}
 
 	protected void grade(long submissionId, Map<Long, Integer> scores) throws Exception {
@@ -150,7 +150,7 @@ abstract class StatsTestSupport extends IntegrationTest {
 	}
 
 	protected void returnGrade(long submissionId) throws Exception {
-		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(status().isOk());
+		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(apiStatus(200));
 	}
 
 	protected JsonNode data(ResultActions r) throws Exception {

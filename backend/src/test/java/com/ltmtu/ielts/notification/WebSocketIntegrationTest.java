@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.notification;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -120,11 +120,11 @@ class WebSocketIntegrationTest extends IntegrationTest {
 				"criteria", List.of(Map.of("code", "TR", "name", "Task Response", "checklist", List.of())));
 		Map<String, Object> body = Map.of("title", "Bài realtime", "dueAt", "2027-01-05T16:59:00Z", "parts", List.of(part));
 		String created = mvc.perform(postJson("/api/teacher/assignments", body)
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isCreated())
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(201))
 				.andReturn().getResponse().getContentAsString();
 		long id = json.readTree(created).get("data").get("id").asLong();
 		mvc.perform(postJson("/api/teacher/assignments/" + id + "/publish", Map.of("studentIds", studentIds))
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -163,7 +163,7 @@ class WebSocketIntegrationTest extends IntegrationTest {
 		JsonNode login = login(student.getUsername(), DEFAULT_PASSWORD);
 		String token = login.get("accessToken").asString();
 		mvc.perform(postJson("/api/auth/logout", Map.of("refreshToken", login.get("refreshToken").asString())))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		assertThat(catchThrowable(() -> connect(token, new ErrorRecorder()).get(5, TimeUnit.SECONDS))).isNotNull();
 
 		User fresh = newUser(Role.STUDENT, true);
@@ -200,6 +200,6 @@ class WebSocketIntegrationTest extends IntegrationTest {
 		JsonNode pushed = mine.poll(5, TimeUnit.SECONDS);
 		assertThat(pushed).isNotNull();
 		mvc.perform(post("/api/notifications/" + pushed.get("id").asLong() + "/read")
-				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(apiStatus(200));
 	}
 }

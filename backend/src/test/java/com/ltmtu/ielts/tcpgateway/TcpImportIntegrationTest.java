@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.tcpgateway;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -198,7 +198,7 @@ class TcpImportIntegrationTest extends IntegrationTest {
 	private long createClass(String token, String code) throws Exception {
 		String body = mvc.perform(postJson("/api/teacher/classes", Map.of("code", code, "name", "Lớp TCP"))
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+				.andExpect(apiStatus(201)).andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data").get("id").asLong();
 	}
 

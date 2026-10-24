@@ -15,6 +15,14 @@ export function loadStudent(n) {
 	return `${PREFIX}-T${('000' + n).slice(-4)}`;
 }
 
+/**
+ * Request API thành công: server luôn trả HTTP 200, lỗi nằm trong body {success: false, errorCode, status} (docs/05 A.1),
+ * nên phải xem cả `success` — http_req_failed giờ chỉ đếm lỗi mạng / nginx.
+ */
+export function apiOk(r) {
+	return r.status === 200 && r.json('success') === true;
+}
+
 export function auth(token, extra) {
 	return { headers: Object.assign({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, extra || {}) };
 }
@@ -25,12 +33,12 @@ export function login(username) {
 		headers: { 'Content-Type': 'application/json' },
 		tags: { name: 'login' },
 	});
-	const ok = check(res, { 'đăng nhập 200': (r) => r.status === 200 });
+	const ok = check(res, { 'đăng nhập thành công': apiOk });
 	return ok ? res.json('data.accessToken') : null;
 }
 
 function data(res, what) {
-	if (res.status < 200 || res.status >= 300) {
+	if (!apiOk(res)) {
 		fail(`${what}: HTTP ${res.status} ${res.body}`);
 	}
 	return res.json('data');

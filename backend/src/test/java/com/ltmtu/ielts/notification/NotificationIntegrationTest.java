@@ -1,11 +1,11 @@
 package com.ltmtu.ielts.notification;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -67,7 +67,7 @@ class NotificationIntegrationTest extends IntegrationTest {
 	}
 
 	private JsonNode notifications(String token) throws Exception {
-		return data(call(get("/api/notifications"), token).andExpect(status().isOk()));
+		return data(call(get("/api/notifications"), token).andExpect(apiStatus(200)));
 	}
 
 	/** Bài 1 phần (Task 2, 1 tiêu chí TR), phát hành cho {@code students}; trả về chi tiết bài phía giáo viên. */
@@ -79,9 +79,9 @@ class NotificationIntegrationTest extends IntegrationTest {
 		if (openAt != null) {
 			body.put("openAt", openAt.toString());
 		}
-		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(status().isCreated()));
+		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(apiStatus(201)));
 		call(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish", Map.of("studentIds", students)),
-				teacher).andExpect(status().isOk());
+				teacher).andExpect(apiStatus(200));
 		return a;
 	}
 
@@ -122,7 +122,7 @@ class NotificationIntegrationTest extends IntegrationTest {
 		JsonNode a = publish("Bài nộp", null, Set.of(student.getId()));
 		long partId = a.get("parts").get(0).get("id").asLong();
 		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", "My essay.", "expectedVersion", 0)),
-				studentToken).andExpect(status().isCreated());
+				studentToken).andExpect(apiStatus(201));
 
 		JsonNode n = notifications(teacher).get(0);
 		assertThat(n.get("type").asString()).isEqualTo("SUBMISSION_RECEIVED");
@@ -140,14 +140,14 @@ class NotificationIntegrationTest extends IntegrationTest {
 		long partId = a.get("parts").get(0).get("id").asLong();
 		long criterionId = a.get("parts").get(0).get("criteria").get(0).get("id").asLong();
 		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", "My essay.", "expectedVersion", 0)),
-				studentToken).andExpect(status().isCreated());
+				studentToken).andExpect(apiStatus(201));
 		long submissionId = data(call(get("/api/teacher/submissions").param("partId", String.valueOf(partId)), teacher))
 				.get(0).get("submissionId").asLong();
 		Map<String, Object> grade = Map.of("versionNo", 1, "scores", List.of(Map.of("criterionId", criterionId, "score", 1)));
 		call(put("/api/teacher/submissions/" + submissionId + "/grade").contentType(MediaType.APPLICATION_JSON)
-				.content(json.writeValueAsString(grade)), teacher).andExpect(status().isOk());
+				.content(json.writeValueAsString(grade)), teacher).andExpect(apiStatus(200));
 		call(postJson("/api/teacher/submissions/" + submissionId + "/request-revision",
-				Map.of("note", "Viết dài hơn", "dueAt", "2027-01-10T16:59:00Z")), teacher).andExpect(status().isOk());
+				Map.of("note", "Viết dài hơn", "dueAt", "2027-01-10T16:59:00Z")), teacher).andExpect(apiStatus(200));
 
 		JsonNode n = notifications(studentToken).get(0);
 		assertThat(n.get("type").asString()).isEqualTo("REVISION_REQUESTED");
@@ -202,16 +202,16 @@ class NotificationIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.totalRecord").value(1));
 
 		long firstId = all.get(1).get("id").asLong();
-		call(post("/api/notifications/" + firstId + "/read"), teacher).andExpect(status().isNotFound());
+		call(post("/api/notifications/" + firstId + "/read"), teacher).andExpect(apiStatus(404));
 		call(post("/api/notifications/" + firstId + "/read"), studentToken)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.readAt").value(clock.instant().toString()));
 		call(get("/api/notifications").param("unreadOnly", "true"), studentToken)
 				.andExpect(jsonPath("$.data.length()").value(1));
 		call(get("/api/notifications/unread-count"), studentToken).andExpect(jsonPath("$.data.count").value(1));
 		call(post("/api/notifications/read-all"), studentToken).andExpect(jsonPath("$.data.updated").value(1));
 		call(get("/api/notifications/unread-count"), studentToken).andExpect(jsonPath("$.data.count").value(0));
-		call(get("/api/notifications").param("after", "không-phải-ngày"), studentToken).andExpect(status().isBadRequest());
-		mvc.perform(get("/api/notifications")).andExpect(status().isUnauthorized());
+		call(get("/api/notifications").param("after", "không-phải-ngày"), studentToken).andExpect(apiStatus(400));
+		mvc.perform(get("/api/notifications")).andExpect(apiStatus(401));
 	}
 }
