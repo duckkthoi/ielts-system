@@ -117,6 +117,7 @@ Bộ ảnh này cho thấy vì sao phải dùng HTTPS: qua HTTP, mật khẩu hi
 | [04 ERD](docs/04-erd.md) · [05 API](docs/05-api.md) · [06 Trạng thái](docs/06-trang-thai.md) | Bảng và migration; REST, WebSocket, giao thức TCP, mã lỗi; vòng đời đối tượng |
 | [07 Design system](docs/07-design-system.md) · [08 Nghiệp vụ chấm IELTS](docs/08-nghiep-vu-cham-ielts.md) | Giao diện; cách chấm và tính band |
 | [09 Kiểm thử tải](docs/09-kiem-thu-tai.md) | Môi trường, kịch bản và kết quả k6 |
+| [10 Hướng dẫn sử dụng](docs/10-huong-dan-su-dung.md) | Cách mở hệ thống, **danh sách tài khoản**, thao tác theo vai trò, kịch bản demo, sự cố thường gặp |
 
 Bản Word: `python tools/docs-export/export_docx.py --merge` (chạy bằng PowerShell) → `docx/00-tai-lieu-phan-tich-thiet-ke.docx`.
 

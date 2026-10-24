@@ -63,7 +63,7 @@ Module sau gọi module trước qua **service "cửa"** (vd `StudentAssignmentA
 | 6 | Chấm bài: checklist giới hạn band, mã lỗi, nhận xét inline, ngân hàng nhận xét, BandCalculator, trả bài / yêu cầu sửa, kết quả phía sinh viên | ✅ backend |
 | 7 | Thông báo (DB + WebSocket + email), job nhắc hạn, bài hẹn giờ mở, nhắc thủ công | ✅ backend |
 | 8 | Tiến độ, thống kê, xuất Excel | ✅ backend (B8a–B8e) |
-| F | Giao diện frontend (thiết kế: code Figma Make trong `Review attached content figma/`) | 🟡 F1 ✅ (khung app, đăng nhập, thông báo realtime) · F2 ✅ (quản trị, lớp học + import) · F3a ✅ (danh sách, chi tiết, giao bài) · F3b → F6 ⬜ |
+| F | Giao diện frontend (thiết kế: code Figma Make trong `design/figma-make/`) | 🟡 F1 ✅ (khung app, đăng nhập, thông báo realtime) · F2 ✅ (quản trị, lớp học + import) · F3 ✅ (bài tập: danh sách, chi tiết, giao bài, trình soạn) · F4 → F6 ⬜ |
 | 9–14 | Mức 2 | ✅ backend: 11 (TCP + admin-cli) · 12 (nhật ký, rate limit, nginx) · 9 (một phiên, online, tiến độ live, chat) · 10 (khoá lạc quan bản nháp; IndexedDB ở frontend) · 13 (Docker) · 14 (k6: NFR-01/02/03 đạt — [docs/09](docs/09-kiem-thu-tai.md)) |
 | 20 | README, dữ liệu demo, tài liệu | ✅ `README.md`, profile `demo`, `docs/09`; ảnh Wireshark người dùng tự chụp (hướng dẫn trong README) |
 | 15–19 | Mức 3 | ⬜ làm khi còn thời gian |
