@@ -466,7 +466,7 @@
 
 | Method | Đường dẫn | Mô tả |
 |---|---|---|
-| GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION&page&size` | Bài được giao, theo tab (UC-22) |
+| GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION` | Bài được giao, theo tab (UC-22); bỏ trống `tab` = mọi bài. Không phân trang |
 | GET | `/api/student/assignments/{id}` | Chi tiết bài + trạng thái từng phần của tôi |
 | GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion}` |
 | PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion}` (SD-06) |
@@ -504,7 +504,7 @@
   - `counts` luôn tính trên toàn bộ bài, để hiện badge.
   - Mỗi item: `{id, title, teacherName, status, openAt, dueAt, nextDueAt, tabs[], parts[]}`, trong đó mỗi phần là `{partId, orderNo, title, taskType, status, currentVersion, late, effectiveDueAt, canSubmit}`.
   - Sắp theo `nextDueAt` (hạn gần nhất của phần còn phải làm); bài không còn hạn xếp cuối.
-- `GET /api/student/assignments/{id}` → thêm `description`, `allowLate`, `maxRevisions`, `serverTime`, và cho từng phần: `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `revisionNote` / `revisionDueAt` (khi "Cần sửa"), `criteria[]` kèm `checklist[]` (`kind`, `maxBand`) để sinh viên biết tiêu chí chấm.
+- `GET /api/student/assignments/{id}` → thêm `description`, `teacherName`, `tabs`, `allowLate`, `maxRevisions`, `serverTime`, và cho từng phần: `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `revisionNote` / `revisionDueAt` (khi "Cần sửa"), `criteria[]` kèm `checklist[]` (`kind`, `maxBand`) để sinh viên biết tiêu chí chấm.
 - `canSubmit` = bài đang mở, phần còn mở với sinh viên, và chưa quá hạn hoặc bài cho nộp muộn.
 
 **Lịch sử nộp và kết quả chấm (đã cài ở B6c; BR-13, BR-21, docs/08 mục 4.5):**

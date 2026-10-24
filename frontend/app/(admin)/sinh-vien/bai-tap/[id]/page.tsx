@@ -1,7 +1,15 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import { Suspense } from 'react';
+
+import type { Metadata } from 'next';
+
+import StudentAssignmentDetailPage from './index';
+
+export const metadata: Metadata = { title: 'Chi tiết bài tập — IELTS Writing' };
 
 export default function Page() {
   return (
-    <PagePlaceholder title="Chi tiết bài tập" description="Đề bài, trạng thái từng phần, kết quả chấm, lịch sử nộp." />
+    <Suspense>
+      <StudentAssignmentDetailPage />
+    </Suspense>
   );
 }
