@@ -13,8 +13,8 @@
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
 | Giáo viên: tiến độ, chấm bài, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
-| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp | ✅ Dùng được | |
-| Sinh viên: làm bài, nộp bài, xem kết quả chi tiết, trao đổi | ⏳ Đang làm | Nút "Làm bài" mở màn làm bài (đang là khung trống) |
+| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài, nộp bài | ✅ Dùng được | Nháp khi mất mạng chưa có (bước tiếp theo) |
+| Sinh viên: xem kết quả chi tiết, kết quả học tập, trao đổi | ⏳ Đang làm | |
 
 Những phần "đang làm" vẫn gọi thử được qua Swagger UI (mục 2.2) hoặc file `backend/http/*.http`.
 
@@ -201,9 +201,19 @@ Bấm tên bài (hoặc bấm vào thông báo) để mở. Trang có:
 - khung **Kết quả**: band từng phần và band cả bài (chỉ có khi mọi phần đã được trả; Task 2 tính gấp đôi Task 1);
 - khung **Thời gian & quy định**: hạn nộp, có cho nộp muộn không, số lần yêu cầu sửa tối đa.
 
-### 7.3. Đang làm
+### 7.3. Làm bài và nộp bài
 
-Màn **làm bài** (đếm từ, tự lưu nháp, giữ bài khi mất mạng, nộp từng phần), **xem kết quả chi tiết** (nhận xét trên bài, mã lỗi, so sánh các lần nộp), **kết quả học tập** và **trao đổi** sẽ có ở các bước tiếp theo.
+Bấm **Làm bài / Viết tiếp / Sửa bài** để mở màn làm bài toàn màn hình. Bài nhiều phần thì chọn phần ở hàng tab trên cùng (tab ghi trạng thái từng phần).
+
+- **Bên trái** là đề bài (trên điện thoại: bấm **Xem đề bài** để mở), **bên phải** là ô soạn. Số từ đếm ngay khi gõ (cùng cách đếm với máy chủ): màu cam khi chưa đủ tối thiểu, xanh khi đủ.
+- **Tự lưu nháp**: ngừng gõ 3 giây, chuyển sang tab khác hoặc đổi phần là bài được lưu; dòng trạng thái ghi "Chưa lưu" → "Đang lưu…" → "Đã lưu lúc hh:mm". Lưu lỗi thì bấm "Lỗi lưu – thử lại". Đóng trang khi còn thay đổi chưa lưu, trình duyệt sẽ hỏi lại.
+- **Mở cùng bài ở 2 tab / 2 máy**: khi một nơi lưu đè, nơi kia hiện hộp thoại cho xem cả hai bản (kèm số từ) để chọn **Dùng bản trên máy này** hoặc **Dùng bản trên máy chủ**.
+- **Nộp**: bấm **Nộp phần này** (đang "Cần sửa": **Nộp bản sửa**). Bài ít hơn số từ tối thiểu thì hệ thống hỏi lại ("Viết tiếp" / "Vẫn nộp"). Nộp xong ô soạn chuyển sang chỉ đọc kèm giờ nộp; nộp sau hạn (khi bài cho phép) được ghi là **nộp muộn**.
+- **Đồng hồ đếm ngược** theo giờ máy chủ (tự đồng bộ 5 phút một lần). Quá hạn mà bài không cho nộp muộn, hoặc bài đã đóng, thì ô soạn khoá lại và ghi lý do.
+
+### 7.4. Đang làm
+
+**Giữ nháp khi mất mạng**, **xem kết quả chi tiết** (nhận xét trên bài, mã lỗi, so sánh các lần nộp), **kết quả học tập** và **trao đổi** sẽ có ở các bước tiếp theo.
 
 ---
 
