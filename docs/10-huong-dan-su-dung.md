@@ -12,7 +12,8 @@
 | Đăng nhập, đổi mật khẩu, khung ứng dụng, thông báo realtime | ✅ Dùng được | |
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
-| Giáo viên: tiến độ, chấm bài, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
+| Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, trả bài, yêu cầu sửa) | ✅ Dùng được | Nhận xét inline, ngân hàng nhận xét, so sánh 2 lần nộp: bước tiếp theo |
+| Giáo viên: tiến độ, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
 | Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài (cả khi mất mạng), nộp bài | ✅ Dùng được | |
 | Sinh viên: xem kết quả chi tiết, kết quả học tập, trao đổi | ⏳ Đang làm | |
 
@@ -170,9 +171,21 @@ Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: t
   - Menu "…": **Sửa nội dung** (chỉ bài nháp), **Nhân bản** (tạo bản nháp mới, không chép người nhận và hạn), **Đóng bài** (sinh viên không nộp được nữa, vẫn chấm được) / **Mở lại**, **Xoá** (chỉ bài nháp).
 - Bài **đã phát hành không sửa được đề và rubric** (để không làm sai lệch bài đã nộp) — muốn đổi thì nhân bản rồi soạn bài mới.
 
-### 6.4. Đang làm
+### 6.4. Chấm bài
 
-Tiến độ realtime của lớp, chấm bài (checklist, band, nhận xét inline, trả bài / yêu cầu sửa), thống kê, xuất Excel và trao đổi (chat) đã có ở backend; giao diện sẽ có ở các bước tiếp theo.
+1. **Hàng đợi** (menu **Chấm bài**, hoặc nút "Chấm bài" ở danh sách / chi tiết bài tập): lọc theo bài tập, phần, lớp, mã SV / họ tên; tab **Chờ chấm / Đang chấm / Đã trả / Cần sửa**. Bài nộp trước xếp trước; nhãn `v2` = bài nộp lại sau khi yêu cầu sửa, nhãn "Nộp muộn" nếu nộp sau hạn. Bấm **Chấm**.
+2. **Màn chấm**: bài làm bên trái (cảnh báo khi bài ≤ 20 từ hoặc dưới số từ tối thiểu; bấm "Đề bài" để xem đề), bảng chấm bên phải. Màn hình nhỏ: chuyển giữa tab **Bài làm** / **Chấm điểm**.
+   - Mỗi tiêu chí: tick checklist, chọn điểm (bấm lại để bỏ chọn, hoặc dùng phím ← →), ghi nhận xét. Tick mục **"Giới hạn điểm"** (nhãn cam "Tối đa N") thì các mức cao hơn bị khoá kèm lý do, điểm đang chọn cao hơn sẽ tự hạ xuống. Bài ≤ 20 từ: mọi tiêu chí tối đa 1.
+   - **Band của phần** hiện ngay khi chấm đủ (trung bình các tiêu chí, làm tròn kiểu IELTS .25 / .75).
+   - **Chấm 0** (góc trên bảng chấm): chọn lý do Không làm bài / Không viết bằng tiếng Anh / Học thuộc hoàn toàn; bấm "Bỏ chấm 0" để chấm lại bình thường.
+   - Kết quả **tự lưu nháp** 2 giây sau mỗi thay đổi (hoặc bấm **Lưu nháp**); sinh viên chưa thấy gì cho tới khi trả bài.
+   - **Trả bài**: cần chấm đủ mọi tiêu chí. Sinh viên nhận thông báo và thấy band, nhận xét.
+   - **Yêu cầu sửa**: nhập lời nhắn và hạn sửa; chỉ khi còn lượt sửa (theo cài đặt bài tập) và bài chưa đóng. Sinh viên nộp lại sẽ thành lần nộp mới (`v2`).
+   - Trả bài / yêu cầu sửa xong, màn tự chuyển sang **bài kế tiếp** trong hàng đợi. Nút **Trước / Sau** và số "3/12" đi theo bộ lọc của hàng đợi; ô chọn **Lần nộp** để xem lại các lần nộp cũ (chỉ xem).
+
+### 6.5. Đang làm
+
+Nhận xét trên bài (bôi đen → mã lỗi, gợi ý sửa), ngân hàng nhận xét, so sánh 2 lần nộp, tiến độ realtime của lớp, thống kê, xuất Excel và trao đổi (chat) đã có ở backend; giao diện sẽ có ở các bước tiếp theo.
 
 ---
 
