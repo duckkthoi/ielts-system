@@ -1,5 +1,6 @@
 package com.ltmtu.ielts.classroom;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -7,7 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -47,7 +47,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 		classCode = "IMP-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 		String body = mvc.perform(postJson("/api/teacher/classes", Map.of("code", classCode, "name", "Lớp import"))
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+				.andExpect(apiStatus(201)).andReturn().getResponse().getContentAsString();
 		classId = json.readTree(body).get("data").get("id").asLong();
 	}
 
@@ -65,7 +65,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 
 	private JsonNode importCsv(String csv, boolean sendEmail) throws Exception {
 		String body = upload("ds.csv", csv.getBytes(StandardCharsets.UTF_8), sendEmail, token)
-				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+				.andExpect(apiStatus(200)).andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data");
 	}
 
@@ -73,7 +73,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 	private Map<String, String> downloadCredentials(String credentialsToken) throws Exception {
 		byte[] file = mvc.perform(get("/api/teacher/imports/" + credentialsToken + "/credentials")
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString(".xlsx")))
 				.andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
 				.andReturn().getResponse().getContentAsByteArray();
@@ -149,7 +149,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 
 		mvc.perform(get("/api/teacher/imports/" + credentialsToken + "/credentials")
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -158,13 +158,13 @@ class StudentImportIntegrationTest extends IntegrationTest {
 		String t1 = importCsv("ma_sv,ho_ten\n" + code() + ",Võ Minh Đức\n", false).get("credentialsToken").asString();
 		String otherToken = accessToken(newUser(Role.TEACHER));
 		mvc.perform(get("/api/teacher/imports/" + t1 + "/credentials").header(HttpHeaders.AUTHORIZATION,
-				bearer(otherToken))).andExpect(status().isNotFound());
+				bearer(otherToken))).andExpect(apiStatus(404));
 		downloadCredentials(t1); // người khác thử lấy không làm mất file của chủ
 
 		String t2 = importCsv("ma_sv,ho_ten\n" + code() + ",Đặng Khánh Linh\n", false).get("credentialsToken").asString();
 		clock.advance(ImportCredentialStore.TTL.plusSeconds(1));
 		mvc.perform(get("/api/teacher/imports/" + t2 + "/credentials").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -200,7 +200,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 		String c1 = code();
 		byte[] file = StudentFileParserTest.xlsx(List.of(Map.of(0, "Mã SV", 1, "Họ tên"), Map.of(0, c1, 1, "Lê Hoàng Cường")));
 		upload("danh-sach.xlsx", file, false, token)
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.created").value(1));
 	}
 
@@ -208,11 +208,11 @@ class StudentImportIntegrationTest extends IntegrationTest {
 	@DisplayName("UC-11 E1: file sai định dạng / thiếu cột / rỗng → 400 BAD_FILE, không tạo gì")
 	void badFiles() throws Exception {
 		upload("ds.txt", "abc".getBytes(StandardCharsets.UTF_8), false, token)
-				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("BAD_FILE"));
+				.andExpect(apiStatus(400)).andExpect(jsonPath("$.errorCode").value("BAD_FILE"));
 		upload("ds.csv", "email\na@b.c\n".getBytes(StandardCharsets.UTF_8), false, token)
-				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.message", containsString("ma_sv")));
+				.andExpect(apiStatus(400)).andExpect(jsonPath("$.errorMessage", containsString("ma_sv")));
 		upload("ds.csv", new byte[0], false, token)
-				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("BAD_FILE"));
+				.andExpect(apiStatus(400)).andExpect(jsonPath("$.errorCode").value("BAD_FILE"));
 	}
 
 	@Test
@@ -220,21 +220,21 @@ class StudentImportIntegrationTest extends IntegrationTest {
 	void otherTeachersClass() throws Exception {
 		String otherToken = accessToken(newUser(Role.TEACHER));
 		upload("ds.csv", ("ma_sv,ho_ten\n" + code() + ",A B\n").getBytes(StandardCharsets.UTF_8), false, otherToken)
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
 	@DisplayName("Tải file mẫu .xlsx và .csv; file mẫu import lại được")
 	void templates() throws Exception {
 		byte[] xlsx = mvc.perform(get("/api/teacher/import-template").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("mau-danh-sach-sinh-vien.xlsx")))
 				.andReturn().getResponse().getContentAsByteArray();
 		assertThat(StudentFileParser.parse("mau.xlsx", new ByteArrayInputStream(xlsx))).hasSize(2);
 
 		byte[] csv = mvc.perform(get("/api/teacher/import-template").param("format", "csv")
 				.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+				.andExpect(apiStatus(200)).andReturn().getResponse().getContentAsByteArray();
 		assertThat(StudentFileParser.parse("mau.csv", new ByteArrayInputStream(csv)))
 				.extracting(StudentFileParser.RawRow::fullName).containsExactly("Nguyễn Văn An", "Trần Thị Bình");
 	}
@@ -248,7 +248,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 		String adminToken = accessToken(newUser(Role.ADMIN));
 		mvc.perform(postJson("/api/admin/teachers", Map.of("username", t.getUsername().toUpperCase(), "fullName", "X"))
 				.header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
-				.andExpect(status().isConflict());
+				.andExpect(apiStatus(409));
 	}
 
 	@Test

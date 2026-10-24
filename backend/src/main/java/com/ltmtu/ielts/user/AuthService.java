@@ -1,13 +1,17 @@
 package com.ltmtu.ielts.user;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ltmtu.ielts.audit.AuditAction;
+import com.ltmtu.ielts.audit.AuditService;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.config.AppProperties;
 import com.ltmtu.ielts.security.AuthPrincipal;
@@ -38,22 +42,45 @@ public class AuthService {
 	private final JwtService jwtService;
 	private final AppProperties props;
 	private final Clock clock;
+	private final LoginThrottle loginThrottle;
+	private final SessionRevoker sessionRevoker;
+	private final AuditService audit;
 
-	/** UC-01. Sai tên hoặc sai mật khẩu đều trả cùng một thông báo, không lộ trường nào sai. */
+	/**
+	 * UC-01. Sai tên hoặc sai mật khẩu đều trả cùng một thông báo, không lộ trường nào sai. Sai quá nhiều lần theo IP
+	 * hoặc theo tài khoản → 429 (NFR-09). Mọi lần thử đều ghi nhật ký (UC-07).
+	 */
 	@Transactional
 	public LoginResponse login(String username, String password, ClientInfo client) {
-		User user = userRepository.findByUsernameIgnoreCase(username.trim()).orElse(null);
+		String name = username.trim();
+		Duration wait = loginThrottle.blockedFor(name, client.ip());
+		if (wait != null) {
+			audit.recordAlone(null, AuditAction.LOGIN_BLOCKED, "USER", null, client.ip(), Map.of("username", clip(name)));
+			long minutes = Math.max(1, (wait.toSeconds() + 59) / 60);
+			throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED",
+					"Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau " + minutes + " phút");
+		}
+		User user = userRepository.findByUsernameIgnoreCase(name).orElse(null);
 		String hash = user != null ? user.getPasswordHash() : DUMMY_HASH;
 		boolean matches = passwordEncoder.matches(password, hash);
 		if (user == null || !matches) {
+			loginThrottle.failed(name, client.ip());
+			audit.recordAlone(user == null ? null : user.getId(), AuditAction.LOGIN_FAILED, "USER",
+					user == null ? null : user.getId(), client.ip(), Map.of("username", clip(name), "reason", "BAD_CREDENTIALS"));
 			throw new ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", BAD_CREDENTIALS_MSG);
 		}
 		if (!user.isActive()) {
+			audit.recordAlone(user.getId(), AuditAction.LOGIN_FAILED, "USER", user.getId(), client.ip(),
+					Map.of("username", clip(name), "reason", "ACCOUNT_LOCKED"));
 			throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_LOCKED",
 					"Tài khoản đã bị khoá, vui lòng liên hệ quản trị viên");
 		}
+		loginThrottle.succeeded(name);
 
 		Instant now = clock.instant();
+		if (props.session() != null && props.session().singleLogin()) {
+			sessionRevoker.revokeAll(user, null, RevokeReason.NEW_LOGIN, now);
+		}
 		String refreshToken = TokenHasher.newRefreshToken();
 		UserSession session = new UserSession();
 		session.setUser(user);
@@ -66,6 +93,7 @@ public class AuthService {
 		user.setLastLoginAt(now);
 
 		JwtService.IssuedToken access = jwtService.issueAccessToken(principalOf(user, session));
+		audit.record(user.getId(), AuditAction.LOGIN, "USER", user.getId(), Map.of("sessionId", session.getId()));
 		log.info("Đăng nhập: user {} phiên {} từ {}", user.getId(), session.getId(), client.ip());
 		return new LoginResponse(access.token(), refreshToken, access.expiresAt(), AccountInfo.from(user));
 	}
@@ -111,8 +139,7 @@ public class AuthService {
 			throw new ApiException(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_ROTATED",
 					"Phiên vừa được làm mới ở nơi khác, vui lòng thử lại");
 		}
-		int revoked = sessionRepository.revokeAllOfUser(session.getUser().getId(), null, RevokeReason.TOKEN_REUSE,
-				now);
+		int revoked = sessionRevoker.revokeAll(session.getUser(), null, RevokeReason.TOKEN_REUSE, now);
 		log.warn("Phát hiện dùng lại refresh token cũ: user {} phiên {}, thu hồi {} phiên",
 				session.getUser().getId(), session.getId(), revoked);
 	}
@@ -143,8 +170,7 @@ public class AuthService {
 		}
 		user.setPasswordHash(passwordEncoder.encode(newPassword));
 		user.setMustChangePassword(false);
-		sessionRepository.revokeAllOfUser(user.getId(), principal.sessionId(), RevokeReason.PASSWORD_CHANGED,
-				clock.instant());
+		sessionRevoker.revokeAll(user, principal.sessionId(), RevokeReason.PASSWORD_CHANGED, clock.instant());
 		log.info("Đổi mật khẩu: user {}", user.getId());
 		return AccountInfo.from(user);
 	}
@@ -160,5 +186,10 @@ public class AuthService {
 	private static ApiException invalidRefresh() {
 		return new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
 				"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
+	}
+
+	/** Tên đăng nhập người dùng gõ có thể rất dài; nhật ký chỉ giữ 100 ký tự đầu. */
+	private static String clip(String s) {
+		return s.length() > 100 ? s.substring(0, 100) : s;
 	}
 }

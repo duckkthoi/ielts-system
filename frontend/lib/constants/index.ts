@@ -35,3 +35,18 @@ export const ROUTES = {
   login: '/dang-nhap',
   changePassword: '/doi-mat-khau'
 } as const;
+
+/** Loại phần bài (TaskType của server). */
+export const TASK_TYPE_LABEL: Record<'WRITING_TASK1' | 'WRITING_TASK2' | 'CUSTOM', string> = {
+  WRITING_TASK1: 'IELTS Writing Task 1',
+  WRITING_TASK2: 'IELTS Writing Task 2',
+  CUSTOM: 'Tự do'
+};
+
+/**
+ * Đường dẫn file do backend phục vụ (`/uploads/…`): khi frontend và backend khác origin (lúc dev)
+ * thì gắn thêm NEXT_PUBLIC_API_BASE_URL; link http(s) đầy đủ giữ nguyên.
+ */
+export function fileUrl(path: string): string {
+  return path.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${path}` : path;
+}

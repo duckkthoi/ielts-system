@@ -1,5 +1,6 @@
 package com.ltmtu.ielts.classroom;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
@@ -10,7 +11,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,7 @@ class ClassroomIntegrationTest extends IntegrationTest {
 	private long createClass(String token, String code, String name) throws Exception {
 		String body = mvc.perform(as(token, postJson("/api/teacher/classes",
 				Map.of("code", code, "name", name, "description", "Lớp luyện IELTS"))))
-				.andExpect(status().isCreated())
+				.andExpect(apiStatus(201))
 				.andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data").get("id").asLong();
 	}
@@ -62,20 +62,20 @@ class ClassroomIntegrationTest extends IntegrationTest {
 		long id = createClass(teacherToken, code, "IELTS K15 – Lớp A");
 
 		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + id)))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.code").value(code.toUpperCase()))
 				.andExpect(jsonPath("$.data.memberCount").value(0));
 
 		mvc.perform(as(teacherToken, postJson("/api/teacher/classes", Map.of("code", code.toUpperCase(), "name", "X"))))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("DUPLICATE"));
+				.andExpect(apiStatus(409))
+				.andExpect(jsonPath("$.errorCode").value("DUPLICATE"));
 	}
 
 	@Test
 	@DisplayName("Mã lớp sai định dạng / thiếu tên → 400 kèm lỗi từng trường")
 	void create_validation() throws Exception {
 		mvc.perform(as(teacherToken, postJson("/api/teacher/classes", Map.of("code", "có dấu", "name", ""))))
-				.andExpect(status().isBadRequest())
+				.andExpect(apiStatus(400))
 				.andExpect(jsonPath("$.fieldErrors.code").exists())
 				.andExpect(jsonPath("$.fieldErrors.name").exists());
 	}
@@ -92,13 +92,13 @@ class ClassroomIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.data[*].id", hasItem((int) mine)))
 				.andExpect(jsonPath("$.data[*].id", not(hasItem((int) theirs))));
 
-		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + theirs))).andExpect(status().isNotFound());
+		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + theirs))).andExpect(apiStatus(404));
 		mvc.perform(as(teacherToken, put("/api/teacher/classes/" + theirs).contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("code", uniqueCode(), "name", "Chiếm lớp")))))
-				.andExpect(status().isNotFound());
-		mvc.perform(as(teacherToken, delete("/api/teacher/classes/" + theirs))).andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
+		mvc.perform(as(teacherToken, delete("/api/teacher/classes/" + theirs))).andExpect(apiStatus(404));
 		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + theirs + "/members")))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -109,15 +109,15 @@ class ClassroomIntegrationTest extends IntegrationTest {
 
 		mvc.perform(as(teacherToken, put("/api/teacher/classes/" + id).contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("code", newCode, "name", "Lớp Writing nâng cao")))))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.code").value(newCode.toUpperCase()))
 				.andExpect(jsonPath("$.data.description").isEmpty());
 
 		mvc.perform(as(teacherToken, get("/api/teacher/classes").param("keyword", "writing nâng")))
 				.andExpect(jsonPath("$.data[*].id", contains((int) id)));
 
-		mvc.perform(as(teacherToken, delete("/api/teacher/classes/" + id))).andExpect(status().isOk());
-		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + id))).andExpect(status().isNotFound());
+		mvc.perform(as(teacherToken, delete("/api/teacher/classes/" + id))).andExpect(apiStatus(200));
+		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + id))).andExpect(apiStatus(404));
 	}
 
 	@Test
@@ -134,7 +134,7 @@ class ClassroomIntegrationTest extends IntegrationTest {
 
 		mvc.perform(as(teacherToken, postJson("/api/teacher/classes/" + id + "/members",
 				Map.of("studentCodes", List.of(s1.getStudentCode(), s2.getStudentCode(), "KHONGCO", notStudent.getUsername())))))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.added").value(1))
 				.andExpect(jsonPath("$.data.alreadyMember").value(1))
 				.andExpect(jsonPath("$.data.notFound", containsInAnyOrder("KHONGCO", notStudent.getUsername())));
@@ -153,7 +153,7 @@ class ClassroomIntegrationTest extends IntegrationTest {
 				Map.of("studentCodes", List.of(s1.getStudentCode(), s2.getStudentCode())))));
 
 		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + id + "/members").param("sort", "fullName,desc")))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data", hasSize(2)))
 				.andExpect(jsonPath("$.totalRecord").value(2));
 		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + id + "/members")
@@ -161,9 +161,9 @@ class ClassroomIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.data[*].studentId", contains(s2.getId().intValue())));
 
 		mvc.perform(as(teacherToken, delete("/api/teacher/classes/" + id + "/members/" + s1.getId())))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		mvc.perform(as(teacherToken, delete("/api/teacher/classes/" + id + "/members/" + s1.getId())))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 		mvc.perform(as(teacherToken, get("/api/teacher/classes/" + id)))
 				.andExpect(jsonPath("$.data.memberCount").value(1));
 	}
@@ -173,7 +173,7 @@ class ClassroomIntegrationTest extends IntegrationTest {
 	void searchStudents() throws Exception {
 		User s = newUser(Role.STUDENT);
 		mvc.perform(as(teacherToken, get("/api/teacher/students/search").param("keyword", s.getStudentCode())))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data[*].id", contains(s.getId().intValue())));
 		mvc.perform(as(teacherToken, get("/api/teacher/students/search").param("keyword", "teacher_")))
 				.andExpect(jsonPath("$.data", hasSize(0)));
@@ -207,6 +207,6 @@ class ClassroomIntegrationTest extends IntegrationTest {
 	@DisplayName("Sinh viên gọi API lớp của giáo viên → 403")
 	void studentForbidden() throws Exception {
 		String token = accessToken(newUser(Role.STUDENT));
-		mvc.perform(as(token, get("/api/teacher/classes"))).andExpect(status().isForbidden());
+		mvc.perform(as(token, get("/api/teacher/classes"))).andExpect(apiStatus(403));
 	}
 }

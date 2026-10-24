@@ -1,10 +1,10 @@
 package com.ltmtu.ielts.submission;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -60,10 +60,10 @@ class StudentAssignmentIntegrationTest extends IntegrationTest {
 		Map<String, Object> body = new HashMap<>(Map.of("title", title, "dueAt", clock.instant().plus(dueIn).toString(),
 				"allowLate", allowLate, "parts", partList));
 		JsonNode a = data(mvc.perform(postJson("/api/teacher/assignments", body)
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isCreated()));
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(201)));
 		mvc.perform(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish",
 				Map.of("studentIds", Set.of(student.getId()))).header(HttpHeaders.AUTHORIZATION, bearer(teacherToken)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		return a;
 	}
 
@@ -73,7 +73,7 @@ class StudentAssignmentIntegrationTest extends IntegrationTest {
 
 	private void submit(long partId) throws Exception {
 		mvc.perform(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", "My essay text here.", "expectedVersion", 0))
-				.header(HttpHeaders.AUTHORIZATION, bearer(studentToken))).andExpect(status().isCreated());
+				.header(HttpHeaders.AUTHORIZATION, bearer(studentToken))).andExpect(apiStatus(201));
 	}
 
 	private JsonNode list(String tab) throws Exception {
@@ -81,7 +81,7 @@ class StudentAssignmentIntegrationTest extends IntegrationTest {
 		if (tab != null) {
 			req.param("tab", tab);
 		}
-		return data(mvc.perform(req).andExpect(status().isOk()));
+		return data(mvc.perform(req).andExpect(apiStatus(200)));
 	}
 
 	private static List<Long> ids(JsonNode list) {
@@ -109,7 +109,7 @@ class StudentAssignmentIntegrationTest extends IntegrationTest {
 		submissionRepository.save(rev);
 		JsonNode closedA = publish("G – đã đóng, chưa nộp", Duration.ofDays(3), false, 1);
 		mvc.perform(post("/api/teacher/assignments/" + closedA.get("id").asLong() + "/close")
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(200));
 
 		clock.advance(Duration.ofHours(2)); // C quá hạn; B còn 3 giờ
 		studentToken = accessToken(student);
@@ -172,7 +172,7 @@ class StudentAssignmentIntegrationTest extends IntegrationTest {
 		submissionRepository.save(s);
 
 		mvc.perform(get("/api/student/assignments/" + id).header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
-				.andExpect(status().isOk())
+				.andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.title").value("Chi tiết"))
 				.andExpect(jsonPath("$.data.serverTime").value(clock.instant().toString()))
 				.andExpect(jsonPath("$.data.tabs[0]").value("REVISION"))
@@ -195,13 +195,13 @@ class StudentAssignmentIntegrationTest extends IntegrationTest {
 		JsonNode outsiderList = data(mvc.perform(get("/api/student/assignments").header(HttpHeaders.AUTHORIZATION, bearer(outsider))));
 		assertThat(ids(outsiderList)).doesNotContain(id);
 		mvc.perform(get("/api/student/assignments/" + id).header(HttpHeaders.AUTHORIZATION, bearer(outsider)))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 	}
 
 	@Test
 	@DisplayName("Tab không hợp lệ → 400")
 	void invalidTab() throws Exception {
 		mvc.perform(get("/api/student/assignments").param("tab", "KHAC").header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
-				.andExpect(status().isBadRequest());
+				.andExpect(apiStatus(400));
 	}
 }

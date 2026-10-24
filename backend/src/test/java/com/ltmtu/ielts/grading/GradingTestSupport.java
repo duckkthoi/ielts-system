@@ -1,8 +1,8 @@
 package com.ltmtu.ielts.grading;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -106,15 +106,15 @@ abstract class GradingTestSupport extends IntegrationTest {
 				"prompt", "<p>Some people think…</p>", "minWords", 250, "criteria", criteria));
 		Map<String, Object> body = new HashMap<>(Map.of("title", "Bài chấm thử", "dueAt",
 				clock.instant().plus(dueIn).toString(), "maxRevisions", maxRevisions, "parts", List.of(part)));
-		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(status().isCreated()));
+		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(apiStatus(201)));
 		long assignmentId = a.get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + assignmentId + "/publish", Map.of("studentIds", Set.of(student.getId()))),
-				teacher).andExpect(status().isOk());
+				teacher).andExpect(apiStatus(200));
 		long partId = a.get("parts").get(0).get("id").asLong();
 		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", essay, "expectedVersion", 0)),
-				studentToken).andExpect(status().isCreated());
+				studentToken).andExpect(apiStatus(201));
 		JsonNode queue = data(call(get("/api/teacher/submissions").param("partId", String.valueOf(partId)), teacher)
-				.andExpect(status().isOk()));
+				.andExpect(apiStatus(200)));
 		return new Fixture(assignmentId, partId, queue.get(0).get("submissionId").asLong(),
 				a.get("parts").get(0).get("criteria"));
 	}

@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import AuditLogPage from './index';
+
+export const metadata: Metadata = { title: 'Nhật ký hệ thống — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Nhật ký hệ thống" description="Audit log các thao tác quan trọng kèm IP." />;
+  return <AuditLogPage />;
 }

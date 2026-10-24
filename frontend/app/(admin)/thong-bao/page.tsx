@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import NotificationsPage from './index';
+
+export const metadata: Metadata = { title: 'Thông báo — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Thông báo" description="Toàn bộ thông báo, đánh dấu đã đọc." />;
+  return <NotificationsPage />;
 }

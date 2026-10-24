@@ -28,10 +28,12 @@
 | `V3__user_sessions.sql` | Mức 1 / bước 2 | Bảng `user_sessions` (refresh token + phiên đăng nhập) | ✅ đã viết |
 | `V4__assignment_rubric.sql` | Mức 1 / bước 4 | `assignments.open_notified_at`, `show_suggestions_on_revision`; `assignment_parts.weight`; mã tiêu chí `code`; checklist `kind` + `max_band` (CHECK: LIMIT ⇔ có max_band); rubric mẫu chuyển `step = 1` và thêm 16 mục **Giới hạn điểm** (xem [08](08-nghiep-vu-cham-ielts.md) mục 2, 5.2) | ✅ đã viết |
 | `V5__grading_feedback.sql` | Mức 1 / bước 6 | `error_codes` (seed 22 mã hệ thống), `comment_bank` (seed 20 nhận xét mẫu); `inline_comments` thêm `error_code`, `criterion_id`, `suggestion`, bỏ NOT NULL ở `comment`; `grades.zero_reason`, `grades.overall_score` đổi sang `NUMERIC(8,6)` | ✅ đã viết |
-| `V6__network_features.sql` | Mức 2 | `submissions.draft_version`, `chat_messages`, `chat_read_markers`, `audit_logs` | ⬜ |
-| `V7__extensions.sql` | Mức 3 | Chế độ thi, ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
+| `V6__audit_logs.sql` | Mức 2 / bước 12 | Bảng `audit_logs` (nhật ký hệ thống) | ✅ đã viết |
+| `V7__chat.sql` | Mức 2 / bước 9b | `chat_messages`, `chat_read_markers` | ✅ đã viết |
+| `V8__draft_version.sql` | Mức 2 / bước 10 | `submissions.draft_version` | ✅ đã viết |
+| `V9__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
 
-> Lộ trình đã đánh số lại sau khi nghiên cứu nghiệp vụ chấm IELTS (tài liệu 08). Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
+> Lộ trình đã đánh số lại sau khi nghiên cứu nghiệp vụ chấm IELTS (tài liệu 08). Ở bước 12, migration Mức 2 (trước gộp trong V6) được tách theo từng bước — V6 audit, V7 chat, V8 bản nháp — để mỗi bước tự chứa bảng và entity của mình; Mức 3 dời sang V9 trở đi. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
 ---
 
@@ -193,7 +195,7 @@ erDiagram
         int current_version
         text draft_content
         timestamptz draft_saved_at
-        int draft_version "Mức 2"
+        int draft_version "V8"
         timestamptz revision_due_at
         text revision_note
     }
@@ -462,7 +464,7 @@ Một sinh viên có thể thuộc nhiều lớp. Xoá lớp không xoá tài kh
 
 Index: `teacher_id`, `(status, due_at)`.
 
-#### `assignment_parts` — các phần của bài (V1, V6)
+#### `assignment_parts` — các phần của bài (V1, V4, V9+)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -475,8 +477,8 @@ Index: `teacher_id`, `(status, due_at)`.
 | min_words | INT | CK ≥ 0 | 150 / 250 theo IELTS |
 | suggested_minutes | INT | CK > 0 | 20 / 40 theo IELTS |
 | part_due_at | TIMESTAMPTZ | | NULL = dùng `assignments.due_at` (BR-07) |
-| exam_mode | BOOLEAN | (V6) DF false | Bật chế độ thi |
-| exam_duration_minutes | INT | (V6) | Thời gian làm bài của chế độ thi |
+| exam_mode | BOOLEAN | (V9+, Mức 3) DF false | Bật chế độ thi |
+| exam_duration_minutes | INT | (V9+, Mức 3) | Thời gian làm bài của chế độ thi |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
 #### `rubric_criteria` — tiêu chí chấm của một phần (V1)
@@ -530,7 +532,7 @@ Cấu trúc giống `rubric_criteria` / `checklist_items`, nhưng gắn với m�
 
 ### 4.4 Nhóm bài nộp
 
-#### `submissions` — bài nộp của một sinh viên cho một phần (V1, V6)
+#### `submissions` — bài nộp của một sinh viên cho một phần (V1, V8)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -540,7 +542,7 @@ Cấu trúc giống `rubric_criteria` / `checklist_items`, nhưng gắn với m�
 | current_version | INT | NN, DF 0 | Số version mới nhất đã nộp (0 = chưa nộp). Client gửi kèm `expectedVersion` để chống nộp trùng (SD-07) |
 | draft_content | TEXT | | Bản nháp hiện tại; NULL sau khi nộp |
 | draft_saved_at | TIMESTAMPTZ | | |
-| draft_version | INT | (V6) NN, DF 0 | Optimistic locking cho bản nháp (SD-06) |
+| draft_version | INT | (V8) NN, DF 0, CK ≥ 0 | Khoá lạc quan của bản nháp (SD-06): tăng 1 sau mỗi lần lưu nháp; lệch → 409 `DRAFT_CONFLICT` |
 | revision_due_at | TIMESTAMPTZ | | Hạn sửa khi bị yêu cầu sửa (BR-07) |
 | revision_note | TEXT | | Lời nhắn của giáo viên khi yêu cầu sửa |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
@@ -646,37 +648,37 @@ Index: `(user_id, created_at DESC)`, và `(user_id) WHERE read_at IS NULL` để
 #### `reminder_log` (V1)
 PK `(part_id, student_id, kind)`; `kind ∈ {H24, H2, REVISION_H24, REVISION_H2}`; `sent_at`. Chống nhắc trùng bằng `INSERT … ON CONFLICT DO NOTHING` (BR-14, SD-10). Khi giáo viên yêu cầu sửa lần mới, các dòng `REVISION_*` của (phần, sinh viên) bị xoá để vòng sửa mới được nhắc lại.
 
-#### `chat_messages` (V6)
+#### `chat_messages` (V7, đã cài ở bước 9b)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
 | channel_type | VARCHAR(20) | NN, CK | `SUBMISSION` hoặc `CLASSROOM` |
 | submission_id | BIGINT | FK (cascade) | Khác NULL khi `channel_type = SUBMISSION` |
 | classroom_id | BIGINT | FK (cascade) | Khác NULL khi `channel_type = CLASSROOM` |
-| sender_id | BIGINT | FK → users, NN | |
+| sender_id | BIGINT | FK → users (cascade), NN | |
 | content | TEXT | NN, CK độ dài ≤ 4000 | |
 | client_msg_id | VARCHAR(40) | UK cùng sender_id | Client tự sinh, để khớp "đã gửi" và chống gửi trùng khi gửi lại |
 | created_at | TIMESTAMPTZ | NN | |
 
-CK: `channel_type` phải khớp với cột khoá ngoại tương ứng. Index: `(submission_id, id DESC)`, `(classroom_id, id DESC)`.
+CK: `channel_type` phải khớp đúng một cột khoá ngoại (`chk_chat_channel`). UK `(sender_id, client_msg_id)` chống lưu trùng khi gửi lại. Index một phần: `(submission_id, id DESC) WHERE submission_id IS NOT NULL`, `(classroom_id, id DESC) WHERE classroom_id IS NOT NULL`. Entity `ChatMessage` giữ id dạng số (không quan hệ entity) để module chat không gắn chặt module khác.
 
-#### `chat_read_markers` (V6)
-PK `(user_id, channel_type, channel_ref_id)`; `last_read_message_id BIGINT`; `updated_at`. Dùng cho trạng thái "đã xem".
+#### `chat_read_markers` (V7, đã cài ở bước 9b)
+PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp hoặc id lớp; `last_read_message_id BIGINT NN`; `updated_at`. Dùng cho "đã xem" và đếm tin chưa đọc. Ghi bằng upsert `ON CONFLICT … DO UPDATE SET last_read_message_id = GREATEST(…)` — mốc chỉ tăng.
 
-#### `audit_logs` (V6)
-| Cột | Kiểu | Ý nghĩa |
-|---|---|---|
-| id | BIGINT PK | |
-| actor_id | BIGINT FK → users (SET NULL) | Người thực hiện. NULL nếu là hệ thống |
-| action | VARCHAR(50) | `LOGIN`, `LOGIN_FAILED`, `IMPORT_STUDENTS`, `TCP_IMPORT`, `PUBLISH_ASSIGNMENT`, `RETURN_GRADE`, `LOCK_USER`… |
-| target_type, target_id | VARCHAR, BIGINT | Đối tượng bị tác động |
-| ip | VARCHAR(45) | IPv4 hoặc IPv6 |
-| detail | JSONB | Thông tin thêm |
-| created_at | TIMESTAMPTZ | |
+#### `audit_logs` (V6, đã cài ở bước 12)
+| Cột | Kiểu | Ràng buộc | Ý nghĩa |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| actor_id | BIGINT | FK → users (SET NULL) | Người thực hiện. NULL = hệ thống, hoặc lần đăng nhập bị chặn / sai tên |
+| action | VARCHAR(50) | NN | Theo enum `AuditAction`: `LOGIN`, `LOGIN_FAILED`, `LOGIN_BLOCKED`, `CREATE_TEACHER`, `LOCK_USER`, `UNLOCK_USER`, `RESET_PASSWORD`, `IMPORT_STUDENTS`, `TCP_IMPORT`, `PUBLISH_ASSIGNMENT`, `RETURN_GRADE`, `REQUEST_REVISION`. Không đặt CHECK vì danh sách mở |
+| target_type, target_id | VARCHAR(30), BIGINT | | Đối tượng bị tác động: `USER`, `CLASSROOM`, `ASSIGNMENT`, `SUBMISSION` |
+| ip | VARCHAR(45) | | IPv4 hoặc IPv6 của client (HTTP: qua nginx lấy từ `X-Forwarded-For`; TCP: địa chỉ socket) |
+| detail | JSONB | | Số liệu tóm tắt (vd số dòng import, tên đăng nhập đã gõ, lý do). **Không** chứa mật khẩu, token, mã SV / tên trong file import |
+| created_at | TIMESTAMPTZ | NN | Giờ server (bean `Clock`) |
 
-Index: `(created_at DESC)`, `(actor_id, created_at DESC)`.
+Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction với thao tác (rollback thì không có dòng "ma"); riêng đăng nhập sai / bị chặn và import TCP ghi transaction riêng để không mất khi request lỗi.
 
-### 4.7 Nhóm mở rộng (V7, Mức 3)
+### 4.7 Nhóm mở rộng (V9 trở đi, Mức 3)
 | Bảng | Mô tả |
 |---|---|
 | `exam_sessions` | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần. `ends_at` cố định từ lúc bắt đầu. `finish_reason` là `SUBMITTED` hoặc `TIMEOUT`. |

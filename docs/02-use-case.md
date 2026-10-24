@@ -237,7 +237,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 1. Người dùng mở trang Đăng nhập, nhập tên đăng nhập (sinh viên dùng mã sinh viên) và mật khẩu.
 2. Hệ thống kiểm tra tài khoản tồn tại, đang hoạt động, và mật khẩu khớp (BCrypt).
 3. Hệ thống tạo access token (30 phút) và refresh token (7 ngày), cập nhật thời điểm đăng nhập gần nhất.
-4. *(Mức 2)* Hệ thống thu hồi phiên cũ của tài khoản và gửi lệnh `FORCE_LOGOUT` tới thiết bị cũ qua WebSocket (FR-06).
+4. *(Mức 2, đã cài ở bước 9a)* Hệ thống thu hồi phiên cũ của tài khoản và gửi lệnh `FORCE_LOGOUT` tới thiết bị cũ qua WebSocket rồi ngắt kết nối của thiết bị đó (FR-06).
 5. Hệ thống chuyển người dùng tới trang chủ theo vai trò. Nếu có `returnUrl` hợp lệ và người dùng được phép vào thì chuyển tới đó.
 
 **Luồng thay thế**
@@ -246,7 +246,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 **Ngoại lệ**
 - E1. Sai tên đăng nhập hoặc mật khẩu → báo "Tên đăng nhập hoặc mật khẩu không đúng". Không tiết lộ trường nào sai.
 - E2. Tài khoản bị khoá → báo "Tài khoản đã bị khoá, vui lòng liên hệ quản trị viên".
-- E3. *(Mức 2)* Sai quá 5 lần trong 5 phút → trả 429, báo "Thử lại sau ít phút" (NFR-09).
+- E3. *(Mức 2, đã cài ở bước 12)* Sai quá 5 lần trong 5 phút (tính riêng theo IP và theo tài khoản) → trả 429, báo "Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau N phút" (NFR-09).
 
 ---
 
@@ -310,16 +310,17 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 | Hậu điều kiện | Giống UC-11. Server ghi audit log có IP của client. |
 
 **Luồng chính**
-1. Người dùng chạy `admin-cli import --host <máy chủ> --class <mã lớp> --file students.csv`.
+1. Người dùng chạy `java -jar admin-cli.jar import --class <mã lớp> --file students.csv --user <tên đăng nhập>` (client đăng nhập qua HTTP để lấy access token, hoặc dùng `--token`).
 2. Client mở kết nối TCP và gửi `AUTH <token>`. Server kiểm tra token rồi trả `OK`.
-3. Client gửi `IMPORT <mã lớp> <số byte>` và nội dung CSV.
+3. Client gửi `IMPORT <mã lớp> <số byte> [EMAIL]`; server kiểm tra lớp và quyền rồi client gửi nội dung CSV.
 4. Server xử lý từng dòng như UC-11 bước 4–5. Sau mỗi dòng, server gửi `PROGRESS n/tổng`; client vẽ thanh tiến trình.
 5. Server gửi `DONE created=.. skipped=.. errors=..` kèm các dòng lỗi, rồi đóng kết nối.
 6. Client in báo cáo và lưu file tài khoản ra đĩa.
 
 **Ngoại lệ**
 - E1. Token sai hoặc hết hạn → server trả `ERR 401` và đóng kết nối.
-- E2. Không có quyền với lớp → `ERR 403`.
+- E2. Không có quyền với lớp → `ERR 403`; không có lớp → `ERR 404`; dữ liệu quá 5 MB → `ERR 413`; CSV thiếu cột → `ERR 415`.
+- E5. Server đang đủ số phiên đồng thời → `ERR 503` ngay khi kết nối; client im lặng quá 30 giây → `ERR 408`.
 - E3. Khung tin sai cú pháp hoặc số byte không khớp → `ERR 400 <mô tả>`.
 - E4. Client mất kết nối giữa chừng → server huỷ phần chưa xử lý; các dòng đã xử lý vẫn được giữ. Mỗi dòng là một giao dịch riêng.
 
@@ -388,8 +389,8 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 
 **Luồng chính**
 1. Giáo viên mở "Tiến độ" của một bài.
-2. Hệ thống hiển thị ma trận: mỗi hàng là một sinh viên, mỗi cột là một phần. Mỗi ô có màu theo trạng thái: chưa làm / nháp / đã nộp / nộp muộn / đã chấm / cần sửa. Kèm phần trăm hoàn thành của cả bài.
-3. *(Mức 2)* Ma trận cập nhật **ngay lập tức** khi sinh viên lưu nháp hoặc nộp bài. Có chấm xanh cho sinh viên đang online và đang mở bài này (FR-54, FR-61).
+2. Hệ thống hiển thị ma trận: mỗi hàng là một sinh viên, mỗi cột là một phần. Mỗi ô có màu theo trạng thái: chưa làm / nháp / đã nộp / nộp muộn / đã chấm / cần sửa; có dấu **quá hạn** khi chưa nộp mà đã qua hạn áp dụng (BR-07), và band của phần khi đã trả bài. Kèm phần trăm hoàn thành, số sinh viên nộp muộn, số sinh viên đang quá hạn.
+3. *(Mức 2, đã cài ở bước 9a)* Ma trận cập nhật **ngay lập tức** khi sinh viên bắt đầu làm (lưu nháp lần đầu), nộp bài, hoặc khi giáo viên trả bài / yêu cầu sửa. Có chấm xanh cho sinh viên đang online và cho biết đang mở phần nào (FR-54, FR-61).
 4. Giáo viên lọc theo lớp hoặc trạng thái, chọn những sinh viên chưa nộp, bấm "Nhắc nhở".
 5. Hệ thống gửi thông báo nhắc nhở tới những sinh viên đó.
 
@@ -538,7 +539,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 | Tác nhân | Giáo viên, Sinh viên |
 | Mô tả | Nhắn tin realtime qua WebSocket. Có hai loại kênh: kênh riêng của một **bài nộp** (giữa giáo viên và sinh viên đó) và kênh chung của **lớp**. |
 | Tiền điều kiện | Người dùng thuộc kênh: là chủ bài nộp hoặc giáo viên của bài; hoặc là thành viên hoặc giáo viên của lớp. |
-| Hậu điều kiện | Tin nhắn được lưu DB và tới mọi người đang mở kênh. |
+| Hậu điều kiện | Tin nhắn được lưu DB và tới mọi người đang mở kênh. *(Đã cài ở bước 9b.)* |
 
 **Luồng chính**
 1. Người dùng mở kênh. Hệ thống tải 50 tin gần nhất; kéo lên để tải thêm.
@@ -548,7 +549,8 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 
 **Ngoại lệ**
 - E1. Người dùng không thuộc kênh → server từ chối đăng ký kênh.
-- E2. Mất kết nối → tin chưa gửi được đánh dấu "chưa gửi", có nút gửi lại.
+- E2. Mất kết nối → tin chưa gửi được đánh dấu "chưa gửi", có nút gửi lại. Gửi lại cùng mã tin (`clientMsgId`) thì server không lưu trùng.
+- E3. Tin rỗng hoặc dài quá 4000 ký tự → báo lỗi riêng người gửi, không lưu.
 
 ---
 

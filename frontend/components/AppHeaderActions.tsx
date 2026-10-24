@@ -2,23 +2,28 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { Badge, Button, Dropdown } from 'antd';
+import { Avatar, Button, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { Bell, KeyRound, LogOut, UserRound } from 'lucide-react';
+import { ChevronDown, KeyRound, LogOut, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { IconButton } from '@/components/IconButton';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
+import { NotificationBell } from '@/components/NotificationBell';
 import { ROLE_LABEL, ROUTES } from '@/lib/constants';
 import { useAuthStore } from '@/stores/useAuthStore';
 
-// ─── Nhóm nút bên phải header: thông báo + menu tài khoản ─────────────────────
-// Số thông báo chưa đọc sẽ nối với WebSocket ở bước thông báo realtime.
+// ─── Nhóm nút bên phải header: trạng thái kết nối, chuông thông báo, menu tài khoản ─
 
 const USER_MENU_KEY = {
   profile: 'profile',
   changePassword: 'change-password',
   logout: 'logout'
 } as const;
+
+/** Chữ cái đầu của tên (từ cuối trong họ tên tiếng Việt) để hiện trên avatar. */
+function getInitial(fullName: string): string {
+  return fullName.trim().split(/\s+/).at(-1)?.charAt(0).toUpperCase() ?? '';
+}
 
 export function AppHeaderActions() {
   const router = useRouter();
@@ -49,19 +54,20 @@ export function AppHeaderActions() {
 
   const menu = useMemo(() => ({ items: menuItems, onClick: handleMenuClick }), [menuItems, handleMenuClick]);
 
-  const goNotifications = useCallback(() => router.push('/thong-bao'), [router]);
-
   if (!user) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <Badge count={0} size="small">
-        <IconButton title="Thông báo" type="text" icon={<Bell size={18} />} onClick={goNotifications} />
-      </Badge>
-      <Dropdown menu={menu} trigger={['click']}>
-        <Button type="text" className="flex items-center gap-2">
-          <span className="font-medium">{user.fullName}</span>
-          <span className="text-xs opacity-70">{ROLE_LABEL[user.role]}</span>
+    <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+      <ConnectionStatus />
+      <NotificationBell />
+      <Dropdown menu={menu} trigger={['click']} placement="bottomRight">
+        <Button type="text" className="h-13 gap-2.5 px-2">
+          <Avatar className="bg-brand-50 font-medium text-brand-700">{getInitial(user.fullName)}</Avatar>
+          <span className="hidden text-left leading-[18px] sm:grid">
+            <span className="font-semibold text-neutral-900">{user.fullName}</span>
+            <span className="text-caption text-neutral-500">{ROLE_LABEL[user.role]}</span>
+          </span>
+          <ChevronDown size={14} className="text-neutral-400" />
         </Button>
       </Dropdown>
     </div>

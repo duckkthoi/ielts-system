@@ -35,18 +35,18 @@
 {
   "success": false,
   "data": null,
-  "message": "Đã quá hạn nộp",
-  "code": "DEADLINE_PASSED",
+  "errorCode": "DEADLINE_PASSED",
+  "errorMessage": "Đã quá hạn nộp",
   "status": 422,
   "path": "/api/student/parts/12/submit",
   "timestamp": "2026-11-05T17:00:03Z",
   "fieldErrors": { "content": "Nội dung không được để trống" }
 }
 ```
-`message` là câu tiếng Việt hiển thị thẳng cho người dùng. `fieldErrors` chỉ có khi lỗi validate.
+**HTTP status luôn là `200`** (kể cả khi lỗi, kể cả lỗi của Spring Security như chưa đăng nhập / không có quyền). Kết quả thật đọc trong body: `success`; khi lỗi thì `errorCode` (mã lỗi, bảng dưới), `errorMessage` (câu tiếng Việt hiển thị thẳng cho người dùng) và `status` (mã kiểu HTTP: 400, 401, 403, 404, 409, 422, 429, 500 — để phân loại lỗi, vd `401` → client refresh token rồi gửi lại). `fieldErrors` chỉ có khi lỗi validate. Response thành công không có các trường này; `message` ở response thành công là câu thông báo (vd "Đã gửi email"). Trong tài liệu này, các chỗ ghi "→ `409`", "`429 RATE_LIMITED`"… là giá trị `status` trong body; endpoint tạo mới trước đây trả `201` nay trả `200`. Ngoại lệ ngoài ứng dụng: lỗi mạng, nginx (`502`/`504`) và `/actuator/health` (`503` khi hỏng) vẫn dùng HTTP status thật.
 
 #### Mã lỗi
-| HTTP | `code` | Khi nào |
+| `status` | `errorCode` | Khi nào |
 |---|---|---|
 | 400 | `VALIDATION_ERROR` | Dữ liệu gửi lên không hợp lệ |
 | 400 | `BAD_FILE` | File import sai định dạng hoặc thiếu cột; ảnh không phải PNG / JPG / WEBP |
@@ -64,14 +64,14 @@
 | 404 | `NOT_FOUND` | Không tồn tại, hoặc người dùng không được phép biết là nó tồn tại |
 | 409 | `ALREADY_SUBMITTED` | Phần này đã nộp và không ở trạng thái yêu cầu sửa |
 | 409 | `VERSION_CONFLICT` | `expectedVersion` lệch: đã nộp ở tab hoặc máy khác |
-| 409 | `DRAFT_CONFLICT` | `draftVersion` lệch: có bản nháp mới hơn (Mức 2) |
+| 409 | `DRAFT_CONFLICT` | `draftVersion` lệch: tab / máy khác vừa lưu nháp. `data` = `{serverContent, draftVersion, savedAt}` (bước 10) |
 | 409 | `DUPLICATE` | Trùng mã lớp, tên đăng nhập… |
 | 409 | `INVALID_STATE` | Thao tác không hợp lệ với trạng thái hiện tại, ví dụ xoá bài đã phát hành |
 | 413 | `FILE_TOO_LARGE` | File vượt giới hạn |
 | 422 | `DEADLINE_PASSED` | Quá hạn và bài không cho nộp muộn |
 | 422 | `REVISION_LIMIT` | Đã hết số lần được yêu cầu sửa |
 | 422 | `SCORE_LIMITED` | Điểm tiêu chí vượt giới hạn do mục checklist "Giới hạn điểm" đang tick (BR-17) hoặc bài ≤ 20 từ (BR-18). Message nêu lý do |
-| 429 | `RATE_LIMITED` | Đăng nhập sai quá nhiều lần (Mức 2) |
+| 429 | `RATE_LIMITED` | Đăng nhập sai quá nhiều lần (5 lần / 5 phút theo IP hoặc theo tài khoản, NFR-09), hoặc nhắc thủ công quá 3 lần / 10 phút cho một bài. Message ghi số phút phải chờ |
 | 500 | `INTERNAL_ERROR` | Lỗi không mong muốn |
 
 > Giáo viên truy cập lớp hoặc bài của người khác nhận **404** chứ không phải 403, để không lộ việc tài nguyên đó có tồn tại.
@@ -88,6 +88,8 @@
 | GET | `/api/auth/me` | Thông tin người dùng hiện tại | → `AccountInfo` |
 | POST | `/api/auth/change-password` | Đổi mật khẩu (UC-02). Thu hồi các phiên khác, giữ phiên hiện tại | `{currentPassword, newPassword}` → `AccountInfo` |
 | GET | `/api/time` | Giờ server, không cần token (SD-11) | → `{serverTime}` |
+
+**Giới hạn đăng nhập sai (NFR-09, đã cài ở bước 12):** tối đa 5 lần sai trong 5 phút, đếm **riêng cho mỗi IP** và **mỗi tài khoản** (trong bộ nhớ, `app.rate-limit`). Vượt → `429 RATE_LIMITED` "Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau N phút", kể cả khi lần đó nhập đúng mật khẩu. Đăng nhập đúng xoá bộ đếm của tài khoản (không xoá của IP). Mọi lần thử đều ghi nhật ký (`LOGIN`, `LOGIN_FAILED`, `LOGIN_BLOCKED`).
 
 **Kiểm tra mỗi request có access token:** ngoài chữ ký và hạn của JWT, server kiểm tra **phiên (`sid`) chưa bị thu hồi** và **tài khoản còn hoạt động**. Nhờ vậy đăng xuất, đổi mật khẩu, khoá tài khoản có tác dụng ngay, không phải chờ access token hết hạn.
 
@@ -120,7 +122,7 @@
 | POST | `/api/admin/users/{id}/unlock` | Mở khoá | 1 |
 | POST | `/api/admin/users/{id}/reset-password` | Đặt lại mật khẩu → `{temporaryPassword}`; bắt đổi lần sau | 1 |
 | GET | `/api/admin/stats` | Thống kê toàn hệ thống (UC-09) → `{usersByRole, lockedUsers, classrooms, assignmentsByStatus, submissionsToday, submissionsByDay[14], activeSessions}`. "Ngày" tính theo giờ Việt Nam (`app.zone`) | 1 |
-| GET | `/api/admin/audit-logs?actorId&action&ip&from&to&page&size` | Nhật ký hệ thống (UC-07) | 2 |
+| GET | `/api/admin/audit-logs?actorId&action&ip&from&to&page&size` | Nhật ký hệ thống (UC-07, đã cài ở bước 12): mới nhất trước; `ip` lọc theo tiền tố (vd `192.168.`); `from` ≤ thời điểm < `to`, `from ≥ to` → `400`. Mỗi dòng `{id, actorId, actorUsername, actorName, action, targetType, targetId, ip, detail, createdAt}` | 2 |
 | GET | `/api/admin/sessions?userId&page&size` | Phiên đang hoạt động (UC-08) | 3 |
 | DELETE | `/api/admin/sessions/{id}` | Buộc đăng xuất một phiên | 3 |
 
@@ -207,7 +209,7 @@
 | PUT | `/api/teacher/assignments/{id}/targets` | Giao thêm (chỉ bài PUBLISHED) `{classIds, studentIds}` → `{newRecipients, recipientCount}`. Chỉ thêm, không gỡ người đã giao |
 | POST | `/api/teacher/assignments/{id}/close` | PUBLISHED → CLOSED |
 | POST | `/api/teacher/assignments/{id}/reopen` | CLOSED → PUBLISHED |
-| POST | `/api/teacher/assignments/{id}/duplicate` | Nhân bản → `201` bài DRAFT mới "… (bản sao)": đủ phần và rubric; **không** chép người nhận, `openAt`, `dueAt`, hạn riêng |
+| POST | `/api/teacher/assignments/{id}/duplicate` | Nhân bản → bài DRAFT mới "… (bản sao)": đủ phần và rubric; **không** chép người nhận, `openAt`, `dueAt`, hạn riêng |
 
 **Phát hành (UC-14):**
 - Điều kiện: bài nháp; có ≥ 1 phần; mỗi phần có ≥ 1 tiêu chí; có `dueAt` ở tương lai; hạn riêng (nếu có) ở tương lai; **có ≥ 1 người nhận**. Thiếu điều kiện → `400 NOT_READY`, message **liệt kê mọi vấn đề**. Phát hành lần 2 → `409 INVALID_STATE`.
@@ -218,7 +220,7 @@
 
 **Upload ảnh đề:** `POST /api/files` (TEACHER, ADMIN), multipart `file`.
 - Loại file nhận diện theo **chữ ký byte đầu file** (PNG / JPG / WEBP), không tin tên hay Content-Type. Tối đa 5 MB.
-- Trả `201 {url: "/uploads/yyyy/MM/<uuid>.png"}`.
+- Trả `{url: "/uploads/yyyy/MM/<uuid>.png"}`.
 - `GET /uploads/**` **công khai** (thẻ `<img>` không gửi được token), tên file là UUID nên không đoán được, cache 30 ngày.
 
 ```jsonc
@@ -272,42 +274,90 @@
 | Method | Đường dẫn | Mô tả |
 |---|---|---|
 | GET | `/api/teacher/assignments/{id}/progress?classId&status` | Ma trận tiến độ (UC-16) |
-| POST | `/api/teacher/assignments/{id}/remind` | Nhắc nhở `{studentIds, partId?}` → `{sent}` (đã cài ở B7b): chỉ bài đang mở (khác → `409`); mọi `studentIds` phải là người nhận bài, `partId` phải thuộc bài (sai → `400`); bài của người khác → `404`. Mỗi sinh viên nhận thông báo `MANUAL_REMINDER` kèm email |
-| GET | `/api/teacher/assignments/{id}/stats` | Thống kê một bài (UC-19) |
-| GET | `/api/teacher/assignments/{id}/export` | Bảng điểm `.xlsx` |
-| GET | `/api/teacher/stats/classes/{id}` | Thống kê lớp, bảng xếp hạng |
-| GET | `/api/teacher/stats/students/{id}` | Thống kê một sinh viên |
+| POST | `/api/teacher/assignments/{id}/remind` | Nhắc nhở `{studentIds, partId?}` → `{sent}` (đã cài ở B7b): chỉ bài đang mở (khác → `409`); mọi `studentIds` phải là người nhận bài, `partId` phải thuộc bài (sai → `400`); bài của người khác → `404`. Mỗi sinh viên nhận thông báo `MANUAL_REMINDER` kèm email. Mỗi (giáo viên, bài) tối đa 3 lần / 10 phút, vượt → `429 RATE_LIMITED` (bước 12) |
+| GET | `/api/teacher/assignments/{id}/stats?classId` | Thống kê một bài (UC-19) |
+| GET | `/api/teacher/assignments/{id}/export?classId` | Bảng điểm `.xlsx` (FR-66) |
+| GET | `/api/teacher/stats/classes/{id}` | Thống kê lớp, bảng xếp hạng (FR-65) |
+| GET | `/api/teacher/stats/students/{id}` | Thống kê một sinh viên trên các bài của tôi (FR-64) → `StudentStats` (xem A.8 "Kết quả học tập") |
+
+**Ma trận tiến độ (UC-16, đã cài ở B8a):**
+- **Hàng** = người nhận bài (giao trực tiếp ∪ thành viên lớp được giao, tính tại thời điểm truy vấn) **∪ người đã có bài làm** (sinh viên rời lớp sau khi nộp vẫn hiện, để không mất bài cần chấm). Sắp theo mã sinh viên. **Cột** = các phần theo thứ tự.
+- **Ô**: `status` theo docs/06 mục 2 (giáo viên thấy cả `GRADED`; chưa có bài làm = `NOT_STARTED`, `submissionId = null`); `late` = lần nộp mới nhất bị muộn (BR-08); `overdue` = còn phải nộp (`NOT_STARTED` / `DRAFT` / `REVISION_REQUESTED`) mà đã quá **hạn áp dụng** (BR-07: hạn sửa → hạn phần → hạn bài); `score` = band của phần (đã làm tròn hiển thị) **chỉ khi kết quả của lần nộp mới nhất đã trả** — gồm cả bài đang "Cần sửa"; "Chấm 0" hiện `0.0`.
+- `classId`: chỉ sinh viên đang là thành viên lớp đó; lớp không phải của mình → `400`. `status`: chỉ giữ hàng có ít nhất một ô ở trạng thái đó; sai giá trị → `400`.
+- `summary` tính trên các hàng **sau khi lọc lớp, trước khi lọc trạng thái**: `completedCount` = số sinh viên đã nộp (ít nhất một lần) mọi phần, `completedRate` = `completedCount / students` (0 khi chưa có ai), `lateCount` / `overdueCount` = số **sinh viên** có ít nhất một ô `late` / `overdue`.
+- Bài của giáo viên khác → `404`. Toàn bộ ô lấy bằng một câu SQL (không N+1).
+- Mỗi hàng có thêm `online` (đang có kết nối WebSocket) và `viewingPartId` (đang mở phần nào của bài này) — Mức 2, bước 9a; cập nhật tiếp qua kênh `/topic/assignments/{id}/presence`.
 
 ```jsonc
-// Ma trận tiến độ
+// GET /api/teacher/assignments/7/progress?classId=3
 {
-  "parts": [ { "id": 11, "title": "Task 1" }, { "id": 12, "title": "Task 2" } ],
+  "parts": [
+    { "id": 11, "orderNo": 1, "title": "Task 1", "taskType": "WRITING_TASK1" },
+    { "id": 12, "orderNo": 2, "title": "Task 2", "taskType": "WRITING_TASK2" }
+  ],
   "rows": [
     {
       "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
-      "online": true,                       // Mức 2
+      "online": true, "viewingPartId": 12,
       "cells": [
-        { "partId": 11, "submissionId": 301, "status": "RETURNED", "isLate": false, "score": 6.5 },
-        { "partId": 12, "submissionId": null, "status": "NOT_STARTED", "isLate": false, "score": null }
+        { "partId": 11, "submissionId": 301, "status": "RETURNED", "currentVersion": 1, "late": false, "overdue": false, "score": 6.5 },
+        { "partId": 12, "submissionId": null, "status": "NOT_STARTED", "currentVersion": 0, "late": false, "overdue": true, "score": null }
       ]
     }
   ],
-  "summary": { "students": 45, "completedRate": 0.62, "lateCount": 4 }
+  "summary": { "students": 45, "completedCount": 28, "completedRate": 0.6222, "lateCount": 4, "overdueCount": 9 }
 }
 ```
 
+**Thống kê một bài (UC-19, FR-63, đã cài ở B8b):**
+- Tập sinh viên **giống ma trận tiến độ** (kể cả lọc `classId`); `students` = số sinh viên đó.
+- Chỉ tính kết quả **đã trả** (BR-13): mỗi bài làm lấy kết quả đã trả của version mới nhất có kết quả đã trả — cùng cách chọn với màn kết quả của sinh viên. Bản sửa đang chấm nháp chưa tính. "Chấm 0" được tính (band 0).
+- Theo từng phần: `submittedCount` (đã nộp ít nhất một lần), `lateCount` (lần nộp **đầu tiên** bị muộn), `onTimeRate` = (đã nộp − muộn) / đã nộp, `returnedCount`, `averageBand`, trung bình từng tiêu chí, `bandDistribution` (đếm theo band đã làm tròn hiển thị, chỉ band có bài, tăng dần).
+- `overall`: band cả bài (BR-12, có trọng số phần) của các sinh viên **đã được trả mọi phần**.
+- `topErrors`: tối đa 10 mã lỗi hay gặp trong nhận xét inline, sắp theo số lần; bỏ mã khen (`GOOD`…). `name` / `criterion` lấy từ mã hệ thống hoặc mã riêng của giáo viên; `null` nếu mã riêng đã bị xoá.
+- Trung bình giữ 2 chữ số thập phân, **không** làm tròn kiểu IELTS. Chưa có dữ liệu → `null` (không phải 0).
+- Bài của giáo viên khác → `404`; lớp không phải của mình → `400`. Số câu SQL cố định (4 truy vấn tổng hợp), không phụ thuộc số sinh viên.
+
 ```jsonc
-// Thống kê một bài
+// GET /api/teacher/assignments/7/stats
 {
+  "students": 45,
   "perPart": [
     {
-      "partId": 12,
-      "submittedCount": 40, "onTimeRate": 0.9, "averageBand": 6.0,
-      "criteria": [ { "criterionId": 51, "name": "Task Response", "average": 5.9 } ],
+      "partId": 12, "orderNo": 2, "title": "Task 2", "taskType": "WRITING_TASK2",
+      "submittedCount": 40, "lateCount": 4, "onTimeRate": 0.9, "returnedCount": 35, "averageBand": 6.04,
+      "criteria": [ { "criterionId": 51, "code": "TR", "name": "Task Response", "average": 5.93, "count": 35 } ],
       "bandDistribution": [ { "band": 5.5, "count": 8 }, { "band": 6.0, "count": 12 } ]
     }
   ],
-  "overallAverage": 6.0
+  "overall": { "count": 30, "averageBand": 6.08, "bandDistribution": [ { "band": 6.0, "count": 11 } ] },
+  "topErrors": [ { "code": "VT", "name": "Thì động từ", "criterion": "GRA", "count": 57, "studentCount": 21 } ]
+}
+```
+
+**Xuất bảng điểm (FR-66, đã cài ở B8e):** `GET …/export?classId` → file `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, tên `bang-diem-bai-{id}[-{mã lớp}].xlsx`, `Cache-Control: no-store`.
+- Sheet **"Bảng điểm"**: cùng tập sinh viên và thứ tự với ma trận tiến độ. Cột: `STT`, `Mã SV` (dạng chữ), `Họ tên`; với mỗi phần: điểm từng tiêu chí (`<phần> – TA`…; tiêu chí tự định nghĩa dùng tên), `<phần> – Band`, `<phần> – Trạng thái` (Chưa làm / Đang làm / Đã nộp / Đang chấm / Đã trả / Cần sửa, thêm "(muộn)" nếu lần nộp mới nhất muộn); cuối: `Band cả bài`, `Số phần nộp muộn`.
+- Điểm lấy từ **lần nộp gần nhất đã được trả** (như màn kết quả của sinh viên). Ô chưa có điểm **để trống**, "Chấm 0" ghi `0`. Band đã làm tròn .25 / .75; band cả bài chỉ có khi mọi phần đã trả.
+- Sheet **"Thông tin"**: tên bài, thời điểm xuất và hạn nộp (giờ Việt Nam), phạm vi (lớp / mọi người nhận), ghi chú cách tính.
+- Bài của người khác → `404`; lớp không phải của mình → `400`.
+
+**Thống kê lớp (FR-65, đã cài ở B8d):**
+- Tính trên **thành viên hiện tại** của lớp và các bài (đã phát hành / đã đóng) của giáo viên **giao cho lớp**. Bài chỉ giao trực tiếp cho từng người không tính; người được giao trực tiếp nhưng không ở lớp không tính.
+- Chỉ kết quả đã trả (BR-13), cùng cách chọn với các thống kê khác.
+- `assignments[]` (sắp theo hạn nộp): `completedCount` = thành viên đã nộp mọi phần, `completedRate` = `completedCount / memberCount`, `gradedCount` = thành viên đã được trả mọi phần, `averageBand` = trung bình band cả bài (BR-12) của những người đó.
+- `ranking[]`: mỗi thành viên một hàng — `averageBand` = trung bình band cả bài của các bài đã đủ phần (`gradedAssignments`), `submittedParts` / `lateParts` = số phần đã nộp / có lần nộp đầu muộn. Xếp band cao trước, **bằng band thì cùng hạng** (1, 1, 3), cùng hạng xếp theo mã SV; chưa có band → `rank = null`, đứng cuối.
+- `averageBand` của lớp = trung bình mọi band cả bài (thành viên × bài) đã đủ phần. Trung bình giữ 2 chữ số, không có dữ liệu → `null`.
+- Lớp của giáo viên khác → `404`. 4 câu SQL cố định.
+
+```jsonc
+// GET /api/teacher/stats/classes/3
+{
+  "classroom": { "id": 3, "code": "K15-A", "name": "IELTS K15 – Lớp A", "memberCount": 45 },
+  "averageBand": 5.92,
+  "assignments": [ { "assignmentId": 7, "title": "Tuần 5", "status": "CLOSED", "dueAt": "2026-11-07T16:59:00Z",
+                     "partCount": 2, "completedCount": 40, "completedRate": 0.8889, "gradedCount": 38, "averageBand": 6.04 } ],
+  "ranking": [ { "rank": 1, "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
+                 "averageBand": 7.17, "gradedAssignments": 3, "submittedParts": 6, "lateParts": 0 } ]
 }
 ```
 
@@ -325,11 +375,11 @@
 | POST | `/api/teacher/submissions/{id}/request-revision` | Yêu cầu sửa `{note?, dueAt}` → `GradingScreen` |
 | POST | `/api/teacher/submissions/{id}/ai-suggest` | Gợi ý AI (Mức 3, chỉ khi có API key) |
 | GET | `/api/teacher/error-codes` | Mã lỗi dùng được: 22 mã của hệ thống (theo thứ tự) rồi tới mã riêng của tôi |
-| POST | `/api/teacher/error-codes` | Thêm mã riêng `{code, name, criterion?, description?, positive?}` → `201 ErrorCodeDto` |
+| POST | `/api/teacher/error-codes` | Thêm mã riêng `{code, name, criterion?, description?, positive?}` → `200 ErrorCodeDto` |
 | PUT | `/api/teacher/error-codes/{id}` | Sửa mã riêng (cùng body) |
 | DELETE | `/api/teacher/error-codes/{id}` | Xoá mã riêng. Nhận xét inline đã dùng mã vẫn giữ mã dạng chữ |
 | GET | `/api/teacher/comment-bank?criterion&keyword` | Ngân hàng nhận xét: của tôi (hay dùng lên đầu) rồi tới nhận xét mẫu |
-| POST | `/api/teacher/comment-bank` | Thêm `{criterion?, content}` → `201 CommentBankDto` |
+| POST | `/api/teacher/comment-bank` | Thêm `{criterion?, content}` → `200 CommentBankDto` |
 | PUT | `/api/teacher/comment-bank/{id}` | Sửa (cùng body) |
 | DELETE | `/api/teacher/comment-bank/{id}` | Xoá |
 | POST | `/api/teacher/comment-bank/{id}/use` | Ghi nhận một lần chèn → `CommentBankDto` (đã tăng `useCount`) |
@@ -418,13 +468,13 @@
 |---|---|---|
 | GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION&page&size` | Bài được giao, theo tab (UC-22) |
 | GET | `/api/student/assignments/{id}` | Chi tiết bài + trạng thái từng phần của tôi |
-| GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, draftVersion, savedAt}` |
-| PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{draftVersion, savedAt}` (SD-06) |
-| POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `201 {versionNo, submittedAt, isLate}` (SD-07) |
+| GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion}` |
+| PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion}` (SD-06) |
+| POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}` (SD-07) |
 | GET | `/api/student/parts/{partId}/versions` | Lịch sử nộp, có band nếu đã trả bài |
 | GET | `/api/student/parts/{partId}/versions/{versionNo}` | Nội dung một version + kết quả chấm (chỉ khi RETURNED, BR-13) |
 | GET | `/api/student/assignments/{id}/result` | Band từng phần và band cả bài (BR-12) |
-| GET | `/api/student/results` | Kết quả học tập của tôi (UC-28) |
+| GET | `/api/student/results` | Kết quả học tập của tôi (UC-28) → `StudentStats` |
 | POST | `/api/student/parts/{partId}/exam/start` | Bắt đầu chế độ thi → `{sessionId, endsAt}` (Mức 3) |
 
 **Làm bài và nộp bài (đã cài ở B5a):**
@@ -434,10 +484,11 @@
   - `LAST_VERSION`: đang "Cần sửa" mà chưa có nháp, nên nạp sẵn nội dung version mới nhất để sửa tiếp;
   - `EMPTY`: chưa có gì.
   - `status` phía sinh viên hiển thị `GRADED` thành `SUBMITTED` (BR-13).
-- `PUT …/draft {content}` (tối đa 30 000 ký tự) → `{savedAt, wordCount}`. Lưu nháp cũng tuân theo hạn, như khi nộp.
-- `POST …/submit {content, expectedVersion}` → `201 {versionNo, submittedAt, late, wordCount}`. Lỗi:
+- `PUT …/draft {content, draftVersion}` (tối đa 30 000 ký tự) → `{savedAt, wordCount, draftVersion}`. Lưu nháp cũng tuân theo hạn, như khi nộp.
+- **Khoá lạc quan bản nháp (bước 10, SD-06):** `draftVersion` bắt đầu từ 0 (chưa lưu lần nào), tăng 1 sau mỗi lần lưu thành công; `GET …/draft` trả số hiện tại. Server **khoá dòng bài làm** (`FOR UPDATE`) rồi so số client gửi: lệch → `409 DRAFT_CONFLICT`, body lỗi có `data: {serverContent, draftVersion, savedAt}` để client hiện hộp thoại "giữ bản trên máy này / dùng bản trên server"; chọn xong thì gửi lại với `draftVersion` mới nhất. Bỏ trống `draftVersion` = không kiểm tra (ghi đè như Mức 1); số âm → `400`. Có test bắn 2 lần lưu đồng thời cùng số: đúng 1 thành công.
+- `POST …/submit {content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}`. Lỗi:
 
-  | HTTP | `code` | Khi nào |
+  | `status` | `errorCode` | Khi nào |
   |---|---|---|
   | 409 | `VERSION_CONFLICT` | `expectedVersion` ≠ version hiện tại, hoặc 2 request đầu tiên chạy đồng thời. Client tải lại trạng thái |
   | 409 | `ALREADY_SUBMITTED` | Phần đã nộp và không ở trạng thái "Cần sửa" |
@@ -481,6 +532,28 @@
   - band cả bài = trung bình có trọng số band các phần (chưa làm tròn rồi mới làm tròn .25 / .75), **chỉ có khi mọi phần đã có kết quả**; nếu chưa thì `complete = false`, `band = null`, `note` = "Chưa đủ phần…";
   - khi đủ, `note` = "Band tổng được ước lượng theo quy ước Task 2 gấp đôi Task 1; IELTS không công bố công thức chính xác."
 
+**Kết quả học tập — `StudentStats` (UC-28, FR-64, đã cài ở B8c):** dùng chung cho `GET /api/student/results` (sinh viên xem mình) và `GET /api/teacher/stats/students/{id}` (giáo viên xem một sinh viên).
+- **Phạm vi bài:** sinh viên → mọi bài mình **được thấy** (BR-04, BR-05; kể cả của nhiều giáo viên); giáo viên → chỉ **bài của mình**. Giáo viên chỉ xem được sinh viên đang ở lớp của mình, được mình giao bài trực tiếp, hoặc đã có bài làm trong bài của mình; ngoài ra (hoặc id không phải sinh viên) → `404`.
+- Chỉ tính kết quả **đã trả** (BR-13), lấy version mới nhất có kết quả đã trả, giống `…/result`. Bài đang chấm nháp không hiện.
+- `submittedCount` = số phần đã nộp ít nhất một lần; `lateCount` = số phần có lần nộp đầu muộn; `returnedCount` = số phần có kết quả đã trả; `averageBand` = trung bình band cả bài của các bài **đủ phần** (2 chữ số thập phân, `null` nếu chưa có).
+- `assignments`: các bài có ít nhất một phần đã trả, sắp theo lần trả gần nhất tăng dần (biểu đồ "band theo thời gian"); `band` (đã làm tròn .25 / .75) chỉ có khi `complete`.
+- `parts`: band từng phần đã trả, sắp theo thời điểm trả.
+- `criteria`: trung bình theo mã tiêu chí IELTS (thứ tự TA, TR, CC, LR, GRA), gộp mọi bài; tiêu chí tự định nghĩa không tính.
+- `errorProfile` (**hồ sơ lỗi**, docs/08 mục 4.5): tối đa 10 mã lỗi hay gặp, cùng cách tính với `topErrors` của thống kê bài; tên mã theo bộ mã của người chấm.
+
+```jsonc
+{
+  "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
+  "submittedCount": 9, "lateCount": 1, "returnedCount": 8, "averageBand": 6.17,
+  "assignments": [ { "assignmentId": 7, "title": "Tuần 5", "partCount": 2, "returnedParts": 2, "complete": true,
+                     "band": 6.0, "returnedAt": "2026-11-09T03:00:00Z" } ],
+  "parts": [ { "assignmentId": 7, "assignmentTitle": "Tuần 5", "partId": 11, "partTitle": "Task 1",
+               "taskType": "WRITING_TASK1", "band": 5.5, "returnedAt": "2026-11-08T03:00:00Z" } ],
+  "criteria": [ { "code": "TA", "average": 5.50, "count": 4 }, { "code": "CC", "average": 5.75, "count": 8 } ],
+  "errorProfile": [ { "code": "VT", "name": "Thì động từ", "criterion": "GRA", "count": 12, "studentCount": 1 } ]
+}
+```
+
 **Quy tắc tab** (một bài có thể thuộc nhiều tab):
 - `TODO`: bài đang mở, có phần **chưa làm / đang làm** chưa quá hạn.
 - `DUE_SOON`: là `TODO` và có phần như vậy hết hạn trong vòng 24 giờ.
@@ -498,11 +571,19 @@
 | GET | `/api/notifications/unread-count` | → `{count}` | 1 |
 | POST | `/api/notifications/{id}/read` | Đánh dấu đã đọc | 1 |
 | POST | `/api/notifications/read-all` | Đánh dấu tất cả | 1 |
-| GET | `/api/chat/channels` | Các kênh chat của tôi, kèm số tin chưa đọc | 2 |
-| GET | `/api/chat/{channelId}/messages?beforeId&size=50` | Lịch sử chat, tải ngược về trước | 2 |
+| GET | `/api/chat/channels` | Các kênh chat của tôi, kèm tin cuối và số tin chưa đọc (bước 9b) | 2 ✅ |
+| GET | `/api/chat/{channelId}/messages?beforeId&size=50` | Lịch sử chat, tải ngược về trước (bước 9b) | 2 ✅ |
 | GET | `/api/teacher/parts/{partId}/exam-sessions` | Các phiên thi của một phần | 3 |
 | GET | `/api/teacher/exam-sessions/{id}/events` | Dòng thời gian sự kiện (UC-21) | 3 |
 | CRUD | `/api/teacher/question-bank` | Ngân hàng đề (UC-20) | 3 |
+
+**Chat (đã cài ở bước 9b; UC-29, FR-55, SD-12):**
+- Kênh `submission-{id}`: sinh viên chủ bài nộp và giáo viên chủ bài tập. Kênh `class-{id}`: giáo viên của lớp và **thành viên hiện tại**. Không thuộc kênh / mã kênh sai → `404` (REST) hoặc `ERROR` (STOMP).
+- `GET /api/chat/channels` → `[{channelId, type, title, lastMessage: {id, senderName, preview, createdAt} | null, unreadCount}]`: mọi lớp mình dạy / học (kể cả chưa có tin) và các bài nộp **đã có tin nhắn**; kênh có tin mới nhất trước. `title`: lớp = "mã – tên", bài nộp = "bài – phần · tên sinh viên". `unreadCount` = tin **của người khác** sau mốc "đã đọc" của mình.
+- `GET /api/chat/{channelId}/messages?beforeId&size` → `{messages, reads}`: `messages` **mới nhất trước** (`size` mặc định 50, tối đa 100; `beforeId` để tải tiếp các tin cũ hơn), mỗi tin là `ChatEvent` loại `MESSAGE`; `reads` = `[{userId, userName, lastMessageId}]` mốc đã đọc của những người khác (hiện "Đã xem").
+- Gửi tin chỉ qua STOMP (`/app/chat/{id}/send {content, clientMsgId}`): nội dung 1–4000 ký tự sau khi bỏ khoảng trắng hai đầu; `clientMsgId` ≤ 40 ký tự, **cùng người gửi + cùng `clientMsgId` không lưu lần hai** (UNIQUE trong DB) — server phát lại tin đã lưu để client đánh dấu "đã gửi". Tin được lưu rồi **sau commit** mới phát tới `/topic/chat/{id}`.
+- `typing`: không lưu; server bỏ bớt nếu một người gửi dày hơn 2 giây / kênh. `read {lastMessageId}`: tin phải thuộc kênh; mốc chỉ tăng (upsert `GREATEST`); phát `READ` tới kênh.
+- Lỗi dữ liệu của lệnh STOMP (tin rỗng, quá dài, tin không thuộc kênh) → gửi riêng người gửi trên `/user/queue/errors` dạng `{errorCode, errorMessage}` (cùng tên trường với body lỗi REST); không lưu, không phát.
 
 **Thông báo (đã cài ở B7a; UC-04, FR-50, FR-51, FR-53):**
 - Mọi vai trò đều dùng được; chỉ thấy thông báo của chính mình (của người khác → `404`).
@@ -553,28 +634,35 @@
 | Hướng | Destination | Ai dùng | Payload | Mức |
 |---|---|---|---|---|
 | SUBSCRIBE | `/user/queue/notifications` | Mọi người | `NotificationDto` | 1 |
-| SUBSCRIBE | `/user/queue/session` | Mọi người | `{type: "FORCE_LOGOUT", reason}` | 2 |
-| SUBSCRIBE | `/topic/assignments/{id}/progress` | Giáo viên chủ bài | `{studentId, partId, status, isLate, score, at}` | 2 |
-| SUBSCRIBE | `/topic/assignments/{id}/presence` | Giáo viên chủ bài | `{studentId, online, viewingPartId, at}` | 2 |
-| SEND | `/app/presence/viewing` | Sinh viên | `{assignmentId, partId}` khi mở / đổi phần; `partId = null` khi rời trang | 2 |
-| SUBSCRIBE | `/topic/chat/{channelId}` | Thành viên kênh | `ChatEvent` | 2 |
-| SEND | `/app/chat/{channelId}/send` | Thành viên kênh | `{content, clientMsgId}` | 2 |
-| SEND | `/app/chat/{channelId}/typing` | Thành viên kênh | `{}` (gửi tối đa 1 lần / 3 giây) | 2 |
-| SEND | `/app/chat/{channelId}/read` | Thành viên kênh | `{lastMessageId}` | 2 |
+| SUBSCRIBE | `/user/queue/session` | Mọi người | `{type: "FORCE_LOGOUT", reason}` — `reason` ∈ `NEW_LOGIN`, `PASSWORD_CHANGED`, `ACCOUNT_LOCKED`, `ADMIN_FORCED`, `TOKEN_REUSE` | 2 ✅ |
+| SUBSCRIBE | `/topic/assignments/{id}/progress` | Giáo viên chủ bài | `{submissionId, studentId, partId, status, late, score, at}` | 2 ✅ |
+| SUBSCRIBE | `/topic/assignments/{id}/presence` | Giáo viên chủ bài | `{studentId, online, viewingPartId, at}` | 2 ✅ |
+| SEND | `/app/presence/viewing` | Sinh viên | `{assignmentId, partId}` khi mở / đổi phần; `partId = null` khi rời trang | 2 ✅ |
+| SUBSCRIBE | `/topic/chat/{channelId}` | Thành viên kênh | `ChatEvent` | 2 ✅ |
+| SUBSCRIBE | `/user/queue/errors` | Mọi người | `{errorCode, errorMessage}` — lỗi của lệnh STOMP mình vừa gửi (vd tin chat rỗng) | 2 ✅ |
+| SEND | `/app/chat/{channelId}/send` | Thành viên kênh | `{content, clientMsgId}` | 2 ✅ |
+| SEND | `/app/chat/{channelId}/typing` | Thành viên kênh | `{}` (gửi tối đa 1 lần / 3 giây) | 2 ✅ |
+| SEND | `/app/chat/{channelId}/read` | Thành viên kênh | `{lastMessageId}` | 2 ✅ |
 | SEND | `/app/exam/{sessionId}/event` | Sinh viên trong phiên thi | `{type: "TAB_HIDDEN" \| "TAB_VISIBLE" \| "PASTE"}` | 3 |
 
 - `channelId` có dạng `submission-{submissionId}` hoặc `class-{classroomId}`.
 - `ChatEvent` có dạng `{type: "MESSAGE" | "TYPING" | "READ", ...}`:
-  - `MESSAGE`: `{id, senderId, senderName, content, clientMsgId, createdAt}`
+  - `MESSAGE`: `{id, channelId, senderId, senderName, content, clientMsgId, createdAt}`
   - `TYPING`: `{userId, userName}`
   - `READ`: `{userId, lastMessageId}`
 
 **Phân quyền SUBSCRIBE / SEND:** `StompAuthInterceptor` kiểm tra mỗi khung tin.
 - `CONNECT`: access token hợp lệ, phiên chưa bị thu hồi, tài khoản còn hoạt động và không đang bị bắt đổi mật khẩu (cùng cách kiểm tra với REST). Sai → khung `ERROR` có `message` tiếng Việt, không kết nối được.
-- **Mức 1 (đã cài ở B7a):** chỉ cho SUBSCRIBE `/user/queue/notifications` và `/user/queue/session`; mọi `/topic/…` và mọi lệnh SEND → `ERROR`. Các kênh Mức 2 mở dần cùng quy tắc bên dưới.
-- Quy tắc cho kênh Mức 2, ví dụ:
-- chỉ giáo viên chủ bài mới SUBSCRIBE được `/topic/assignments/{id}/...`;
-- chỉ chủ bài nộp và giáo viên của bài mới vào được kênh `submission-{id}`.
+- **Mức 1 (đã cài ở B7a):** luôn cho SUBSCRIBE `/user/queue/notifications` và `/user/queue/session`.
+- **Mức 2 (bước 9a):** các kênh còn lại do các luật `StompAccessRule` quyết định (module `security` định nghĩa interface, module nghiệp vụ cài luật — `realtime.AssignmentChannelRule`). Kênh không luật nào phụ trách → `ERROR`.
+
+**Một tài khoản một phiên (FR-06, bước 9a):** đăng nhập thành công thì mọi phiên cũ của tài khoản bị thu hồi (`NEW_LOGIN`, bật / tắt bằng `app.session.single-login`). Mọi lần thu hồi hàng loạt (đăng nhập mới, đổi mật khẩu, khoá, đặt lại mật khẩu, dùng lại refresh token cũ) đi qua `SessionRevoker`, phát sự kiện `SessionsRevoked`; **sau commit**, mỗi kết nối WebSocket của phiên bị thu hồi nhận riêng `FORCE_LOGOUT` (gửi theo `simpSessionId`, thiết bị mới không nhận nhầm) rồi bị server đóng sau ~0,5 giây. REST với token cũ → 401 ngay; CONNECT lại bằng token cũ → `ERROR`.
+
+**Tiến độ live và online (FR-54, FR-61, bước 9a):**
+- `progress`: đẩy sau commit khi sinh viên **lưu nháp lần đầu** (`DRAFT`), **nộp** (`SUBMITTED`, kèm `late`), giáo viên **trả bài** (`RETURNED`, kèm `score` đã làm tròn) hoặc **yêu cầu sửa** (`REVISION_REQUESTED`, kèm `score`). Lưu chấm nháp (`GRADED`) không đẩy — chỉ giáo viên đó thấy, ở màn chấm.
+- `presence`: giữ trong bộ nhớ. Sinh viên có kết nối đầu tiên / mất kết nối cuối cùng → `online` true / false gửi tới kênh của **mọi bài sinh viên đang được giao**. Mở / đổi / rời phần → `viewingPartId` gửi tới kênh của bài đó. Bài không được thấy hoặc phần không thuộc bài → bỏ qua (không lỗi, không lộ thông tin).
+- Ma trận tiến độ REST (A.6) có sẵn `online`, `viewingPartId` của mỗi hàng làm trạng thái ban đầu; sau đó client cập nhật theo hai kênh trên.
+- Luật hiện có: chỉ **giáo viên chủ bài** SUBSCRIBE được `/topic/assignments/{id}/progress|presence`; chỉ **sinh viên** SEND được `/app/presence/viewing`. Kênh chat (`chat.ChatChannelRule`, bước 9b): chỉ chủ bài nộp và giáo viên của bài vào được `submission-{id}`; thành viên và giáo viên của lớp vào được `class-{id}`.
 
 Sai quyền thì server trả khung `ERROR`.
 
@@ -610,7 +698,7 @@ message-id:a1b2-17
 | Khung lệnh | Một dòng text kết thúc bằng `\n` (LF). Tối đa 1024 byte mỗi dòng |
 | Phần dữ liệu | Ngay sau dòng `IMPORT`, gửi **đúng** `<byteLength>` byte nội dung CSV (cùng định dạng mục A.4). Tối đa 5 MB |
 | Timeout | Không nhận được byte nào trong 30 giây → `ERR 408` rồi đóng. Toàn phiên tối đa 5 phút |
-| Đồng thời | Mỗi kết nối được một luồng của `ExecutorService` xử lý (mặc định 16 luồng). Pool đầy thì trả ngay `ERR 503` rồi đóng |
+| Đồng thời | Mỗi kết nối được một luồng của `ExecutorService` xử lý (mặc định 16 luồng, `app.tcp.threads`). Số phiên đồng thời giới hạn bằng `Semaphore` cùng cỡ: hết chỗ thì trả ngay `ERR 503` rồi đóng |
 | Bảo mật | Bản cơ bản là **text không mã hoá**: chỉ nên dùng trong LAN. Bản Mức 3 có TLS (`SSLServerSocket`, cổng 9443) |
 
 ### C.2 Lệnh từ client
@@ -685,15 +773,18 @@ S: END
 (server đóng kết nối)
 ```
 
-### C.7 Ghi chú cài đặt
+### C.7 Ghi chú cài đặt (đã cài ở bước 11)
 - **Server** (`tcpgateway.TcpImportServer`):
-  - khởi động cùng Spring (`SmartLifecycle`);
-  - một luồng chạy vòng `accept()`, socket nhận được giao cho thread pool;
-  - mỗi socket đặt `setSoTimeout(30_000)`;
-  - đọc dòng bằng `BufferedInputStream` tự tách theo `\n` (không dùng `BufferedReader` vì cần đọc chính xác số byte của phần CSV);
-  - khi Spring tắt thì đóng `ServerSocket` và `shutdown()` pool.
-- **Tái sử dụng nghiệp vụ:** gọi đúng `StudentImportService` của luồng HTTP, nên kết quả hai cách import là như nhau.
-- **Client** (`admin-cli`): Java thuần, dùng `Socket`, `DataOutputStream` và `BufferedInputStream`, in thanh tiến trình theo `PROGRESS`, lưu các dòng `CRED` ra file CSV.
+  - khởi động / dừng cùng Spring (`SmartLifecycle`); cấu hình `app.tcp.{enabled, port, threads, read-timeout, session-timeout, max-payload}`;
+  - một luồng chạy vòng `accept()`; socket nhận được giao cho `ExecutorService` cỡ cố định; `Semaphore` giữ số phiên ≤ số luồng, hết chỗ → `ERR 503` ngay;
+  - mỗi phiên (`TcpImportSession`) đặt `setSoTimeout` = min(timeout đọc 30 s, thời gian phiên còn lại trong 5 phút); hết → `ERR 408`;
+  - đọc khung tin bằng `FrameReader` (đọc từng byte tới `\n`, rồi `readNBytes` đúng `byteLength`) — không dùng `BufferedReader` vì nó đọc trước vào bộ đệm làm lệch phần CSV;
+  - tài khoản phải đổi mật khẩu hoặc vai trò STUDENT → `ERR 403` sau `AUTH`;
+  - lỗi nghiệp vụ đổi sang mã TCP: `BAD_FILE` → 415, 403 / 404 / 400 giữ nguyên, còn lại → 500;
+  - khi Spring tắt thì đóng `ServerSocket` và `shutdownNow()` pool.
+- **Tái sử dụng nghiệp vụ:** `StudentImportService.requireImportableClass` (kiểm tra lớp trước khi nhận dữ liệu) và `importCsv` dùng chung lõi xử lý dòng với import HTTP, nên kết quả hai cách import là như nhau. Mật khẩu tạm trả thẳng trong các dòng `CRED`, không lưu, không ghi log.
+- **Client** (`admin-cli/`, Java thuần, không thư viện ngoài): `java -jar admin-cli.jar import --class <mã lớp> --file <ds.csv> --user <tên> [--password …] [--email] [--out …]` hoặc `ping`. Đăng nhập qua `POST /api/auth/login` để lấy token (hoặc `--token`), vẽ thanh tiến trình theo `PROGRESS`, lưu các dòng `CRED` ra file CSV (UTF-8 có BOM). Mã thoát: 0 thành công, 1 lỗi kết nối / `ERR`, 2 sai tham số. Chi tiết: `admin-cli/README.md`.
 - **Kiểm thử:**
-  - unit test cho bộ phân tích khung tin (đúng cú pháp, sai cú pháp, dòng quá dài, thiếu byte);
-  - test tích hợp mở socket thật tới cổng ngẫu nhiên.
+  - unit test cho bộ phân tích lệnh (`TcpCommandTest`) và đọc khung tin (`FrameReaderTest`: đúng cú pháp, sai cú pháp, dòng quá dài, thiếu byte);
+  - test tích hợp mở socket thật tới cổng ngẫu nhiên (`TcpImportIntegrationTest`): phiên đầy đủ, lỗi xác thực, lỗi 400 giữ kết nối, 403 / 404 / 413 / 415, admin, timeout 408, pool đầy 503;
+  - `admin-cli` có test với server giả (`ImportClientTest`).

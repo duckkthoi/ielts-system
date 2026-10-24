@@ -1,9 +1,9 @@
 package com.ltmtu.ielts.notification;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -53,8 +53,19 @@ class WebSocketIntegrationTest extends IntegrationTest {
 
 	@AfterEach
 	void disconnect() {
-		sessions.stream().filter(StompSession::isConnected).forEach(StompSession::disconnect);
+		sessions.forEach(WebSocketIntegrationTest::disconnectQuietly);
 		client.stop();
+	}
+
+	/** Server có thể vừa đóng kết nối (sau khung ERROR) mà client chưa kịp biết → disconnect ném lỗi; bỏ qua. */
+	private static void disconnectQuietly(StompSession s) {
+		try {
+			if (s.isConnected()) {
+				s.disconnect();
+			}
+		} catch (RuntimeException ignored) {
+			// Kết nối đã đóng.
+		}
 	}
 
 	/** Ghi lại khung ERROR server gửi về (header {@code message}). */
@@ -109,11 +120,11 @@ class WebSocketIntegrationTest extends IntegrationTest {
 				"criteria", List.of(Map.of("code", "TR", "name", "Task Response", "checklist", List.of())));
 		Map<String, Object> body = Map.of("title", "Bài realtime", "dueAt", "2027-01-05T16:59:00Z", "parts", List.of(part));
 		String created = mvc.perform(postJson("/api/teacher/assignments", body)
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isCreated())
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(201))
 				.andReturn().getResponse().getContentAsString();
 		long id = json.readTree(created).get("data").get("id").asLong();
 		mvc.perform(postJson("/api/teacher/assignments/" + id + "/publish", Map.of("studentIds", studentIds))
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(200));
 	}
 
 	@Test
@@ -152,7 +163,7 @@ class WebSocketIntegrationTest extends IntegrationTest {
 		JsonNode login = login(student.getUsername(), DEFAULT_PASSWORD);
 		String token = login.get("accessToken").asString();
 		mvc.perform(postJson("/api/auth/logout", Map.of("refreshToken", login.get("refreshToken").asString())))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		assertThat(catchThrowable(() -> connect(token, new ErrorRecorder()).get(5, TimeUnit.SECONDS))).isNotNull();
 
 		User fresh = newUser(Role.STUDENT, true);
@@ -162,7 +173,7 @@ class WebSocketIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Phân quyền SUBSCRIBE / SEND: kênh /topic/… và lệnh gửi lên chưa mở ở Mức 1 → khung ERROR")
+	@DisplayName("Phân quyền SUBSCRIBE / SEND: kênh /topic của bài không phải của mình, lệnh gửi không đúng vai trò → khung ERROR")
 	void forbiddenDestinations() throws Exception {
 		String token = accessToken(newUser(Role.TEACHER));
 		ErrorRecorder handler = new ErrorRecorder();
@@ -189,6 +200,6 @@ class WebSocketIntegrationTest extends IntegrationTest {
 		JsonNode pushed = mine.poll(5, TimeUnit.SECONDS);
 		assertThat(pushed).isNotNull();
 		mvc.perform(post("/api/notifications/" + pushed.get("id").asLong() + "/read")
-				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(apiStatus(200));
 	}
 }

@@ -20,6 +20,8 @@ import com.ltmtu.ielts.assignment.Assignment;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentPart;
 import com.ltmtu.ielts.assignment.RubricCriterion;
+import com.ltmtu.ielts.audit.AuditAction;
+import com.ltmtu.ielts.audit.AuditService;
 import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.grading.GradingEnums.GradeStatus;
@@ -59,6 +61,7 @@ public class GradingService {
 	private final UserQueryService userQueryService;
 	private final ApplicationEventPublisher events;
 	private final Clock clock;
+	private final AuditService audit;
 
 	/** Hàng đợi chấm, mặc định các bài "Đã nộp – chờ chấm", bài nộp trước xếp trước. */
 	@Transactional(readOnly = true)
@@ -131,6 +134,7 @@ public class GradingService {
 		events.publishEvent(new GradingEvents.Returned(s.getId(), s.getPart().getAssignment().getId(),
 				s.getPart().getId(), s.getStudent().getId(), s.getCurrentVersion(),
 				BandCalculator.display(g.getOverallScore()), s.getPart().getAssignment().getTitle(), s.getPart().getTitle()));
+		audit.record(teacherId, AuditAction.RETURN_GRADE, "SUBMISSION", s.getId(), Map.of("versionNo", s.getCurrentVersion()));
 		log.info("Giáo viên {} trả bài nộp {} version {}", teacherId, s.getId(), s.getCurrentVersion());
 		return buildScreen(s, g.getVersion());
 	}
@@ -162,6 +166,8 @@ public class GradingService {
 		events.publishEvent(new GradingEvents.RevisionRequested(s.getId(), a.getId(), s.getPart().getId(),
 				s.getStudent().getId(), s.getCurrentVersion(), BandCalculator.display(g.getOverallScore()), note,
 				req.dueAt(), a.getTitle(), s.getPart().getTitle()));
+		audit.record(teacherId, AuditAction.REQUEST_REVISION, "SUBMISSION", s.getId(),
+				Map.of("versionNo", s.getCurrentVersion(), "revision", used + 1));
 		log.info("Giáo viên {} yêu cầu sửa bài nộp {} (lần {}/{})", teacherId, s.getId(), used + 1, a.getMaxRevisions());
 		return buildScreen(s, g.getVersion());
 	}

@@ -7,3 +7,8 @@ spring:
 
 app:
   upload-dir: ${UPLOAD_DIR:/data/uploads}
+
+server:
+  # Sau nginx: lấy IP client và giao thức gốc từ X-Forwarded-* (nhật ký, giới hạn đăng nhập sai).
+  # Chỉ bật ở profile docker, nơi backend không lộ cổng HTTP ra ngoài nên client không giả được header này.
+  forward-headers-strategy: framework

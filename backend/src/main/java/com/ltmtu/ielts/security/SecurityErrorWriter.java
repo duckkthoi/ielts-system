@@ -19,7 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Lỗi phát sinh trong filter chain của Spring Security (chưa tới controller) cũng trả đúng khung
- * {@link ErrorResponse} như mọi API khác.
+ * {@link ErrorResponse} như mọi API khác: HTTP 200, mã lỗi thật (401, 403…) trong trường {@code status}.
  */
 @Component
 @RequiredArgsConstructor
@@ -41,7 +41,7 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
 
 	public void write(HttpServletRequest req, HttpServletResponse res, HttpStatus status, String code, String message)
 			throws IOException {
-		res.setStatus(status.value());
+		res.setStatus(HttpServletResponse.SC_OK);
 		res.setCharacterEncoding("UTF-8");
 		res.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		objectMapper.writeValue(res.getOutputStream(),

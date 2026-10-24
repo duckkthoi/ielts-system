@@ -1,12 +1,13 @@
 package com.ltmtu.ielts.submission;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
+import static com.ltmtu.ielts.support.ApiStatus.apiStatusOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -83,10 +84,10 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		body.put("allowLate", allowLate);
 		body.put("parts", partList);
 		JsonNode a = data(mvc.perform(postJson("/api/teacher/assignments", body)
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isCreated()));
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(201)));
 		mvc.perform(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish",
 				Map.of("studentIds", Set.of(student.getId()))).header(HttpHeaders.AUTHORIZATION, bearer(teacherToken)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		List<Long> ids = new ArrayList<>();
 		a.get("parts").forEach(p -> ids.add(p.get("id").asLong()));
 		return ids;
@@ -106,7 +107,7 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 
 	private JsonNode getDraft(long partId) throws Exception {
 		return data(mvc.perform(get("/api/student/parts/" + partId + "/draft")
-				.header(HttpHeaders.AUTHORIZATION, bearer(studentToken))).andExpect(status().isOk()));
+				.header(HttpHeaders.AUTHORIZATION, bearer(studentToken))).andExpect(apiStatus(200)));
 	}
 
 	@Test
@@ -115,8 +116,8 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		long partId = publishedAssignment(Duration.ofDays(3), false, 1).getFirst();
 		assertThat(getDraft(partId).get("source").asString()).isEqualTo("EMPTY");
 
-		saveDraft(partId, "first attempt").andExpect(status().isOk()).andExpect(jsonPath("$.data.wordCount").value(2));
-		saveDraft(partId, ESSAY).andExpect(status().isOk());
+		saveDraft(partId, "first attempt").andExpect(apiStatus(200)).andExpect(jsonPath("$.data.wordCount").value(2));
+		saveDraft(partId, ESSAY).andExpect(apiStatus(200));
 
 		JsonNode d = getDraft(partId);
 		assertThat(d.get("source").asString()).isEqualTo("DRAFT");
@@ -130,10 +131,10 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 	@DisplayName("UC-24 + BR-09: nộp từng phần độc lập; server đếm từ; version bất biến; nháp bị xoá; phát sự kiện")
 	void submitPartsIndependently() throws Exception {
 		List<Long> parts = publishedAssignment(Duration.ofDays(3), false, 2);
-		saveDraft(parts.get(0), "draft").andExpect(status().isOk());
+		saveDraft(parts.get(0), "draft").andExpect(apiStatus(200));
 
 		submit(parts.get(0), ESSAY, 0)
-				.andExpect(status().isCreated())
+				.andExpect(apiStatus(201))
 				.andExpect(jsonPath("$.data.versionNo").value(1))
 				.andExpect(jsonPath("$.data.late").value(false))
 				.andExpect(jsonPath("$.data.wordCount").value(WordCounter.count(ESSAY)));
@@ -162,30 +163,30 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 	@DisplayName("Đã nộp → không lưu nháp / nộp lại được (409 ALREADY_SUBMITTED); expectedVersion sai → 409 VERSION_CONFLICT")
 	void cannotResubmitOrSaveAfterSubmit() throws Exception {
 		long partId = publishedAssignment(Duration.ofDays(3), false, 1).getFirst();
-		submit(partId, ESSAY, 0).andExpect(status().isCreated());
+		submit(partId, ESSAY, 0).andExpect(apiStatus(201));
 
-		submit(partId, ESSAY, 1).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ALREADY_SUBMITTED"));
-		submit(partId, ESSAY, 0).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
-		saveDraft(partId, "sửa lén").andExpect(status().isConflict());
+		submit(partId, ESSAY, 1).andExpect(apiStatus(409)).andExpect(jsonPath("$.errorCode").value("ALREADY_SUBMITTED"));
+		submit(partId, ESSAY, 0).andExpect(apiStatus(409)).andExpect(jsonPath("$.errorCode").value("VERSION_CONFLICT"));
+		saveDraft(partId, "sửa lén").andExpect(apiStatus(409));
 	}
 
 	@Test
 	@DisplayName("SD-07: 2 request nộp ĐỒNG THỜI cùng expectedVersion → đúng 1 thành công, chỉ 1 version được tạo")
 	void concurrentSubmits_createExactlyOneVersion() throws Exception {
 		long partId = publishedAssignment(Duration.ofDays(3), false, 1).getFirst();
-		saveDraft(partId, "nháp").andExpect(status().isOk()); // để có sẵn dòng submissions → kiểm tra FOR UPDATE
+		saveDraft(partId, "nháp").andExpect(apiStatus(200)); // để có sẵn dòng submissions → kiểm tra FOR UPDATE
 
 		CountDownLatch start = new CountDownLatch(1);
 		Callable<Integer> task = () -> {
 			start.await();
-			return submit(partId, ESSAY, 0).andReturn().getResponse().getStatus();
+			return apiStatusOf(submit(partId, ESSAY, 0).andReturn());
 		};
 		ExecutorService pool = Executors.newFixedThreadPool(2);
 		try {
 			Future<Integer> a = pool.submit(task);
 			Future<Integer> b = pool.submit(task);
 			start.countDown();
-			assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(201, 409);
+			assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(200, 409);
 		} finally {
 			pool.shutdown();
 		}
@@ -201,14 +202,14 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		CountDownLatch start = new CountDownLatch(1);
 		Callable<Integer> task = () -> {
 			start.await();
-			return submit(partId, ESSAY, 0).andReturn().getResponse().getStatus();
+			return apiStatusOf(submit(partId, ESSAY, 0).andReturn());
 		};
 		ExecutorService pool = Executors.newFixedThreadPool(2);
 		try {
 			Future<Integer> a = pool.submit(task);
 			Future<Integer> b = pool.submit(task);
 			start.countDown();
-			assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(201, 409);
+			assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(200, 409);
 		} finally {
 			pool.shutdown();
 		}
@@ -221,9 +222,9 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		clock.advance(Duration.ofHours(1).plusSeconds(1));
 		studentToken = accessToken(student);
 
-		submit(partId, ESSAY, 0).andExpect(status().isUnprocessableContent())
-				.andExpect(jsonPath("$.code").value("DEADLINE_PASSED"));
-		saveDraft(partId, "x").andExpect(status().isUnprocessableContent());
+		submit(partId, ESSAY, 0).andExpect(apiStatus(422))
+				.andExpect(jsonPath("$.errorCode").value("DEADLINE_PASSED"));
+		saveDraft(partId, "x").andExpect(apiStatus(422));
 	}
 
 	@Test
@@ -235,7 +236,7 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		long part2 = publishedAssignment(Duration.ofHours(1), true, 1).getFirst();
 		clock.advance(Duration.ofHours(2));
 		studentToken = accessToken(student);
-		submit(part2, ESSAY, 0).andExpect(status().isCreated()).andExpect(jsonPath("$.data.late").value(true));
+		submit(part2, ESSAY, 0).andExpect(apiStatus(201)).andExpect(jsonPath("$.data.late").value(true));
 	}
 
 	@Test
@@ -248,11 +249,11 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 				.patch("/api/teacher/assignments/" + assignmentId + "/settings").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("partDueAts", Map.of(String.valueOf(parts.getFirst()), partDue.toString()))))
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacherToken))).andExpect(apiStatus(200));
 
 		clock.advance(Duration.ofHours(2));
 		studentToken = accessToken(student);
-		submit(parts.getFirst(), ESSAY, 0).andExpect(status().isUnprocessableContent());
+		submit(parts.getFirst(), ESSAY, 0).andExpect(apiStatus(422));
 	}
 
 	@Autowired
@@ -268,16 +269,16 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 		long partId = publishedAssignment(Duration.ofDays(3), false, 1).getFirst();
 		String outsider = accessToken(newUser(Role.STUDENT));
 		mvc.perform(get("/api/student/parts/" + partId + "/draft").header(HttpHeaders.AUTHORIZATION, bearer(outsider)))
-				.andExpect(status().isNotFound());
+				.andExpect(apiStatus(404));
 		mvc.perform(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", ESSAY, "expectedVersion", 0))
-				.header(HttpHeaders.AUTHORIZATION, bearer(outsider))).andExpect(status().isNotFound());
+				.header(HttpHeaders.AUTHORIZATION, bearer(outsider))).andExpect(apiStatus(404));
 		mvc.perform(get("/api/student/parts/" + partId + "/draft").header(HttpHeaders.AUTHORIZATION, bearer(teacherToken)))
-				.andExpect(status().isForbidden());
+				.andExpect(apiStatus(403));
 
 		long assignmentId = submissionRepositoryAssignmentId(partId);
 		mvc.perform(post("/api/teacher/assignments/" + assignmentId + "/close").header(HttpHeaders.AUTHORIZATION, bearer(teacherToken)))
-				.andExpect(status().isOk());
-		submit(partId, ESSAY, 0).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("INVALID_STATE"));
+				.andExpect(apiStatus(200));
+		submit(partId, ESSAY, 0).andExpect(apiStatus(409)).andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
 		getDraft(partId); // bài đã đóng vẫn xem được
 	}
 
@@ -285,9 +286,9 @@ class StudentSubmissionIntegrationTest extends IntegrationTest {
 	@DisplayName("Nội dung rỗng → 400; thiếu expectedVersion → 400")
 	void validation() throws Exception {
 		long partId = publishedAssignment(Duration.ofDays(3), false, 1).getFirst();
-		submit(partId, "   ", 0).andExpect(status().isBadRequest());
+		submit(partId, "   ", 0).andExpect(apiStatus(400));
 		mvc.perform(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", ESSAY))
 				.header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
-				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.expectedVersion").exists());
+				.andExpect(apiStatus(400)).andExpect(jsonPath("$.fieldErrors.expectedVersion").exists());
 	}
 }

@@ -24,7 +24,7 @@ class JwtServiceTest {
 	private static AppProperties props(String secret) {
 		return new AppProperties(
 				new AppProperties.Jwt(secret, Duration.ofMinutes(30), Duration.ofDays(7), Duration.ofSeconds(30)),
-				null, new AppProperties.Cors(List.of()), null, null, null, ZoneId.of("Asia/Ho_Chi_Minh"), null, null);
+				null, new AppProperties.Cors(List.of()), null, null, null, ZoneId.of("Asia/Ho_Chi_Minh"), null, null, null, null, null, null);
 	}
 
 	@Test

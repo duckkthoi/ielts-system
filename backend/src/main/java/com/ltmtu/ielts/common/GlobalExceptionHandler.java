@@ -22,14 +22,18 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
-/** Chuyển mọi lỗi thành {@link ErrorResponse} với message tiếng Việt (mã lỗi: docs/05-api.md mục A.1). */
+/**
+ * Chuyển mọi lỗi thành {@link ErrorResponse} với message tiếng Việt (mã lỗi: docs/05-api.md mục A.1).
+ * HTTP status luôn là 200; mã lỗi thật (400, 404, 409…) nằm trong trường {@code status} của body.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler(ApiException.class)
 	ResponseEntity<ErrorResponse> handleApi(ApiException ex, HttpServletRequest req) {
-		return build(ex.getStatus(), ex.getCode(), ex.getMessage(), req);
+		return ResponseEntity.ok(ErrorResponse.of(ex.getStatus().value(), ex.getCode(),
+				ex.getMessage(), req.getRequestURI(), ex.getData()));
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
@@ -39,7 +43,7 @@ public class GlobalExceptionHandler {
 			fields.putIfAbsent(fe.getField(), fe.getDefaultMessage());
 		}
 		HttpStatus status = HttpStatus.BAD_REQUEST;
-		return ResponseEntity.status(status).body(ErrorResponse.withFields(status.value(), "VALIDATION_ERROR",
+		return ResponseEntity.ok(ErrorResponse.withFields(status.value(), "VALIDATION_ERROR",
 				"Dữ liệu không hợp lệ", req.getRequestURI(), fields));
 	}
 
@@ -84,6 +88,6 @@ public class GlobalExceptionHandler {
 
 	private static ResponseEntity<ErrorResponse> build(HttpStatus status, String code, String message,
 			HttpServletRequest req) {
-		return ResponseEntity.status(status).body(ErrorResponse.of(status.value(), code, message, req.getRequestURI()));
+		return ResponseEntity.ok(ErrorResponse.of(status.value(), code, message, req.getRequestURI()));
 	}
 }

@@ -4,9 +4,11 @@ import type { AccountInfo, ChangePasswordRequest, LoginRequest, LoginResponse } 
 
 // ─── Xác thực ─────────────────────────────────────────────────────────────────
 
+/** Trang đăng nhập tự hiện lỗi ngay trên form (sai thông tin, bị khoá, đăng nhập sai quá nhiều lần) nên tắt toast. */
 export async function login(data: LoginRequest): Promise<LoginResponse> {
   const res = (await axiosClient.post('/api/auth/login', data, {
-    isAuthCall: true
+    isAuthCall: true,
+    toastError: false
   })) as unknown as ApiResponse<LoginResponse>;
   return res.data;
 }

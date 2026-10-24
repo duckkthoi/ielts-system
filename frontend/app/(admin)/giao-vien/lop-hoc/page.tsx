@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import ClassListPage from './index';
+
+export const metadata: Metadata = { title: 'Lớp học — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Lớp học" description="Danh sách lớp, tạo lớp mới." />;
+  return <ClassListPage />;
 }
