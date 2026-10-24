@@ -111,3 +111,103 @@ export interface AssignmentResult {
   band: number | null;
   note: string | null;
 }
+
+// ─── Làm bài: nháp, nộp (SD-06, SD-07) ────────────────────────────────────────
+
+/** DRAFT = nháp đang lưu · LAST_VERSION = đang "Cần sửa", nạp sẵn bản nộp gần nhất · EMPTY = chưa có gì. */
+export type DraftSource = 'DRAFT' | 'LAST_VERSION' | 'EMPTY';
+
+export interface DraftResponse {
+  content: string;
+  source: DraftSource;
+  savedAt: string | null;
+  wordCount: number;
+  status: SubmissionStatus;
+  currentVersion: number;
+  /** Gửi lại ở lần lưu sau để phát hiện tab / máy khác đã lưu (khoá lạc quan). */
+  draftVersion: number;
+}
+
+export interface SaveDraftResponse {
+  savedAt: string;
+  wordCount: number;
+  draftVersion: number;
+}
+
+/** `data` của lỗi 409 DRAFT_CONFLICT. */
+export interface DraftConflict {
+  serverContent: string | null;
+  draftVersion: number;
+  savedAt: string | null;
+}
+
+export interface SubmitResponse {
+  versionNo: number;
+  submittedAt: string;
+  late: boolean;
+  wordCount: number;
+}
+
+// ─── Một lần nộp + kết quả chấm (chỉ khi đã trả bài, BR-13) ───────────────────
+
+export interface ResultChecklistMark {
+  content: string;
+  kind: ChecklistKind;
+  maxBand: number | null;
+  checked: boolean;
+}
+
+export interface ResultCriterion {
+  criterionId: number;
+  code: CriterionCode | null;
+  name: string;
+  maxScore: number;
+  score: number | null;
+  comment: string | null;
+  limitedTo: number | null;
+  limitReason: string | null;
+  checklist: ResultChecklistMark[];
+}
+
+export interface StudentInlineComment {
+  startOffset: number;
+  endOffset: number;
+  quote: string;
+  comment: string | null;
+  errorCode: string | null;
+  errorName: string | null;
+  criterionCode: CriterionCode | null;
+  criterionName: string | null;
+  /** null khi bị ẩn (BR-21) hoặc giáo viên không ghi. */
+  suggestion: string | null;
+}
+
+export interface ErrorCount {
+  criterionCode: CriterionCode | null;
+  criterionName: string | null;
+  errorCode: string;
+  errorName: string;
+  count: number;
+}
+
+export interface VersionResult {
+  band: number | null;
+  zeroReason: 'NO_ATTEMPT' | 'NOT_ENGLISH' | 'MEMORISED' | null;
+  generalComment: string | null;
+  graderName: string | null;
+  returnedAt: string | null;
+  suggestionsHidden: boolean;
+  criteria: ResultCriterion[];
+  inlineComments: StudentInlineComment[];
+  errorSummary: ErrorCount[];
+}
+
+export interface VersionDetail {
+  versionNo: number;
+  submittedAt: string;
+  wordCount: number;
+  late: boolean;
+  content: string;
+  /** null khi chưa được trả bài. */
+  result: VersionResult | null;
+}

@@ -9,7 +9,7 @@ Cập nhật: 24/10/2026
 
 ## 1. Đang ở đâu
 
-**Backend xong Mức 1 + Mức 2. Frontend xong F1 → F3 và F4a (bài được giao + chi tiết bài), bước tiếp theo là F4b (màn làm bài).**
+**Backend xong Mức 1 + Mức 2. Frontend xong F1 → F3, F4a (bài được giao + chi tiết bài), F4b (màn làm bài); bước tiếp theo là F4c (nháp offline).**
 
 | Phần | Trạng thái |
 |---|---|
@@ -20,13 +20,13 @@ Cập nhật: 24/10/2026
 | Frontend F1 — đăng nhập, khung app, thông báo realtime | ✅ |
 | Frontend F2 — quản trị; lớp học + import sinh viên | ✅ |
 | Frontend F3 — bài tập: danh sách, chi tiết, giao bài, trình soạn | ✅ |
-| Frontend F4 — sinh viên: bài được giao, làm bài, nộp bài | 🟡 F4a ✅ (danh sách theo tab, chi tiết, lịch sử nộp) · F4b ⬜ **tiếp theo** (màn làm bài) |
+| Frontend F4 — sinh viên: bài được giao, làm bài, nộp bài | 🟡 F4a ✅ (danh sách theo tab, chi tiết, lịch sử nộp) · F4b ✅ (làm bài, tự lưu, xung đột nháp, nộp) · F4c ⬜ **tiếp theo** (nháp offline) |
 | Frontend F5 — giáo viên chấm bài | ⬜ |
 | Frontend F6 — kết quả, tiến độ, thống kê, trao đổi | ⬜ |
 | Mức 3 (bước 15 → 19) | ⬜ làm nếu còn thời gian |
 
-Kiểm tra gần nhất: backend `mvn test` 466 test case đều đạt · frontend `lint`, `tsc`, `build` sạch, `test:unit` 36 / 36.
-Commit gần nhất: F4a (bài được giao + chi tiết bài); chưa push.
+Kiểm tra gần nhất: backend `mvn test` 466 test case đều đạt · frontend `lint`, `tsc`, `build` sạch, `test:unit` 38 / 38.
+Commit gần nhất: F4b (màn làm bài); chưa push.
 
 ---
 
@@ -63,14 +63,14 @@ Commit gần nhất: F4a (bài được giao + chi tiết bài); chưa push.
 - [ ] Trao đổi (chat) — `/chat` (F6)
 - [ ] Ngân hàng đề — `/giao-vien/ngan-hang-de` (Mức 3, bước 17)
 
-**Sinh viên** — 2 / 5
+**Sinh viên** — 3 / 5
 - [x] Bài được giao (tab Cần làm / Sắp hết hạn / Quá hạn / Đã nộp / Cần sửa) — `/sinh-vien/tong-quan` (F4a)
 - [x] Chi tiết bài + lịch sử nộp — `/sinh-vien/bai-tap/[id]` (F4a)
-- [ ] Màn làm bài: đếm từ, tự lưu nháp, nháp offline, đồng hồ, nộp — `/sinh-vien/lam-bai/[id]` (F4)
+- [x] Màn làm bài: đếm từ, tự lưu nháp, xung đột nháp, đồng hồ, nộp — `/sinh-vien/lam-bai/[id]` (F4b; nháp offline ở F4c)
 - [ ] Kết quả học tập + kết quả từng bài (band, nhận xét, lỗi) — `/sinh-vien/ket-qua` (F6; kết quả từng bài hiện trong chi tiết bài)
 - [ ] Trao đổi (chat) — `/chat` (F6)
 
-**Tổng: 16 / 28 màn.**
+**Tổng: 17 / 28 màn.**
 
 ---
 
@@ -96,6 +96,7 @@ Commit gần nhất: F4a (bài được giao + chi tiết bài); chưa push.
 - **Giáo viên — bài tập:** danh sách (lọc trạng thái, đếm ngược hạn, đã nộp, chờ chấm), chi tiết (đề, rubric, đã giao cho), cài đặt, giao bài / phát hành (liệt kê lý do chưa phát hành được), đóng / mở lại / nhân bản / xoá, **trình soạn 4 bước** (thông tin, các phần + ảnh đề, tiêu chí + nạp rubric mẫu, giao bài).
 - **Sinh viên — bài được giao:** 5 tab có số đếm (tab giữ trên URL), thẻ bài với trạng thái từng phần, hạn gần nhất + đếm ngược, nút chính Sửa bài / Làm bài / Xem kết quả / Xem chi tiết (`lib/utils/studentAction.ts`, có test); chi tiết bài: khung yêu cầu sửa (hạn, lời nhắn), từng phần (đề, ảnh, tiêu chí + checklist), lịch sử nộp, band từng phần + band cả bài, trang 404 khi không được giao.
 - **Đồng hồ theo giờ server:** `lib/utils/serverClock.ts` (có test) lấy độ lệch từ `serverTime` của response; `CountdownTimer` đếm theo đó. Thêm component `BandBadge`.
+- **Sinh viên — làm bài:** đề bên trái / ô soạn bên phải (điện thoại: đề thu gọn, thanh nộp dính đáy), tab theo phần, đếm từ khi gõ, **tự lưu nháp** sau 3 giây ngừng gõ / khi rời tab / khi đổi phần (gửi `draftVersion`), **409 DRAFT_CONFLICT** → hộp thoại so 2 bản để chọn, nộp có xác nhận khi thiếu từ (gửi `expectedVersion`; lỗi trạng thái cũ thì tải lại), chế độ chỉ đọc khi đã nộp / quá hạn / bài đóng, đồng bộ giờ `GET /api/time` 3 mẫu lấy mẫu nhanh nhất, 5 phút một lần (SD-11). `ApiError` mang thêm `data` của lỗi.
 
 ### Tài liệu
 - docs 01 → 10 (Markdown + Mermaid) và Word gộp `docx/00-tai-lieu-phan-tich-thiet-ke.docx`; docs/10 là hướng dẫn sử dụng + danh sách tài khoản.
@@ -106,7 +107,7 @@ Commit gần nhất: F4a (bài được giao + chi tiết bài); chưa push.
 ## 3. Còn lại
 
 ### Việc chính (theo thứ tự)
-1. **F4b — Màn làm bài** (Prompt 7 C, `/sinh-vien/lam-bai/[id]?phan=…`): `EssayEditor`, đếm từ, tự lưu nháp + xử lý `409 DRAFT_CONFLICT`, nháp offline IndexedDB, đồng bộ đồng hồ bằng `GET /api/time` (`syncServerClock` đã có sẵn), nộp từng phần + xác nhận khi thiếu từ, chế độ chỉ đọc (đã nộp / quá hạn).
+1. **F4c — Nháp offline** (docs/06 mục 7, SD-06): mỗi lần gõ lưu IndexedDB, lỗi mạng → trạng thái OFFLINE "Ngoại tuyến – đã lưu trên máy", có mạng (`online`) → gửi lại; khoá nút nộp khi mất mạng (tooltip "Cần có mạng để nộp bài"); mở lại trang khi bản trên máy mới hơn server → hỏi chọn bản. Thêm vào `useDraftAutosave`.
 2. **F5 — Chấm bài** (Prompt 6 + 6b): hàng đợi chấm, màn chấm (ScorePicker có khoá giới hạn, mã lỗi khi bôi đen, ngân hàng nhận xét, so sánh 2 version), trả bài / yêu cầu sửa.
 3. **F6 — Kết quả & thống kê** (Prompt 5, 7, 8): kết quả phía sinh viên, ma trận tiến độ realtime + nhắc nhở, thống kê bài / lớp / sinh viên, xuất Excel, dashboard, trao đổi (chat).
 4. Mức 3 (nếu còn thời gian): thi tính giờ, kiểm tra đạo văn, ngân hàng đề, gợi ý chấm AI, TCP qua TLS.
