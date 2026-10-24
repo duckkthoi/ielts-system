@@ -9,7 +9,7 @@ Cập nhật: 24/10/2026
 
 ## 1. Đang ở đâu
 
-**Backend xong Mức 1 + Mức 2. Frontend xong F1 → F3, bước tiếp theo là F4 (màn sinh viên).**
+**Backend xong Mức 1 + Mức 2. Frontend xong F1 → F3 và F4a (bài được giao + chi tiết bài), bước tiếp theo là F4b (màn làm bài).**
 
 | Phần | Trạng thái |
 |---|---|
@@ -20,13 +20,13 @@ Cập nhật: 24/10/2026
 | Frontend F1 — đăng nhập, khung app, thông báo realtime | ✅ |
 | Frontend F2 — quản trị; lớp học + import sinh viên | ✅ |
 | Frontend F3 — bài tập: danh sách, chi tiết, giao bài, trình soạn | ✅ |
-| Frontend F4 — sinh viên: bài được giao, làm bài, nộp bài | ⬜ **tiếp theo** |
+| Frontend F4 — sinh viên: bài được giao, làm bài, nộp bài | 🟡 F4a ✅ (danh sách theo tab, chi tiết, lịch sử nộp) · F4b ⬜ **tiếp theo** (màn làm bài) |
 | Frontend F5 — giáo viên chấm bài | ⬜ |
 | Frontend F6 — kết quả, tiến độ, thống kê, trao đổi | ⬜ |
 | Mức 3 (bước 15 → 19) | ⬜ làm nếu còn thời gian |
 
-Kiểm tra gần nhất: backend `mvn test` 466 test case đều đạt · frontend `lint`, `tsc`, `build` sạch, `test:unit` 27 / 27.
-Commit gần nhất: F3b + docs/10 + thư mục thiết kế `design/figma-make/` (chưa push).
+Kiểm tra gần nhất: backend `mvn test` 466 test case đều đạt · frontend `lint`, `tsc`, `build` sạch, `test:unit` 36 / 36.
+Commit gần nhất: F4a (bài được giao + chi tiết bài); chưa push.
 
 ---
 
@@ -63,14 +63,14 @@ Commit gần nhất: F3b + docs/10 + thư mục thiết kế `design/figma-make/
 - [ ] Trao đổi (chat) — `/chat` (F6)
 - [ ] Ngân hàng đề — `/giao-vien/ngan-hang-de` (Mức 3, bước 17)
 
-**Sinh viên** — 0 / 5
-- [ ] Bài được giao (tab Cần làm / Sắp hết hạn / Quá hạn / Đã nộp / Cần sửa) — `/sinh-vien/tong-quan` (F4)
-- [ ] Chi tiết bài + lịch sử nộp — `/sinh-vien/bai-tap/[id]` (F4)
+**Sinh viên** — 2 / 5
+- [x] Bài được giao (tab Cần làm / Sắp hết hạn / Quá hạn / Đã nộp / Cần sửa) — `/sinh-vien/tong-quan` (F4a)
+- [x] Chi tiết bài + lịch sử nộp — `/sinh-vien/bai-tap/[id]` (F4a)
 - [ ] Màn làm bài: đếm từ, tự lưu nháp, nháp offline, đồng hồ, nộp — `/sinh-vien/lam-bai/[id]` (F4)
 - [ ] Kết quả học tập + kết quả từng bài (band, nhận xét, lỗi) — `/sinh-vien/ket-qua` (F6; kết quả từng bài hiện trong chi tiết bài)
 - [ ] Trao đổi (chat) — `/chat` (F6)
 
-**Tổng: 14 / 28 màn.**
+**Tổng: 16 / 28 màn.**
 
 ---
 
@@ -94,6 +94,8 @@ Commit gần nhất: F3b + docs/10 + thư mục thiết kế `design/figma-make/
 - **Quản trị:** tổng quan + biểu đồ 14 ngày, giáo viên (thêm → mật khẩu tạm một lần), người dùng (chi tiết, khoá, đặt lại mật khẩu), nhật ký (lọc hành động / IP / ngày). Trang Phiên đăng nhập chỉ hiện số phiên (API thuộc Mức 3).
 - **Giáo viên — lớp học:** danh sách thẻ lớp, tạo / sửa / xoá, thành viên, thêm theo mã SV, import 3 bước (kết quả, bảng lỗi, tải file tài khoản, cảnh báo khi đóng chưa tải).
 - **Giáo viên — bài tập:** danh sách (lọc trạng thái, đếm ngược hạn, đã nộp, chờ chấm), chi tiết (đề, rubric, đã giao cho), cài đặt, giao bài / phát hành (liệt kê lý do chưa phát hành được), đóng / mở lại / nhân bản / xoá, **trình soạn 4 bước** (thông tin, các phần + ảnh đề, tiêu chí + nạp rubric mẫu, giao bài).
+- **Sinh viên — bài được giao:** 5 tab có số đếm (tab giữ trên URL), thẻ bài với trạng thái từng phần, hạn gần nhất + đếm ngược, nút chính Sửa bài / Làm bài / Xem kết quả / Xem chi tiết (`lib/utils/studentAction.ts`, có test); chi tiết bài: khung yêu cầu sửa (hạn, lời nhắn), từng phần (đề, ảnh, tiêu chí + checklist), lịch sử nộp, band từng phần + band cả bài, trang 404 khi không được giao.
+- **Đồng hồ theo giờ server:** `lib/utils/serverClock.ts` (có test) lấy độ lệch từ `serverTime` của response; `CountdownTimer` đếm theo đó. Thêm component `BandBadge`.
 
 ### Tài liệu
 - docs 01 → 10 (Markdown + Mermaid) và Word gộp `docx/00-tai-lieu-phan-tich-thiet-ke.docx`; docs/10 là hướng dẫn sử dụng + danh sách tài khoản.
@@ -104,14 +106,15 @@ Commit gần nhất: F3b + docs/10 + thư mục thiết kế `design/figma-make/
 ## 3. Còn lại
 
 ### Việc chính (theo thứ tự)
-1. **F4 — Sinh viên** (Prompt 7): danh sách bài được giao theo tab (Cần làm / Sắp hết hạn / Quá hạn / Đã nộp / Cần sửa), chi tiết bài, **màn làm bài** (`EssayEditor`, đếm từ, tự lưu nháp + xử lý `409 DRAFT_CONFLICT`, nháp offline IndexedDB, đồng hồ theo `GET /api/time`), nộp bài, lịch sử version. Dự kiến tách F4a (danh sách + chi tiết) / F4b (màn làm bài).
+1. **F4b — Màn làm bài** (Prompt 7 C, `/sinh-vien/lam-bai/[id]?phan=…`): `EssayEditor`, đếm từ, tự lưu nháp + xử lý `409 DRAFT_CONFLICT`, nháp offline IndexedDB, đồng bộ đồng hồ bằng `GET /api/time` (`syncServerClock` đã có sẵn), nộp từng phần + xác nhận khi thiếu từ, chế độ chỉ đọc (đã nộp / quá hạn).
 2. **F5 — Chấm bài** (Prompt 6 + 6b): hàng đợi chấm, màn chấm (ScorePicker có khoá giới hạn, mã lỗi khi bôi đen, ngân hàng nhận xét, so sánh 2 version), trả bài / yêu cầu sửa.
 3. **F6 — Kết quả & thống kê** (Prompt 5, 7, 8): kết quả phía sinh viên, ma trận tiến độ realtime + nhắc nhở, thống kê bài / lớp / sinh viên, xuất Excel, dashboard, trao đổi (chat).
 4. Mức 3 (nếu còn thời gian): thi tính giờ, kiểm tra đạo văn, ngân hàng đề, gợi ý chấm AI, TCP qua TLS.
 
 ### Việc nhỏ / tồn đọng
 - [ ] Push lên GitHub (commit `58e64f9` trở đi chưa push).
-- [ ] `CountdownTimer` chưa bù độ lệch giờ máy theo `GET /api/time` — làm cùng F4.
+- [ ] Trang chi tiết bài của giáo viên (`/giao-vien/bai-tap/[id]`) bị tràn ngang trên điện thoại: lưới `lg:grid-cols-[1fr_340px]` cần `grid-cols-1` + `minmax(0,1fr)` như trang sinh viên.
+- [ ] Dữ liệu demo chưa có bài "Đã trả bài" / "Cần sửa" nên chưa chụp được khung kết quả và khung yêu cầu sửa của F4a — kiểm lại khi làm F5.
 - [ ] Mỗi bước F4 → F6 xong: cập nhật docs/10 (mục 1, 6.4, 7) + xuất lại Word.
 - [ ] Backend: `AdminUserService` (module `user`) gọi ngược `ClassroomService` để đếm số lớp — nên đổi sang truy vấn chỉ-đọc.
 - [ ] Backend: `grades.updated_at` lấy giờ hệ thống, không qua bean `Clock` (chưa ảnh hưởng nghiệp vụ).

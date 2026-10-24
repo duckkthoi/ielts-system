@@ -13,7 +13,8 @@
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
 | Giáo viên: tiến độ, chấm bài, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
-| Sinh viên: bài được giao, làm bài, kết quả, trao đổi | ⏳ Đang làm | Sinh viên đã đăng nhập và nhận thông báo được |
+| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp | ✅ Dùng được | |
+| Sinh viên: làm bài, nộp bài, xem kết quả chi tiết, trao đổi | ⏳ Đang làm | Nút "Làm bài" mở màn làm bài (đang là khung trống) |
 
 Những phần "đang làm" vẫn gọi thử được qua Swagger UI (mục 2.2) hoặc file `backend/http/*.http`.
 
@@ -177,7 +178,32 @@ Tiến độ realtime của lớp, chấm bài (checklist, band, nhận xét inl
 
 ## 7. Sinh viên
 
-Hiện tại sinh viên đăng nhập, đổi mật khẩu, nhận thông báo realtime (bài mới, nhắc hạn, nhắc của giáo viên, kết quả) và xem trang Thông báo. Màn **bài được giao, làm bài** (đếm từ, tự lưu nháp, giữ bài khi mất mạng, đồng hồ theo giờ máy chủ), **nộp bài, xem kết quả** và **trao đổi** đang được làm.
+### 7.1. Bài được giao
+
+Trang chủ của sinh viên. Bài chia theo 5 tab, số bên cạnh tab là số bài thuộc tab đó (một bài có thể nằm ở nhiều tab):
+
+| Tab | Gồm những bài |
+|---|---|
+| Cần làm | Bài đang mở, còn phần chưa làm / đang làm và chưa quá hạn |
+| Sắp hết hạn | Bài "Cần làm" có phần hết hạn trong 24 giờ tới |
+| Quá hạn | Còn phần chưa nộp mà đã quá hạn, hoặc bài đã đóng |
+| Đã nộp | Đã nộp mọi phần (đang chờ chấm hoặc đã có kết quả) |
+| Cần sửa | Giáo viên yêu cầu sửa ít nhất một phần |
+
+Mỗi thẻ bài ghi tên giáo viên, trạng thái từng phần (Chưa làm / Đang làm / Đã nộp / Nộp muộn / Đã trả bài / Cần sửa), hạn gần nhất kèm đồng hồ đếm ngược **theo giờ máy chủ** (giờ máy tính sai cũng không ảnh hưởng), và một nút chính: **Sửa bài** (có phần cần sửa) → **Làm bài** (còn phần chưa nộp) → **Xem kết quả** (đã có phần được trả) → **Xem chi tiết**. Quá hạn mà bài không cho nộp muộn thì không còn nút "Làm bài".
+
+### 7.2. Chi tiết bài
+
+Bấm tên bài (hoặc bấm vào thông báo) để mở. Trang có:
+- khung đỏ **"Giáo viên yêu cầu sửa …"** kèm hạn sửa, lời nhắn và nút **Sửa bài** (nếu có);
+- từng phần trong một tab: trạng thái, loại đề, số từ tối thiểu, thời gian gợi ý, hạn nộp / hạn sửa, đề bài + hình, **tiêu chí chấm** (mở ra xem checklist, mục "Giới hạn điểm" ghi band tối đa); nút **Làm bài / Viết tiếp / Sửa bài**, hoặc **Xem bài đã nộp**;
+- **Lịch sử nộp** của từng phần: mỗi lần nộp, giờ nộp, số từ, nộp muộn, band nếu đã được trả bài (đang chấm thì ghi "Chờ kết quả");
+- khung **Kết quả**: band từng phần và band cả bài (chỉ có khi mọi phần đã được trả; Task 2 tính gấp đôi Task 1);
+- khung **Thời gian & quy định**: hạn nộp, có cho nộp muộn không, số lần yêu cầu sửa tối đa.
+
+### 7.3. Đang làm
+
+Màn **làm bài** (đếm từ, tự lưu nháp, giữ bài khi mất mạng, nộp từng phần), **xem kết quả chi tiết** (nhận xét trên bài, mã lỗi, so sánh các lần nộp), **kết quả học tập** và **trao đổi** sẽ có ở các bước tiếp theo.
 
 ---
 

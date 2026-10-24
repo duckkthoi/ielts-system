@@ -50,3 +50,12 @@ export const TASK_TYPE_LABEL: Record<'WRITING_TASK1' | 'WRITING_TASK2' | 'CUSTOM
 export function fileUrl(path: string): string {
   return path.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${path}` : path;
 }
+
+// ─── Đường dẫn trang sinh viên ────────────────────────────────────────────────
+// Thông báo của server cũng trỏ tới /sinh-vien/bai-tap/{assignmentId} (docs/05 mục A.9).
+
+export const studentAssignmentPath = (id: number) => `/sinh-vien/bai-tap/${id}`;
+
+/** Màn làm bài: mở sẵn phần `partId` (bỏ trống = phần đầu tiên). */
+export const writingPath = (assignmentId: number, partId?: number | null) =>
+  `/sinh-vien/lam-bai/${assignmentId}${partId ? `?phan=${partId}` : ''}`;
