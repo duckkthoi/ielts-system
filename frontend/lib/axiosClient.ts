@@ -133,7 +133,9 @@ async function handleFailure(config: RetryConfig | undefined, body: ApiErrorBody
 
   const msg = body?.errorMessage || (httpStatus ? 'Thao tác thất bại' : 'Không kết nối được tới máy chủ');
   if (config?.toastError !== false) toastError(msg);
-  return Promise.reject(new ApiError(msg, { code: body?.errorCode, status, fieldErrors: body?.fieldErrors }));
+  return Promise.reject(
+    new ApiError(msg, { code: body?.errorCode, status, fieldErrors: body?.fieldErrors, data: body?.data })
+  );
 }
 
 axiosClient.interceptors.response.use(

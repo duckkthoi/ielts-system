@@ -6,16 +6,19 @@ export class ApiError extends Error {
   readonly code?: string;
   readonly status?: number;
   readonly fieldErrors?: Record<string, string> | null;
+  /** Dữ liệu kèm lỗi (thường null), vd bản nháp trên server khi DRAFT_CONFLICT. */
+  readonly data?: unknown;
 
   constructor(
     message: string,
-    options: { code?: string; status?: number; fieldErrors?: Record<string, string> | null } = {}
+    options: { code?: string; status?: number; fieldErrors?: Record<string, string> | null; data?: unknown } = {}
   ) {
     super(message);
     this.name = 'ApiError';
     this.code = options.code;
     this.status = options.status;
     this.fieldErrors = options.fieldErrors;
+    this.data = options.data;
   }
 }
 
