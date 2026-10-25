@@ -12,7 +12,9 @@ import { ApiError } from '@/lib/apiError';
 import { studentAssignmentPath } from '@/lib/constants';
 import type { StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
+import { useOnlineStatus } from '@/lib/utils/hooks';
 import { countWords } from '@/lib/utils/wordCount';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 import { AutosaveIndicator } from './AutosaveIndicator';
 import { isWritable } from './const';
@@ -63,10 +65,14 @@ function Layout({
 
 function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: DraftInit; onChanged: () => void }) {
   const { modal, message } = App.useApp();
-  const draft = useDraftAutosave(part.partId, init, onChanged);
+  // Layout (main) chỉ render khi đã đăng nhập nên luôn có user; 0 chỉ để thoả kiểu.
+  const userId = useAuthStore((s) => s.user?.id ?? 0);
+  const online = useOnlineStatus();
+  const draft = useDraftAutosave(userId, part.partId, init, onChanged);
   const [submitting, setSubmitting] = useState(false);
   const words = useMemo(() => countWords(draft.content), [draft.content]);
   const blank = words === 0;
+  const canSend = online && draft.state !== 'OFFLINE';
   const short = part.minWords !== null && words < part.minWords;
 
   const doSubmit = async () => {
@@ -97,14 +103,24 @@ function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: Dr
     });
 
   const submitButton = (block: boolean) => (
-    <Tooltip title={blank ? 'Bài đang trống' : draft.conflict ? 'Chọn bản nháp trước khi nộp' : undefined}>
+    <Tooltip
+      title={
+        !canSend
+          ? 'Cần có mạng để nộp bài'
+          : blank
+            ? 'Bài đang trống'
+            : draft.conflict
+              ? 'Chọn bản nháp trước khi nộp'
+              : undefined
+      }
+    >
       <Button
         type="primary"
         size="large"
         block={block}
         icon={<Send size={16} />}
         loading={submitting}
-        disabled={blank || draft.conflict !== null}
+        disabled={!canSend || blank || draft.conflict !== null}
         onClick={confirmSubmit}
       >
         {part.status === 'REVISION_REQUESTED' ? 'Nộp bản sửa' : 'Nộp phần này'}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -77,4 +77,24 @@ export function useServerList<T, Q extends object>(
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
   return { data: result?.data ?? [], total: result?.total ?? 0, loading: result?.key !== key, reload };
+}
+
+// ─── Trạng thái mạng của trình duyệt (sự kiện online / offline) ───────────────
+
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener('online', onChange);
+  window.addEventListener('offline', onChange);
+  return () => {
+    window.removeEventListener('online', onChange);
+    window.removeEventListener('offline', onChange);
+  };
+}
+
+/** `false` khi trình duyệt báo mất mạng. Phía server render coi như có mạng. */
+export function useOnlineStatus(): boolean {
+  return useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true
+  );
 }
