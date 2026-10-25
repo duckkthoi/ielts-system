@@ -1,7 +1,15 @@
 import axiosClient from '@/lib/axiosClient';
 import { formatUrl } from '@/lib/api/base';
 import type { ApiResponse } from '@/lib/types/api';
-import type { GradeDto, GradingScreen, QueueParams, QueueRow, SaveGradeRequest } from '@/lib/types/grading';
+import type {
+  GradeDto,
+  GradingScreen,
+  InlineCommentDto,
+  QueueParams,
+  QueueRow,
+  Resolution,
+  SaveGradeRequest
+} from '@/lib/types/grading';
 
 // ─── Giáo viên chấm bài (docs/05 mục A.7) ─────────────────────────────────────
 
@@ -10,7 +18,8 @@ const URL = {
   screen: '/api/teacher/submissions/{id}',
   grade: '/api/teacher/submissions/{id}/grade',
   return: '/api/teacher/submissions/{id}/return',
-  revision: '/api/teacher/submissions/{id}/request-revision'
+  revision: '/api/teacher/submissions/{id}/request-revision',
+  resolution: '/api/teacher/submissions/{id}/inline-comments/{commentId}'
 } as const;
 
 /** Trả cả `totalRecord` để phân trang. Luôn sắp theo thời điểm nộp. */
@@ -50,4 +59,20 @@ export async function requestRevision(
   return res.data;
 }
 
-export const gradingApi = { queue, screen, saveGrade, returnGrade, requestRevision };
+/** So sánh 2 lần nộp: đánh giá lỗi của lần cũ (null = bỏ đánh giá, giao diện tự đoán). */
+export async function setResolution(
+  id: number,
+  commentId: number,
+  resolution: Resolution | null
+): Promise<InlineCommentDto> {
+  const res = (await axiosClient.patch(
+    formatUrl(URL.resolution, { id, commentId }),
+    { resolution },
+    {
+      controlLoading: true
+    }
+  )) as unknown as ApiResponse<InlineCommentDto>;
+  return res.data;
+}
+
+export const gradingApi = { queue, screen, saveGrade, returnGrade, requestRevision, setResolution };
