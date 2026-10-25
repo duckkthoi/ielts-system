@@ -69,7 +69,7 @@ final class StatsSql {
 	/**
 	 * Mã lỗi hay gặp trong nhận xét inline của các kết quả {@code latest}: số lần, số sinh viên. Tên / nhóm tiêu chí
 	 * tra theo bộ mã của người chấm — mã hệ thống trước, rồi mã riêng (mã riêng không trùng mã hệ thống, BR-22). Bỏ
-	 * mã khen ({@code positive}). Tham số {@code :limit}.
+	 * mã khen ({@code positive}) và đánh dấu không phải lỗi (V9). Tham số {@code :limit}.
 	 */
 	static final String TOP_ERRORS = """
 			SELECT ic.error_code AS code, e.name, e.criterion,
@@ -81,7 +81,7 @@ final class StatsSql {
 			    WHERE upper(ec.code) = upper(ic.error_code) AND (ec.owner_id IS NULL OR ec.owner_id = l.grader_id)
 			    ORDER BY ec.owner_id NULLS FIRST LIMIT 1
 			) e ON TRUE
-			WHERE ic.error_code IS NOT NULL AND NOT coalesce(e.positive, FALSE)
+			WHERE ic.kind = 'ERROR' AND ic.error_code IS NOT NULL AND NOT coalesce(e.positive, FALSE)
 			GROUP BY ic.error_code, e.name, e.criterion
 			ORDER BY total DESC, students DESC, ic.error_code
 			LIMIT :limit""";

@@ -156,7 +156,7 @@ export default function AssignmentDetailPage() {
         <p className="-mt-2 mb-5 max-w-3xl whitespace-pre-line text-neutral-700">{assignment.description}</p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card title="Các phần" styles={{ body: { paddingTop: 4 } }}>
           {assignment.parts.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bài chưa có phần nào — hãy sửa nội dung để thêm" />
