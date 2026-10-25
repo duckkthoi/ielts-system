@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import debounce from 'lodash/debounce';
 
+import { ApiError } from '@/lib/apiError';
 import { ROUTES } from '@/lib/constants';
 import { clearStoredTokens, getAccessToken, getRefreshToken, saveTokens } from '@/lib/tokens';
 import type { ApiErrorBody, ApiResponse } from '@/lib/types/api';
@@ -65,11 +66,12 @@ const axiosClient = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-// ─── Refresh token (một lần cho nhiều request 401 cùng lúc) ───────────────────
+// ─── Refresh token (một lần cho nhiều request bị 401 cùng lúc) ─────────────────
 
 let refreshPromise: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+/** Làm mới access token (dùng chung với WebSocket khi kết nối lại). Thất bại → null. */
+export async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
   refreshPromise ??= axiosClient
@@ -102,39 +104,60 @@ axiosClient.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error)
 );
 
-axiosClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    if (!response.config.controlLoading) hideLoading();
-    if (response.config.rawResponse) return response;
+// ─── Xử lý lỗi ────────────────────────────────────────────────────────────────
+// Server luôn trả HTTP 200; lỗi là body { success: false, errorCode, errorMessage, status } (docs/05 mục A.1).
+// `status` trong body là mã thật (401, 404, 409…) — 401 thì refresh token một lần rồi gửi lại request.
 
-    const body = response.data as ApiResponse<unknown>;
-    if (!body.success) {
-      const msg = body.message || 'Thao tác thất bại';
-      if (response.config.toastError !== false) toastError(msg);
-      return Promise.reject(new Error(msg));
+type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+/** File tải về (blob) mà server trả JSON → đó là body lỗi, đọc ra để xử lý như mọi lỗi khác. */
+async function readBlobError(response: AxiosResponse): Promise<ApiErrorBody | null> {
+  const data: unknown = response.data;
+  if (!(data instanceof Blob) || !data.type.includes('application/json')) return null;
+  const body = JSON.parse(await data.text()) as ApiErrorBody | ApiResponse<unknown>;
+  return body.success ? null : (body as ApiErrorBody);
+}
+
+async function handleFailure(config: RetryConfig | undefined, body: ApiErrorBody | undefined, httpStatus?: number) {
+  const status = body?.status ?? httpStatus;
+
+  if (status === 401 && config && !config._retry && !config.isAuthCall) {
+    config._retry = true;
+    const token = await refreshAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      return axiosClient(config);
     }
+    redirectToLogin();
+  }
+
+  const msg = body?.errorMessage || (httpStatus ? 'Thao tác thất bại' : 'Không kết nối được tới máy chủ');
+  if (config?.toastError !== false) toastError(msg);
+  return Promise.reject(
+    new ApiError(msg, { code: body?.errorCode, status, fieldErrors: body?.fieldErrors, data: body?.data })
+  );
+}
+
+axiosClient.interceptors.response.use(
+  async (response: AxiosResponse) => {
+    if (!response.config.controlLoading) hideLoading();
+    const config = response.config as RetryConfig;
+
+    if (config.rawResponse) {
+      const blobError = await readBlobError(response);
+      return blobError ? handleFailure(config, blobError, response.status) : response;
+    }
+
+    const body = response.data as ApiResponse<unknown> | ApiErrorBody;
+    if (!body.success) return handleFailure(config, body as ApiErrorBody, response.status);
     // Caller nhận thẳng ApiResponse<T> — cast có chủ đích.
     return body as unknown as AxiosResponse;
   },
   async (error: AxiosError<ApiErrorBody>) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
-    if (!original?.controlLoading) hideLoading();
-
-    if (error.response?.status === 401 && original && !original._retry && !original.isAuthCall) {
-      original._retry = true;
-      const token = await refreshAccessToken();
-      if (token) {
-        original.headers.Authorization = `Bearer ${token}`;
-        return axiosClient(original);
-      }
-      redirectToLogin();
-      return Promise.reject(error);
-    }
-
-    const body = error.response?.data;
-    const msg = body?.message || (error.response ? 'Thao tác thất bại' : 'Không kết nối được tới máy chủ');
-    if (original?.toastError !== false) toastError(msg);
-    return Promise.reject(new Error(msg));
+    // Chỉ còn lỗi mạng / timeout / lỗi ngoài ứng dụng (vd nginx 502) — server ứng dụng luôn trả 200.
+    const config = error.config as RetryConfig | undefined;
+    if (!config?.controlLoading) hideLoading();
+    return handleFailure(config, error.response?.data, error.response?.status);
   }
 );
 

@@ -1,11 +1,11 @@
 package com.ltmtu.ielts.grading;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -49,12 +49,12 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 				inline("public transport", "GOOD", null),
 				inline("big cities", null, null)));
 		body.put("generalComment", "Bài khá, cần chia đoạn.");
-		saveGrade(f.submissionId(), body).andExpect(status().isOk());
+		saveGrade(f.submissionId(), body).andExpect(apiStatus(200));
 	}
 
 	private JsonNode version(long partId, int versionNo) throws Exception {
 		return data(call(get("/api/student/parts/" + partId + "/versions/" + versionNo), studentToken)
-				.andExpect(status().isOk()));
+				.andExpect(apiStatus(200)));
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 				.andExpect(jsonPath("$.data[0].band").isEmpty());
 		assertThat(version(f.partId(), 1).get("result").isNull()).isTrue();
 
-		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher).andExpect(status().isOk());
+		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher).andExpect(apiStatus(200));
 		call(get("/api/student/parts/" + f.partId() + "/versions"), studentToken)
 				.andExpect(jsonPath("$.data[0].returned").value(true))
 				.andExpect(jsonPath("$.data[0].band").value(6.0))
@@ -84,7 +84,7 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 	void criteriaAndInline() throws Exception {
 		Fixture f = submitted();
 		gradeWithFeedback(f);
-		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher).andExpect(status().isOk());
+		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher).andExpect(apiStatus(200));
 		JsonNode result = version(f.partId(), 1).get("result");
 
 		JsonNode cc = result.get("criteria").get(1);
@@ -113,7 +113,7 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 	void errorSummary() throws Exception {
 		Fixture f = submitted();
 		gradeWithFeedback(f);
-		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher).andExpect(status().isOk());
+		call(post("/api/teacher/submissions/" + f.submissionId() + "/return"), teacher).andExpect(apiStatus(200));
 		JsonNode summary = version(f.partId(), 1).get("result").get("errorSummary");
 		assertThat(summary).hasSize(3);
 		assertThat(summary.get(0).get("criterionCode").asString()).isEqualTo("LR");
@@ -131,7 +131,7 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 		Fixture f = submitted();
 		gradeWithFeedback(f);
 		call(postJson("/api/teacher/submissions/" + f.submissionId() + "/request-revision",
-				Map.of("dueAt", clock.instant().plus(Duration.ofDays(2)).toString())), teacher).andExpect(status().isOk());
+				Map.of("dueAt", clock.instant().plus(Duration.ofDays(2)).toString())), teacher).andExpect(apiStatus(200));
 
 		JsonNode result = version(f.partId(), 1).get("result");
 		assertThat(result.get("suggestionsHidden").asBoolean()).isTrue();
@@ -139,7 +139,7 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 		assertThat(result.get("inlineComments").get(0).get("suggestion").isNull()).isTrue();
 
 		call(postJson("/api/student/parts/" + f.partId() + "/submit", Map.of("content", ESSAY + " Sửa.", "expectedVersion", 1)),
-				studentToken).andExpect(status().isCreated());
+				studentToken).andExpect(apiStatus(201));
 		result = version(f.partId(), 1).get("result");
 		assertThat(result.get("suggestionsHidden").asBoolean()).isFalse();
 		assertThat(result.get("inlineComments").get(0).get("suggestion").asString()).isEqualTo("people are");
@@ -152,10 +152,10 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 		Fixture f = submitted();
 		call(patch("/api/teacher/assignments/" + f.assignmentId() + "/settings").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("showSuggestionsOnRevision", true))), teacher)
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		gradeWithFeedback(f);
 		call(postJson("/api/teacher/submissions/" + f.submissionId() + "/request-revision",
-				Map.of("dueAt", clock.instant().plus(Duration.ofDays(2)).toString())), teacher).andExpect(status().isOk());
+				Map.of("dueAt", clock.instant().plus(Duration.ofDays(2)).toString())), teacher).andExpect(apiStatus(200));
 		JsonNode result = version(f.partId(), 1).get("result");
 		assertThat(result.get("suggestionsHidden").asBoolean()).isFalse();
 		assertThat(result.get("inlineComments").get(0).get("suggestion").asString()).isEqualTo("people are");
@@ -177,19 +177,19 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 		Map<String, Object> body = new HashMap<>(Map.of("title", "Bài 2 phần", "dueAt",
 				clock.instant().plus(Duration.ofDays(3)).toString(), "parts",
 				List.of(part("Task 1", "WRITING_TASK1", "TA", "CC"), part("Task 2", "WRITING_TASK2", "TR", "CC"))));
-		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(status().isCreated()));
+		JsonNode a = data(call(postJson("/api/teacher/assignments", body), teacher).andExpect(apiStatus(201)));
 		long assignmentId = a.get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + assignmentId + "/publish",
-				Map.of("studentIds", Set.of(student.getId(), other.getId()))), teacher).andExpect(status().isOk());
+				Map.of("studentIds", Set.of(student.getId(), other.getId()))), teacher).andExpect(apiStatus(200));
 		JsonNode p1 = a.get("parts").get(0);
 		JsonNode p2 = a.get("parts").get(1);
 		for (JsonNode p : List.of(p1, p2)) {
 			call(postJson("/api/student/parts/" + p.get("id").asLong() + "/submit",
-					Map.of("content", ESSAY, "expectedVersion", 0)), studentToken).andExpect(status().isCreated());
+					Map.of("content", ESSAY, "expectedVersion", 0)), studentToken).andExpect(apiStatus(201));
 		}
 		String otherToken = accessToken(other);
 		call(postJson("/api/student/parts/" + p1.get("id").asLong() + "/submit", Map.of("content", ESSAY, "expectedVersion", 0)),
-				otherToken).andExpect(status().isCreated());
+				otherToken).andExpect(apiStatus(201));
 
 		JsonNode row = data(call(get("/api/teacher/assignments").param("keyword", "Bài 2 phần"), teacher)).get(0);
 		assertThat(row.get("recipientCount").asLong()).isEqualTo(2);
@@ -206,11 +206,11 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 		JsonNode c1 = p1.get("criteria");
 		JsonNode c2 = p2.get("criteria");
 		saveGrade(subs[0], grade(1, List.of(score(c1.get(0).get("id").asLong(), 6), score(c1.get(1).get("id").asLong(), 6.5)),
-				List.of(), List.of())).andExpect(status().isOk());
-		call(post("/api/teacher/submissions/" + subs[0] + "/return"), teacher).andExpect(status().isOk());
+				List.of(), List.of())).andExpect(apiStatus(200));
+		call(post("/api/teacher/submissions/" + subs[0] + "/return"), teacher).andExpect(apiStatus(200));
 
 		JsonNode partial = data(call(get("/api/student/assignments/" + assignmentId + "/result"), studentToken)
-				.andExpect(status().isOk()));
+				.andExpect(apiStatus(200)));
 		assertThat(partial.get("complete").asBoolean()).isFalse();
 		assertThat(partial.get("band").isNull()).isTrue();
 		assertThat(partial.get("note").asString()).startsWith("Chưa đủ phần");
@@ -219,10 +219,10 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 
 		// Phần 2 mới chấm nháp: sinh viên vẫn chưa thấy (BR-13).
 		saveGrade(subs[1], grade(1, List.of(score(c2.get(0).get("id").asLong(), 7), score(c2.get(1).get("id").asLong(), 6.5)),
-				List.of(), List.of())).andExpect(status().isOk());
+				List.of(), List.of())).andExpect(apiStatus(200));
 		call(get("/api/student/assignments/" + assignmentId + "/result"), studentToken)
 				.andExpect(jsonPath("$.data.complete").value(false));
-		call(post("/api/teacher/submissions/" + subs[1] + "/return"), teacher).andExpect(status().isOk());
+		call(post("/api/teacher/submissions/" + subs[1] + "/return"), teacher).andExpect(apiStatus(200));
 
 		call(get("/api/student/assignments/" + assignmentId + "/result"), studentToken)
 				.andExpect(jsonPath("$.data.complete").value(true))
@@ -240,7 +240,7 @@ class StudentResultIntegrationTest extends GradingTestSupport {
 				.andExpect(jsonPath("$.data.complete").value(false))
 				.andExpect(jsonPath("$.data.parts[0].band").isEmpty());
 		String outsider = accessToken(newUser(Role.STUDENT));
-		call(get("/api/student/assignments/" + assignmentId + "/result"), outsider).andExpect(status().isNotFound());
-		call(get("/api/student/parts/" + p1.get("id").asLong() + "/versions/1"), outsider).andExpect(status().isNotFound());
+		call(get("/api/student/assignments/" + assignmentId + "/result"), outsider).andExpect(apiStatus(404));
+		call(get("/api/student/parts/" + p1.get("id").asLong() + "/versions/1"), outsider).andExpect(apiStatus(404));
 	}
 }

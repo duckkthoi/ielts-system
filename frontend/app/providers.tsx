@@ -7,7 +7,9 @@ import viVN from 'antd/locale/vi_VN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 
+import { RealtimeBridge } from '@/components/RealtimeBridge';
 import { antdTheme } from '@/lib/theme/antdTheme';
+import { LAYOUT } from '@/lib/theme/tokens';
 import { setMessageInstance, useAppStore } from '@/stores/useAppStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -46,16 +48,20 @@ function GlobalLoading() {
   return <Spin fullscreen spinning={loading} size="large" />;
 }
 
+// Thông báo bật lên nằm dưới header (cao 64px) để không che chuông và menu tài khoản.
+const NOTIFICATION_CONFIG = { top: LAYOUT.headerHeight + 8 };
+
 // ─── Providers ────────────────────────────────────────────────────────────────
 // Theme antd lấy từ design system (lib/theme/antdTheme.ts).
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ConfigProvider locale={viVN} theme={antdTheme}>
-      <App>
+      <App notification={NOTIFICATION_CONFIG}>
         <MessageBridge />
         <AuthInit />
         <GlobalLoading />
+        <RealtimeBridge />
         {children}
       </App>
     </ConfigProvider>

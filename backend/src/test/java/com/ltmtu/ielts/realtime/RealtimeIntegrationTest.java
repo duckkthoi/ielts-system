@@ -1,10 +1,10 @@
 package com.ltmtu.ielts.realtime;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.List;
@@ -65,12 +65,12 @@ class RealtimeIntegrationTest extends IntegrationTest {
 				"criteria", List.of(Map.of("code", "TR", "name", "Task Response", "step", "1", "checklist", List.of())));
 		JsonNode a = data(call(postJson("/api/teacher/assignments", Map.of("title", "Bài live", "dueAt",
 				clock.instant().plus(Duration.ofDays(3)).toString(), "parts", List.of(part))), teacher)
-				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+				.andExpect(apiStatus(201)).andReturn().getResponse().getContentAsString());
 		assignmentId = a.get("id").asLong();
 		partId = a.get("parts").get(0).get("id").asLong();
 		criterionId = a.get("parts").get(0).get("criteria").get(0).get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + assignmentId + "/publish", Map.of("studentIds", List.of(student.getId()))),
-				teacher).andExpect(status().isOk());
+				teacher).andExpect(apiStatus(200));
 	}
 
 	@AfterEach
@@ -85,7 +85,7 @@ class RealtimeIntegrationTest extends IntegrationTest {
 		String studentToken = accessToken(student);
 
 		call(put("/api/student/parts/" + partId + "/draft").contentType(MediaType.APPLICATION_JSON)
-				.content(json.writeValueAsString(Map.of("content", "Bắt đầu"))), studentToken).andExpect(status().isOk());
+				.content(json.writeValueAsString(Map.of("content", "Bắt đầu"))), studentToken).andExpect(apiStatus(200));
 		JsonNode draft = progress.poll(5, TimeUnit.SECONDS);
 		assertThat(draft).isNotNull();
 		assertThat(draft.get("status").asString()).isEqualTo("DRAFT");
@@ -93,11 +93,11 @@ class RealtimeIntegrationTest extends IntegrationTest {
 		assertThat(draft.get("partId").asLong()).isEqualTo(partId);
 
 		call(put("/api/student/parts/" + partId + "/draft").contentType(MediaType.APPLICATION_JSON)
-				.content(json.writeValueAsString(Map.of("content", "Lưu lần hai"))), studentToken).andExpect(status().isOk());
+				.content(json.writeValueAsString(Map.of("content", "Lưu lần hai"))), studentToken).andExpect(apiStatus(200));
 		assertThat(progress.poll(500, TimeUnit.MILLISECONDS)).as("lưu nháp lần sau không đổi trạng thái").isNull();
 
 		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", ESSAY, "expectedVersion", 0)),
-				studentToken).andExpect(status().isCreated());
+				studentToken).andExpect(apiStatus(201));
 		JsonNode submitted = progress.poll(5, TimeUnit.SECONDS);
 		assertThat(submitted.get("status").asString()).isEqualTo("SUBMITTED");
 		assertThat(submitted.get("late").asBoolean()).isFalse();
@@ -105,8 +105,8 @@ class RealtimeIntegrationTest extends IntegrationTest {
 
 		call(put("/api/teacher/submissions/" + submissionId + "/grade").contentType(MediaType.APPLICATION_JSON)
 				.content(json.writeValueAsString(Map.of("versionNo", 1, "scores",
-						List.of(Map.of("criterionId", criterionId, "score", 6))))), teacher).andExpect(status().isOk());
-		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(status().isOk());
+						List.of(Map.of("criterionId", criterionId, "score", 6))))), teacher).andExpect(apiStatus(200));
+		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(apiStatus(200));
 		JsonNode returned = progress.poll(5, TimeUnit.SECONDS);
 		assertThat(returned.get("status").asString()).isEqualTo("RETURNED");
 		assertThat(returned.get("score").decimalValue()).isEqualByComparingTo("6.0");

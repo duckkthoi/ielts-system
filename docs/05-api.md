@@ -35,18 +35,18 @@
 {
   "success": false,
   "data": null,
-  "message": "Đã quá hạn nộp",
-  "code": "DEADLINE_PASSED",
+  "errorCode": "DEADLINE_PASSED",
+  "errorMessage": "Đã quá hạn nộp",
   "status": 422,
   "path": "/api/student/parts/12/submit",
   "timestamp": "2026-11-05T17:00:03Z",
   "fieldErrors": { "content": "Nội dung không được để trống" }
 }
 ```
-`message` là câu tiếng Việt hiển thị thẳng cho người dùng. `fieldErrors` chỉ có khi lỗi validate.
+**HTTP status luôn là `200`** (kể cả khi lỗi, kể cả lỗi của Spring Security như chưa đăng nhập / không có quyền). Kết quả thật đọc trong body: `success`; khi lỗi thì `errorCode` (mã lỗi, bảng dưới), `errorMessage` (câu tiếng Việt hiển thị thẳng cho người dùng) và `status` (mã kiểu HTTP: 400, 401, 403, 404, 409, 422, 429, 500 — để phân loại lỗi, vd `401` → client refresh token rồi gửi lại). `fieldErrors` chỉ có khi lỗi validate. Response thành công không có các trường này; `message` ở response thành công là câu thông báo (vd "Đã gửi email"). Trong tài liệu này, các chỗ ghi "→ `409`", "`429 RATE_LIMITED`"… là giá trị `status` trong body; endpoint tạo mới trước đây trả `201` nay trả `200`. Ngoại lệ ngoài ứng dụng: lỗi mạng, nginx (`502`/`504`) và `/actuator/health` (`503` khi hỏng) vẫn dùng HTTP status thật.
 
 #### Mã lỗi
-| HTTP | `code` | Khi nào |
+| `status` | `errorCode` | Khi nào |
 |---|---|---|
 | 400 | `VALIDATION_ERROR` | Dữ liệu gửi lên không hợp lệ |
 | 400 | `BAD_FILE` | File import sai định dạng hoặc thiếu cột; ảnh không phải PNG / JPG / WEBP |
@@ -209,7 +209,7 @@
 | PUT | `/api/teacher/assignments/{id}/targets` | Giao thêm (chỉ bài PUBLISHED) `{classIds, studentIds}` → `{newRecipients, recipientCount}`. Chỉ thêm, không gỡ người đã giao |
 | POST | `/api/teacher/assignments/{id}/close` | PUBLISHED → CLOSED |
 | POST | `/api/teacher/assignments/{id}/reopen` | CLOSED → PUBLISHED |
-| POST | `/api/teacher/assignments/{id}/duplicate` | Nhân bản → `201` bài DRAFT mới "… (bản sao)": đủ phần và rubric; **không** chép người nhận, `openAt`, `dueAt`, hạn riêng |
+| POST | `/api/teacher/assignments/{id}/duplicate` | Nhân bản → bài DRAFT mới "… (bản sao)": đủ phần và rubric; **không** chép người nhận, `openAt`, `dueAt`, hạn riêng |
 
 **Phát hành (UC-14):**
 - Điều kiện: bài nháp; có ≥ 1 phần; mỗi phần có ≥ 1 tiêu chí; có `dueAt` ở tương lai; hạn riêng (nếu có) ở tương lai; **có ≥ 1 người nhận**. Thiếu điều kiện → `400 NOT_READY`, message **liệt kê mọi vấn đề**. Phát hành lần 2 → `409 INVALID_STATE`.
@@ -220,7 +220,7 @@
 
 **Upload ảnh đề:** `POST /api/files` (TEACHER, ADMIN), multipart `file`.
 - Loại file nhận diện theo **chữ ký byte đầu file** (PNG / JPG / WEBP), không tin tên hay Content-Type. Tối đa 5 MB.
-- Trả `201 {url: "/uploads/yyyy/MM/<uuid>.png"}`.
+- Trả `{url: "/uploads/yyyy/MM/<uuid>.png"}`.
 - `GET /uploads/**` **công khai** (thẻ `<img>` không gửi được token), tên file là UUID nên không đoán được, cache 30 ngày.
 
 ```jsonc
@@ -375,11 +375,11 @@
 | POST | `/api/teacher/submissions/{id}/request-revision` | Yêu cầu sửa `{note?, dueAt}` → `GradingScreen` |
 | POST | `/api/teacher/submissions/{id}/ai-suggest` | Gợi ý AI (Mức 3, chỉ khi có API key) |
 | GET | `/api/teacher/error-codes` | Mã lỗi dùng được: 22 mã của hệ thống (theo thứ tự) rồi tới mã riêng của tôi |
-| POST | `/api/teacher/error-codes` | Thêm mã riêng `{code, name, criterion?, description?, positive?}` → `201 ErrorCodeDto` |
+| POST | `/api/teacher/error-codes` | Thêm mã riêng `{code, name, criterion?, description?, positive?}` → `200 ErrorCodeDto` |
 | PUT | `/api/teacher/error-codes/{id}` | Sửa mã riêng (cùng body) |
 | DELETE | `/api/teacher/error-codes/{id}` | Xoá mã riêng. Nhận xét inline đã dùng mã vẫn giữ mã dạng chữ |
 | GET | `/api/teacher/comment-bank?criterion&keyword` | Ngân hàng nhận xét: của tôi (hay dùng lên đầu) rồi tới nhận xét mẫu |
-| POST | `/api/teacher/comment-bank` | Thêm `{criterion?, content}` → `201 CommentBankDto` |
+| POST | `/api/teacher/comment-bank` | Thêm `{criterion?, content}` → `200 CommentBankDto` |
 | PUT | `/api/teacher/comment-bank/{id}` | Sửa (cùng body) |
 | DELETE | `/api/teacher/comment-bank/{id}` | Xoá |
 | POST | `/api/teacher/comment-bank/{id}/use` | Ghi nhận một lần chèn → `CommentBankDto` (đã tăng `useCount`) |
@@ -466,11 +466,11 @@
 
 | Method | Đường dẫn | Mô tả |
 |---|---|---|
-| GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION&page&size` | Bài được giao, theo tab (UC-22) |
+| GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION` | Bài được giao, theo tab (UC-22); bỏ trống `tab` = mọi bài. Không phân trang |
 | GET | `/api/student/assignments/{id}` | Chi tiết bài + trạng thái từng phần của tôi |
 | GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion}` |
 | PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion}` (SD-06) |
-| POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `201 {versionNo, submittedAt, late, wordCount}` (SD-07) |
+| POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}` (SD-07) |
 | GET | `/api/student/parts/{partId}/versions` | Lịch sử nộp, có band nếu đã trả bài |
 | GET | `/api/student/parts/{partId}/versions/{versionNo}` | Nội dung một version + kết quả chấm (chỉ khi RETURNED, BR-13) |
 | GET | `/api/student/assignments/{id}/result` | Band từng phần và band cả bài (BR-12) |
@@ -486,9 +486,9 @@
   - `status` phía sinh viên hiển thị `GRADED` thành `SUBMITTED` (BR-13).
 - `PUT …/draft {content, draftVersion}` (tối đa 30 000 ký tự) → `{savedAt, wordCount, draftVersion}`. Lưu nháp cũng tuân theo hạn, như khi nộp.
 - **Khoá lạc quan bản nháp (bước 10, SD-06):** `draftVersion` bắt đầu từ 0 (chưa lưu lần nào), tăng 1 sau mỗi lần lưu thành công; `GET …/draft` trả số hiện tại. Server **khoá dòng bài làm** (`FOR UPDATE`) rồi so số client gửi: lệch → `409 DRAFT_CONFLICT`, body lỗi có `data: {serverContent, draftVersion, savedAt}` để client hiện hộp thoại "giữ bản trên máy này / dùng bản trên server"; chọn xong thì gửi lại với `draftVersion` mới nhất. Bỏ trống `draftVersion` = không kiểm tra (ghi đè như Mức 1); số âm → `400`. Có test bắn 2 lần lưu đồng thời cùng số: đúng 1 thành công.
-- `POST …/submit {content, expectedVersion}` → `201 {versionNo, submittedAt, late, wordCount}`. Lỗi:
+- `POST …/submit {content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}`. Lỗi:
 
-  | HTTP | `code` | Khi nào |
+  | `status` | `errorCode` | Khi nào |
   |---|---|---|
   | 409 | `VERSION_CONFLICT` | `expectedVersion` ≠ version hiện tại, hoặc 2 request đầu tiên chạy đồng thời. Client tải lại trạng thái |
   | 409 | `ALREADY_SUBMITTED` | Phần đã nộp và không ở trạng thái "Cần sửa" |
@@ -504,7 +504,7 @@
   - `counts` luôn tính trên toàn bộ bài, để hiện badge.
   - Mỗi item: `{id, title, teacherName, status, openAt, dueAt, nextDueAt, tabs[], parts[]}`, trong đó mỗi phần là `{partId, orderNo, title, taskType, status, currentVersion, late, effectiveDueAt, canSubmit}`.
   - Sắp theo `nextDueAt` (hạn gần nhất của phần còn phải làm); bài không còn hạn xếp cuối.
-- `GET /api/student/assignments/{id}` → thêm `description`, `allowLate`, `maxRevisions`, `serverTime`, và cho từng phần: `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `revisionNote` / `revisionDueAt` (khi "Cần sửa"), `criteria[]` kèm `checklist[]` (`kind`, `maxBand`) để sinh viên biết tiêu chí chấm.
+- `GET /api/student/assignments/{id}` → thêm `description`, `teacherName`, `tabs`, `allowLate`, `maxRevisions`, `serverTime`, và cho từng phần: `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `revisionNote` / `revisionDueAt` (khi "Cần sửa"), `criteria[]` kèm `checklist[]` (`kind`, `maxBand`) để sinh viên biết tiêu chí chấm.
 - `canSubmit` = bài đang mở, phần còn mở với sinh viên, và chưa quá hạn hoặc bài cho nộp muộn.
 
 **Lịch sử nộp và kết quả chấm (đã cài ở B6c; BR-13, BR-21, docs/08 mục 4.5):**
@@ -583,7 +583,7 @@
 - `GET /api/chat/{channelId}/messages?beforeId&size` → `{messages, reads}`: `messages` **mới nhất trước** (`size` mặc định 50, tối đa 100; `beforeId` để tải tiếp các tin cũ hơn), mỗi tin là `ChatEvent` loại `MESSAGE`; `reads` = `[{userId, userName, lastMessageId}]` mốc đã đọc của những người khác (hiện "Đã xem").
 - Gửi tin chỉ qua STOMP (`/app/chat/{id}/send {content, clientMsgId}`): nội dung 1–4000 ký tự sau khi bỏ khoảng trắng hai đầu; `clientMsgId` ≤ 40 ký tự, **cùng người gửi + cùng `clientMsgId` không lưu lần hai** (UNIQUE trong DB) — server phát lại tin đã lưu để client đánh dấu "đã gửi". Tin được lưu rồi **sau commit** mới phát tới `/topic/chat/{id}`.
 - `typing`: không lưu; server bỏ bớt nếu một người gửi dày hơn 2 giây / kênh. `read {lastMessageId}`: tin phải thuộc kênh; mốc chỉ tăng (upsert `GREATEST`); phát `READ` tới kênh.
-- Lỗi dữ liệu của lệnh STOMP (tin rỗng, quá dài, tin không thuộc kênh) → gửi riêng người gửi trên `/user/queue/errors` dạng `{code, message}`; không lưu, không phát.
+- Lỗi dữ liệu của lệnh STOMP (tin rỗng, quá dài, tin không thuộc kênh) → gửi riêng người gửi trên `/user/queue/errors` dạng `{errorCode, errorMessage}` (cùng tên trường với body lỗi REST); không lưu, không phát.
 
 **Thông báo (đã cài ở B7a; UC-04, FR-50, FR-51, FR-53):**
 - Mọi vai trò đều dùng được; chỉ thấy thông báo của chính mình (của người khác → `404`).
@@ -639,7 +639,7 @@
 | SUBSCRIBE | `/topic/assignments/{id}/presence` | Giáo viên chủ bài | `{studentId, online, viewingPartId, at}` | 2 ✅ |
 | SEND | `/app/presence/viewing` | Sinh viên | `{assignmentId, partId}` khi mở / đổi phần; `partId = null` khi rời trang | 2 ✅ |
 | SUBSCRIBE | `/topic/chat/{channelId}` | Thành viên kênh | `ChatEvent` | 2 ✅ |
-| SUBSCRIBE | `/user/queue/errors` | Mọi người | `{code, message}` — lỗi của lệnh STOMP mình vừa gửi (vd tin chat rỗng) | 2 ✅ |
+| SUBSCRIBE | `/user/queue/errors` | Mọi người | `{errorCode, errorMessage}` — lỗi của lệnh STOMP mình vừa gửi (vd tin chat rỗng) | 2 ✅ |
 | SEND | `/app/chat/{channelId}/send` | Thành viên kênh | `{content, clientMsgId}` | 2 ✅ |
 | SEND | `/app/chat/{channelId}/typing` | Thành viên kênh | `{}` (gửi tối đa 1 lần / 3 giây) | 2 ✅ |
 | SEND | `/app/chat/{channelId}/read` | Thành viên kênh | `{lastMessageId}` | 2 ✅ |

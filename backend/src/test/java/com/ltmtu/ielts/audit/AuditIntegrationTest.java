@@ -1,10 +1,10 @@
 package com.ltmtu.ielts.audit;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -41,7 +41,7 @@ class AuditIntegrationTest extends IntegrationTest {
 
 	private JsonNode logs(MockHttpServletRequestBuilder req) throws Exception {
 		String body = mvc.perform(req.header(HttpHeaders.AUTHORIZATION, bearer(admin)))
-				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+				.andExpect(apiStatus(200)).andReturn().getResponse().getContentAsString();
 		return json.readTree(body).get("data");
 	}
 
@@ -64,13 +64,13 @@ class AuditIntegrationTest extends IntegrationTest {
 					.with(r -> {
 						r.setRemoteAddr(ip);
 						return r;
-					})).andExpect(status().isUnauthorized());
+					})).andExpect(apiStatus(401));
 		}
 		mvc.perform(postJson("/api/auth/login", Map.of("username", u.getUsername(), "password", DEFAULT_PASSWORD))
 				.with(r -> {
 					r.setRemoteAddr(ip);
 					return r;
-				})).andExpect(status().isTooManyRequests());
+				})).andExpect(apiStatus(429));
 		loginThrottle.clear();
 		accessToken(u);
 
@@ -105,7 +105,7 @@ class AuditIntegrationTest extends IntegrationTest {
 		MockMultipartFile file = new MockMultipartFile("file", "ds.csv", "text/csv",
 				("ma_sv,ho_ten\n" + code + ",Nguyễn Nhật Ký\n").getBytes(StandardCharsets.UTF_8));
 		mvc.perform(multipart("/api/teacher/classes/" + classId + "/import").file(file)
-				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
+				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(apiStatus(200));
 
 		JsonNode imports = logs(search("actorId", String.valueOf(teacher.getId()), "action", "IMPORT_STUDENTS"));
 		assertThat(imports).hasSize(1);
@@ -115,9 +115,9 @@ class AuditIntegrationTest extends IntegrationTest {
 		assertThat(imports.toString()).doesNotContain(code).doesNotContain("Nhật Ký");
 
 		mvc.perform(post("/api/admin/users/" + teacher.getId() + "/lock").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		mvc.perform(post("/api/admin/users/" + teacher.getId() + "/unlock").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 		assertThat(logs(search("action", "LOCK_USER")).get(0).get("targetId").asLong()).isEqualTo(teacher.getId());
 		assertThat(logs(search("action", "UNLOCK_USER")).get(0).get("targetId").asLong()).isEqualTo(teacher.getId());
 	}
@@ -135,8 +135,8 @@ class AuditIntegrationTest extends IntegrationTest {
 		assertThat(logs(search("actorId", actor)).get(0).get("action").asString()).isEqualTo("LOGIN");
 
 		mvc.perform(search("from", at.toString(), "to", at.toString()).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
-				.andExpect(status().isBadRequest());
-		mvc.perform(search().header(HttpHeaders.AUTHORIZATION, bearer(accessToken(u)))).andExpect(status().isForbidden());
+				.andExpect(apiStatus(400));
+		mvc.perform(search().header(HttpHeaders.AUTHORIZATION, bearer(accessToken(u)))).andExpect(apiStatus(403));
 	}
 
 	@Test
@@ -145,7 +145,7 @@ class AuditIntegrationTest extends IntegrationTest {
 		User teacher = newUser(Role.TEACHER);
 		String token = accessToken(teacher);
 		mvc.perform(postJson("/api/teacher/assignments/999999999/publish", Map.of("studentIds", List.of(1)))
-				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isNotFound());
+				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(apiStatus(404));
 		assertThat(logs(search("actorId", String.valueOf(teacher.getId()), "action", "PUBLISH_ASSIGNMENT"))).isEmpty();
 	}
 }

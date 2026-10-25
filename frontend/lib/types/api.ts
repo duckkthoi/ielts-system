@@ -1,6 +1,6 @@
 // ─── Response chuẩn của backend ──────────────────────────────────────────────
 // Mọi API trả cùng một dạng: { success, data, message, totalRecord }.
-// Khi lỗi: { success: false, data: null, message, code, fieldErrors }.
+// Khi lỗi (HTTP status vẫn là mã thật 4xx / 5xx): { success: false, data, errorCode, errorMessage, status, fieldErrors }.
 
 export interface ApiResponse<T = null> {
   success: boolean;
@@ -12,9 +12,10 @@ export interface ApiResponse<T = null> {
 
 export interface ApiErrorBody {
   success: false;
-  data: null;
-  message: string | null;
-  code?: string;
+  /** Thường là null; một số lỗi kèm dữ liệu (vd bản nháp trên server khi 409 DRAFT_CONFLICT). */
+  data: unknown;
+  errorCode?: string;
+  errorMessage?: string | null;
   status?: number;
   /** Lỗi validate theo từng trường: { tenTruong: 'thông báo' }. */
   fieldErrors?: Record<string, string> | null;

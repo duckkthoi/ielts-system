@@ -66,7 +66,8 @@ public class SecurityConfig {
 	@Bean
 	CorsConfigurationSource corsConfigurationSource(AppProperties props) {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(props.cors().allowedOrigins());
+		// Nhận cả mẫu (vd https://*.trycloudflare.com khi demo qua tunnel), giống endpoint WebSocket.
+		config.setAllowedOriginPatterns(props.cors().allowedOrigins());
 		config.addAllowedMethod("*");
 		config.addAllowedHeader("*");
 		config.addExposedHeader("Content-Disposition");

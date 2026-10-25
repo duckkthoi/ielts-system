@@ -1,10 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import ClassDetailPage from './index';
+
+export const metadata: Metadata = { title: 'Chi tiết lớp — IELTS Writing' };
 
 export default function Page() {
-  return (
-    <PagePlaceholder
-      title="Chi tiết lớp"
-      description="Thành viên lớp, import sinh viên từ file, tải danh sách tài khoản."
-    />
-  );
+  return <ClassDetailPage />;
 }

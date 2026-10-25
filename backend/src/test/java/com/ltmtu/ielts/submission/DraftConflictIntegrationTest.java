@@ -1,10 +1,11 @@
 package com.ltmtu.ielts.submission;
 
+import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
+import static com.ltmtu.ielts.support.ApiStatus.apiStatusOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -44,13 +45,13 @@ class DraftConflictIntegrationTest extends IntegrationTest {
 				"criteria", List.of(Map.of("code", "TR", "name", "TR", "checklist", List.of())));
 		String body = mvc.perform(postJson("/api/teacher/assignments", Map.of("title", "Bài nháp", "dueAt",
 				clock.instant().plus(Duration.ofDays(3)).toString(), "parts", List.of(part)))
-				.header(HttpHeaders.AUTHORIZATION, bearer(teacher))).andExpect(status().isCreated())
+				.header(HttpHeaders.AUTHORIZATION, bearer(teacher))).andExpect(apiStatus(201))
 				.andReturn().getResponse().getContentAsString();
 		JsonNode a = json.readTree(body).get("data");
 		partId = a.get("parts").get(0).get("id").asLong();
 		mvc.perform(postJson("/api/teacher/assignments/" + a.get("id").asLong() + "/publish",
 				Map.of("studentIds", List.of(s.getId()))).header(HttpHeaders.AUTHORIZATION, bearer(teacher)))
-				.andExpect(status().isOk());
+				.andExpect(apiStatus(200));
 	}
 
 	private ResultActions save(String content, Integer draftVersion) throws Exception {
@@ -66,13 +67,13 @@ class DraftConflictIntegrationTest extends IntegrationTest {
 	void staleVersionConflicts() throws Exception {
 		mvc.perform(get("/api/student/parts/" + partId + "/draft").header(HttpHeaders.AUTHORIZATION, bearer(student)))
 				.andExpect(jsonPath("$.data.draftVersion").value(0));
-		save("Tab A lần 1", 0).andExpect(status().isOk()).andExpect(jsonPath("$.data.draftVersion").value(1));
-		save("Tab A lần 2", 1).andExpect(status().isOk()).andExpect(jsonPath("$.data.draftVersion").value(2));
+		save("Tab A lần 1", 0).andExpect(apiStatus(200)).andExpect(jsonPath("$.data.draftVersion").value(1));
+		save("Tab A lần 2", 1).andExpect(apiStatus(200)).andExpect(jsonPath("$.data.draftVersion").value(2));
 
 		// Tab B vẫn cầm số 1.
 		save("Tab B ghi đè?", 1)
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("DRAFT_CONFLICT"))
+				.andExpect(apiStatus(409))
+				.andExpect(jsonPath("$.errorCode").value("DRAFT_CONFLICT"))
 				.andExpect(jsonPath("$.data.serverContent").value("Tab A lần 2"))
 				.andExpect(jsonPath("$.data.draftVersion").value(2))
 				.andExpect(jsonPath("$.data.savedAt").isNotEmpty());
@@ -81,28 +82,28 @@ class DraftConflictIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.data.draftVersion").value(2));
 
 		// Người dùng chọn giữ bản của tab B → gửi lại với số mới nhất.
-		save("Tab B ghi đè?", 2).andExpect(status().isOk()).andExpect(jsonPath("$.data.draftVersion").value(3));
+		save("Tab B ghi đè?", 2).andExpect(apiStatus(200)).andExpect(jsonPath("$.data.draftVersion").value(3));
 	}
 
 	@Test
 	@DisplayName("Lần lưu đầu với số khác 0 → 409, bản trên server rỗng; bỏ trống draftVersion → không kiểm tra (như Mức 1); số âm → 400")
 	void edgeCases() throws Exception {
-		save("x", 5).andExpect(status().isConflict())
+		save("x", 5).andExpect(apiStatus(409))
 				.andExpect(jsonPath("$.data.serverContent").value(""))
 				.andExpect(jsonPath("$.data.draftVersion").value(0));
-		save("không kèm số", null).andExpect(status().isOk()).andExpect(jsonPath("$.data.draftVersion").value(1));
-		save("không kèm số lần 2", null).andExpect(status().isOk()).andExpect(jsonPath("$.data.draftVersion").value(2));
-		save("âm", -1).andExpect(status().isBadRequest());
+		save("không kèm số", null).andExpect(apiStatus(200)).andExpect(jsonPath("$.data.draftVersion").value(1));
+		save("không kèm số lần 2", null).andExpect(apiStatus(200)).andExpect(jsonPath("$.data.draftVersion").value(2));
+		save("âm", -1).andExpect(apiStatus(400));
 	}
 
 	@Test
 	@DisplayName("2 tab lưu ĐỒNG THỜI cùng draftVersion → đúng 1 lần thành công, lần kia 409 (khoá dòng FOR UPDATE)")
 	void concurrentSaves() throws Exception {
-		save("bắt đầu", 0).andExpect(status().isOk());
+		save("bắt đầu", 0).andExpect(apiStatus(200));
 		CountDownLatch start = new CountDownLatch(1);
 		Callable<Integer> task = () -> {
 			start.await();
-			return save("song song", 1).andReturn().getResponse().getStatus();
+			return apiStatusOf(save("song song", 1).andReturn());
 		};
 		ExecutorService pool = Executors.newFixedThreadPool(2);
 		try {
@@ -120,7 +121,7 @@ class DraftConflictIntegrationTest extends IntegrationTest {
 	@Test
 	@DisplayName("SD-11: GET /api/time không cần đăng nhập, trả giờ server")
 	void serverTime() throws Exception {
-		mvc.perform(get("/api/time")).andExpect(status().isOk())
+		mvc.perform(get("/api/time")).andExpect(apiStatus(200))
 				.andExpect(jsonPath("$.data.serverTime").value(clock.instant().toString()));
 	}
 }

@@ -11,7 +11,7 @@ import ws from 'k6/ws';
 import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Trend } from 'k6/metrics';
-import { BASE_URL, TEACHER, WS_URL, auth, classMemberIds, login, loadStudent, prepareAssignment } from './lib/api.js';
+import { BASE_URL, TEACHER, WS_URL, apiOk, auth, classMemberIds, login, loadStudent, prepareAssignment } from './lib/api.js';
 import { frame, parse } from './lib/stomp.js';
 
 const CONNECTIONS = parseInt(__ENV.CONNECTIONS || '500', 10);
@@ -104,6 +104,6 @@ export function socket(data) {
 export function remind(data) {
 	const res = http.post(`${BASE_URL}/api/teacher/assignments/${data.assignmentId}/remind`,
 		JSON.stringify({ studentIds: data.studentIds }), Object.assign(auth(data.teacherToken), { tags: { name: 'remind' } }));
-	check(res, { 'nhắc nhở 200': (r) => r.status === 200 });
+	check(res, { 'nhắc nhở thành công': apiOk });
 	console.log(`Đã nhắc ${res.json('data.sent')} sinh viên, request mất ${Math.round(res.timings.duration)} ms`);
 }

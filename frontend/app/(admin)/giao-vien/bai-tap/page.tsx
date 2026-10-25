@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import AssignmentListPage from './index';
+
+export const metadata: Metadata = { title: 'Bài tập — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Bài tập" description="Danh sách bài tập theo trạng thái nháp / đã giao / đã đóng." />;
+  return <AssignmentListPage />;
 }

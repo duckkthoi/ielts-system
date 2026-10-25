@@ -45,6 +45,6 @@ public final class ChatDtos {
 	}
 
 	/** Lỗi gửi về {@code /user/queue/errors} khi lệnh STOMP không hợp lệ. */
-	public record ChatError(String code, String message) {
+	public record ChatError(String errorCode, String errorMessage) {
 	}
 }
