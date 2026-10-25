@@ -1,7 +1,15 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import { Suspense } from 'react';
+
+import type { Metadata } from 'next';
+
+import GradingQueuePage from './index';
+
+export const metadata: Metadata = { title: 'Chấm bài — IELTS Writing' };
 
 export default function Page() {
   return (
-    <PagePlaceholder title="Chấm bài" description="Hàng đợi bài cần chấm, lọc theo bài / phần / lớp / trạng thái." />
+    <Suspense>
+      <GradingQueuePage />
+    </Suspense>
   );
 }
