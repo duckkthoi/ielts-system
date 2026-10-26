@@ -4,8 +4,9 @@ import { useState } from 'react';
 
 import { Modal, Radio } from 'antd';
 
-import { ZERO_REASON_LABEL } from '@/lib/constants';
 import type { ZeroReason } from '@/lib/types/grading';
+
+import { ZERO_REASON_LABEL } from './const';
 
 // ─── Chấm 0 cả bài (BR-19, Prompt 6b ý 8): bắt buộc chọn lý do ────────────────
 

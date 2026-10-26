@@ -259,7 +259,7 @@ Mọi component dựa trên Ant Design, theme hoá bằng token. Cột **Nguồn
 | **CriterionCard** | Một tiêu chí trên màn chấm: tên + mô tả rút gọn, checklist (Checkbox), ScorePicker, ô nhận xét | Thu gọn / mở rộng. Viền trái `brand-600` khi đã chấm đủ |
 | **ChecklistItem** | Checkbox + nội dung. Đã tick: chữ `neutral-500` | |
 | **EssayEditor** | Vùng soạn bài: font `essay`, không viền, nền trắng, padding 32. Thanh trạng thái dưới: WordCounter + AutosaveIndicator | Chế độ chỉ đọc (đã nộp / quá hạn). Chế độ thi: chặn menu chuột phải (tuỳ chọn) |
-| **EssayAnnotator** (thay EssayViewer, F5b) | Bài đã nộp kiểu "Word đã chấm": lỗi = gạch chân gợn sóng màu theo nhóm (`annot-grammar` / `-spelling` / `-vocabulary` / `-coherence` / `-punctuation` / `-other`); sửa = chữ cũ gạch ngang + chữ mới gạch chân màu `annot-edit`; lưu ý nền `highlight-comment`, dùng hay nền `annot-good`, có nhận xét nền `annot-comment` (đang chọn / hover: `annot-comment-active`). Lề trái: thanh dọc `brand-500` ở dòng có đánh dấu; lề phải 180px: bong bóng nhận xét canh theo dòng, tự dàn không chồng | Giáo viên: bôi đen → thanh công cụ 7 nút. Sinh viên: chỉ xem. Hàng "Hiện:" bật / tắt lớp Tô màu / Sửa / Lỗi / Nhận xét. Không dùng innerHTML — tách đoạn theo offset |
+| **EssayViewer** | Hiển thị bài đã nộp, có highlight nhận xét inline. Bôi đen văn bản → hiện nút nổi "Thêm nhận xét" | Chế độ giáo viên (thêm/sửa nhận xét) / sinh viên (chỉ xem, bấm highlight để xem nhận xét) |
 | **InlineCommentPopover** | Popover cạnh đoạn bôi đen: trích dẫn + ô nhận xét + Lưu / Xoá | |
 | **WordCounter** | "248 / 250 từ". Chưa đủ tối thiểu: màu `warning`; đủ: `success` | |
 | **AutosaveIndicator** | Icon + chữ `caption`: "Đã lưu lúc 14:32" · "Đang lưu…" · "Ngoại tuyến – đã lưu trên máy" (`warning`) · "Lỗi lưu – thử lại" (`error`) | 4 trạng thái theo sơ đồ 06 mục 7 |
@@ -271,7 +271,7 @@ Mọi component dựa trên Ant Design, theme hoá bằng token. Cột **Nguồn
 | **StatCard** | Thẻ số liệu dashboard: nhãn `caption`, số `display`, so sánh tăng/giảm | |
 | **PageHeader** | Tiêu đề `h1` + mô tả + breadcrumb + vùng nút bên phải | |
 | **ImportResult** | Kết quả import: 4 số (tạo mới / đã có / bỏ qua / lỗi) + bảng lỗi + nút "Tải file tài khoản" (nổi bật, kèm cảnh báo "chỉ tải được một lần") | |
-| **VersionDiff** | So sánh 2 version: chọn version A/B, hiển thị theo `diff-added` / `diff-removed`; đoạn trích của lỗi đang chọn viền `brand-500` | Hiển thị gộp / song song. Diff theo từ (LCS tự viết, `lib/utils/textDiff.ts`), chữ thường — không innerHTML |
+| **VersionDiff** | So sánh 2 version: chọn version A/B, hiển thị theo `diff-added` / `diff-removed` | Hiển thị gộp / song song |
 | **DescriptorPanel** | Bảng mô tả band thu gọn (tiếng Việt) của một tiêu chí. Mở từ icon ⓘ cạnh tên tiêu chí; mỗi mức 9 → 0 là một dòng gọn, mức đang chọn được tô `brand-50`. Cuối bảng có link "Bản chính thức (ielts.org)" | Popover (desktop) / Drawer (điện thoại) |
 | **ScorePicker – trạng thái giới hạn** | Khi có mục checklist **Giới hạn điểm** được tick: các mức lớn hơn band tối đa bị làm mờ và có biểu tượng khoá, tooltip *"Tối đa 5 vì: Không chia đoạn"* | |
 | **ChecklistItem – loại Giới hạn** | Mục loại **Giới hạn điểm** có nhãn nhỏ màu `warning` "Tối đa 5" bên phải. Khi được tick, nền của mục chuyển sang `warning-bg` | |

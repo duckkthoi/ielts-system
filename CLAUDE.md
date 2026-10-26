@@ -45,7 +45,7 @@ LTMTU/
 ├─ docs/                    TÀI LIỆU CHUẨN (Markdown + Mermaid)
 │   ├─ 01-tong-quan.md      FR, NFR, quy tắc nghiệp vụ BR-01 → BR-22
 │   ├─ 02-use-case.md       32 use case    · 03-sequence.md  sơ đồ tuần tự SD-01 → SD-13
-│   ├─ 04-erd.md            bảng, cột, lộ trình migration V1 → V10 (Mức 3 từ V11)
+│   ├─ 04-erd.md            bảng, cột, lộ trình migration V1 → V8 (Mức 3 từ V9)
 │   ├─ 05-api.md            REST, WebSocket, giao thức TCP, mã lỗi
 │   ├─ 06-trang-thai.md     sơ đồ trạng thái · 07-design-system.md · 08-nghiep-vu-cham-ielts.md
 │   ├─ 09-kiem-thu-tai.md   kết quả kiểm thử tải k6 (NFR-01/02/03)

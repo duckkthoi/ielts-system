@@ -12,12 +12,10 @@
 | Đăng nhập, đổi mật khẩu, khung ứng dụng, thông báo realtime | ✅ Dùng được | |
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
-| Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, đánh dấu trên bài kiểu Word, nhận xét mẫu, thống kê lỗi, trả bài, yêu cầu sửa, so sánh 2 lần nộp) | ✅ Dùng được | |
-| Giáo viên: tiến độ realtime (ma trận, online, nhắc nhở, xuất Excel) | ✅ Dùng được | |
-| Giáo viên: thống kê, dashboard, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
-| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài (cả khi mất mạng), nộp bài, kết quả từng phần + so sánh các lần nộp | ✅ Dùng được | |
-| Sinh viên: kết quả học tập (band theo thời gian, theo tiêu chí, hồ sơ lỗi) | ✅ Dùng được | |
-| Sinh viên: trao đổi | ⏳ Đang làm | |
+| Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, trả bài, yêu cầu sửa) | ✅ Dùng được | Nhận xét inline, ngân hàng nhận xét, so sánh 2 lần nộp: bước tiếp theo |
+| Giáo viên: tiến độ, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
+| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài (cả khi mất mạng), nộp bài | ✅ Dùng được | |
+| Sinh viên: xem kết quả chi tiết, kết quả học tập, trao đổi | ⏳ Đang làm | |
 
 Những phần "đang làm" vẫn gọi thử được qua Swagger UI (mục 2.2) hoặc file `backend/http/*.http`.
 
@@ -183,30 +181,11 @@ Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: t
    - Kết quả **tự lưu nháp** 2 giây sau mỗi thay đổi (hoặc bấm **Lưu nháp**); sinh viên chưa thấy gì cho tới khi trả bài.
    - **Trả bài**: cần chấm đủ mọi tiêu chí. Sinh viên nhận thông báo và thấy band, nhận xét.
    - **Yêu cầu sửa**: nhập lời nhắn và hạn sửa; chỉ khi còn lượt sửa (theo cài đặt bài tập) và bài chưa đóng. Sinh viên nộp lại sẽ thành lần nộp mới (`v2`).
-   - **Đánh dấu trên bài** (giống Word đã chấm): **bôi đen** chữ trong bài → thanh công cụ **Lỗi · Đánh dấu · Tốt · Nhận xét · Sửa thành… · Xoá · Thêm chữ**.
-     - *Lỗi*: chọn 1 trong 7 nhóm (Ngữ pháp, Chính tả, Từ vựng, Collocation, Liên kết, Dấu câu, Khác) hoặc mã IELTS chi tiết (VT, SV, ART…), tuỳ chọn tiêu chí, nhận xét, cách sửa → chữ được **gạch chân gợn sóng** màu theo nhóm lỗi.
-     - *Đánh dấu* → nền vàng; *Tốt* → nền xanh nhạt; *Nhận xét* → nền xám, nội dung hiện ở **lề phải** (bong bóng canh theo dòng).
-     - *Sửa thành…* → chữ cũ gạch ngang đỏ, chữ mới gạch chân đỏ ngay cạnh; *Xoá* → chữ gạch ngang đỏ; *Thêm chữ* → chữ đỏ gạch chân chèn sau đoạn đã chọn. **Bài gốc của sinh viên không bị đổi**, đây chỉ là lớp hiển thị.
-     - Nhiều kiểu được chồng lên cùng một đoạn. Lề trái có **thanh dọc** ở các dòng có đánh dấu. Hàng **Hiện:** bật / tắt từng lớp (Tô màu, Sửa, Lỗi, Nhận xét).
-     - Bấm vào đoạn đã đánh dấu (hoặc bong bóng ở lề) → thẻ chi tiết với **Sửa / Xoá**. Ô nhận xét có nút **Nhận xét mẫu** để chèn nhận xét hay dùng hoặc lưu nhận xét đang viết.
-     - Tab **Đánh dấu (N)** ở bảng bên phải: **thống kê số lỗi** theo nhóm và theo tiêu chí, danh sách mọi đánh dấu — bấm một mục để cuộn tới đoạn đó trên bài. Đánh dấu tự lưu cùng kết quả chấm.
    - Trả bài / yêu cầu sửa xong, màn tự chuyển sang **bài kế tiếp** trong hàng đợi. Nút **Trước / Sau** và số "3/12" đi theo bộ lọc của hàng đợi; ô chọn **Lần nộp** để xem lại các lần nộp cũ (chỉ xem).
-   - **So sánh với lần trước** (hiện khi bài đã nộp lại): nút ở trên bài làm. Chọn lần cũ cần so; xem kiểu **Gộp** (chữ bị bỏ gạch ngang nền đỏ, chữ thêm nền xanh) hoặc **Song song** (bài cũ | bài mới). Bên dưới là **"Đã sửa X/Y lỗi của lần N"** theo nhóm lỗi và theo tiêu chí, rồi từng lỗi của lần cũ với kết quả **tự đoán** (Đã sửa / Đổi khác gợi ý / Chưa sửa). Bấm một lỗi → đoạn trích được viền trên bài cũ; đoán sai thì chọn lại, bấm **Về tự đoán** để bỏ. Đánh giá lưu ngay, làm được cả sau khi đã trả bài.
 
-### 6.5. Tiến độ theo thời gian thực
+### 6.5. Đang làm
 
-Mở từ nút **Tiến độ** ở chi tiết bài / danh sách bài tập (bài đã phát hành). Hàng nút **Chi tiết · Tiến độ · Thống kê** ở góc phải để chuyển giữa các trang của một bài.
-
-- **Bốn thẻ đầu trang**: tỉ lệ hoàn thành (sinh viên đã nộp đủ mọi phần), số sinh viên nộp muộn, số sinh viên quá hạn mà chưa nộp, số người **đang trực tuyến** và số người đang mở bài này.
-- **Ma trận**: mỗi hàng một sinh viên, mỗi cột một phần (tiêu đề cột ghi số đã nộp, vd "Task 1 · 16/20"). Ô tô màu theo trạng thái (Chưa làm, Đang làm, Đã nộp, Nộp muộn, Đang chấm, Đã trả bài, Cần sửa); đã trả thì ô ghi band; đồng hồ = nộp muộn, chấm than đỏ = quá hạn chưa nộp, `v2` = lần nộp thứ 2. Rê chuột vào ô để xem chi tiết; **bấm ô đã nộp để mở màn chấm**.
-- **Realtime**: sinh viên lưu nháp lần đầu, nộp bài, hoặc bạn trả bài / yêu cầu sửa → ô đổi ngay và nháy viền. Chấm xanh ở avatar = sinh viên đang trực tuyến; dòng "đang mở Task 2" và viền xanh quanh ô = sinh viên đang mở màn làm phần đó. Nhãn **Cập nhật trực tiếp** ở góc phải chuyển sang "Đang kết nối lại…" khi mất kết nối; có lại kết nối thì ma trận tự tải lại.
-- **Lọc**: theo lớp, theo trạng thái (hàng có ít nhất một ô ở trạng thái đó), tìm theo mã SV / họ tên.
-- **Nhắc nhở**: tick chọn sinh viên rồi bấm **Nhắc N người đã chọn**; không chọn ai thì nhắc mọi người còn phần chưa nộp / cần sửa (chọn "Nhắc về phần" để chỉ nhắc một phần). Sinh viên nhận thông báo + email. Mỗi bài nhắc tối đa 3 lần trong 10 phút; bài đã đóng không nhắc được.
-- **Xuất Excel**: tải bảng điểm `.xlsx` theo lớp đang lọc (điểm từng tiêu chí, band từng phần, trạng thái, band cả bài).
-
-### 6.6. Đang làm
-
-Thống kê bài / lớp, xếp hạng, dashboard và trao đổi (chat) sẽ có ở các bước tiếp theo.
+Nhận xét trên bài (bôi đen → mã lỗi, gợi ý sửa), ngân hàng nhận xét, so sánh 2 lần nộp, tiến độ realtime của lớp, thống kê, xuất Excel và trao đổi (chat) đã có ở backend; giao diện sẽ có ở các bước tiếp theo.
 
 ---
 
@@ -246,30 +225,9 @@ Bấm **Làm bài / Viết tiếp / Sửa bài** để mở màn làm bài toàn
 - **Nộp**: bấm **Nộp phần này** (đang "Cần sửa": **Nộp bản sửa**). Bài ít hơn số từ tối thiểu thì hệ thống hỏi lại ("Viết tiếp" / "Vẫn nộp"). Nộp xong ô soạn chuyển sang chỉ đọc kèm giờ nộp; nộp sau hạn (khi bài cho phép) được ghi là **nộp muộn**.
 - **Đồng hồ đếm ngược** theo giờ máy chủ (tự đồng bộ 5 phút một lần). Quá hạn mà bài không cho nộp muộn, hoặc bài đã đóng, thì ô soạn khoá lại và ghi lý do.
 
-- **Xem bài đã chấm**: phần đã được trả bài hiện bài viết **kèm đánh dấu của giáo viên** (cùng kiểu với màn chấm: gạch lỗi, chữ sửa, nền tô màu, nhận xét ở lề), chỉ đọc; bấm đoạn được đánh dấu để xem chi tiết, bật / tắt từng lớp ở hàng **Hiện:**. Khi bài đang **Cần sửa**, chữ sửa của giáo viên được ẩn — chỉ thấy loại lỗi và nhận xét để tự sửa.
+### 7.4. Đang làm
 
-### 7.4. Kết quả từng phần
-
-Mở từ nút **Xem kết quả** ở chi tiết bài / màn làm bài, hoặc bấm một lần nộp trong **Lịch sử nộp**. Mặc định hiện lần nộp gần nhất đã được trả; ô chọn ở góc phải để xem lần khác (lần chưa trả ghi "chờ kết quả").
-
-- **Đầu trang**: band của lần nộp và mức (vd 6.0 · Khá), giờ trả bài. Đang **Cần sửa** thì có khung đỏ (hạn sửa, lời nhắn, nút **Sửa bài**) và ghi chú "Gợi ý sửa sẽ hiện sau khi bạn nộp bản sửa".
-- **Bên trái**: bài viết kèm đánh dấu của giáo viên (như mục 7.3) và bảng **Lỗi trong bài** (mã lỗi, số lần).
-- **Bên phải**: từng tiêu chí với điểm, nhận xét, checklist (● đạt, ○ chưa đạt, ● cam = điểm yếu làm giới hạn điểm) và lý do bị giới hạn điểm nếu có; cuối cùng là nhận xét chung.
-- **So sánh các lần nộp** (khi đã nộp từ 2 lần): chọn lần cũ, xem **Gộp** hoặc **Song song** — chữ bỏ đi gạch ngang nền đỏ, chữ thêm nền xanh. Bên dưới là **"Đã sửa X/Y lỗi của lần N"** và từng lỗi của lần cũ: đánh giá của giáo viên, hoặc "(tự đoán)" khi giáo viên chưa đánh giá. Bấm một lỗi để thấy đoạn đó trên bài cũ.
-
-### 7.5. Kết quả học tập
-
-Menu **Kết quả học tập**. Chỉ tính những phần giáo viên **đã trả bài** (bài đang chấm chưa hiện).
-
-- **Ba thẻ đầu trang**: band trung bình (trung bình band cả bài của các bài đã có kết quả đủ mọi phần) kèm mức (Yếu → Xuất sắc); số phần đã nộp và số phần đã có kết quả; số phần nộp muộn (lần nộp đầu sau hạn).
-- **Band theo thời gian**: biểu đồ đường theo ngày trả bài — Band cả bài, Task 1, Task 2. Rê chuột vào một điểm để xem tên bài, band, ngày trả.
-- **Trung bình theo tiêu chí**: TA, TR, CC, LR, GRA gộp mọi bài (thang 0 – 9, 2 chữ số thập phân).
-- **Hồ sơ lỗi**: tối đa 10 mã lỗi giáo viên đánh dấu nhiều nhất trong các bài của bạn — nên ôn những lỗi đứng đầu.
-- **Kết quả từng bài**: bài trả gần nhất lên đầu, số phần đã trả, band cả bài (hoặc "Chưa đủ phần"). Bấm **+** để xem band từng phần và **Xem kết quả** chi tiết của phần đó; bấm tên bài để mở chi tiết bài.
-
-### 7.6. Đang làm
-
-**Trao đổi** (chat với giáo viên) sẽ có ở bước tiếp theo.
+**Xem kết quả chi tiết** (nhận xét trên bài, mã lỗi, so sánh các lần nộp), **kết quả học tập** và **trao đổi** sẽ có ở các bước tiếp theo.
 
 ---
 

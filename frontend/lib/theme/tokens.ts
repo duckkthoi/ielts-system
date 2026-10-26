@@ -52,12 +52,6 @@ export const PRESENCE = {
   offline: '#CBD5E1'
 } as const;
 
-/**
- * Màu chuỗi dữ liệu trên biểu đồ nhiều chuỗi — gán theo thứ tự cố định, không xoay vòng.
- * Đã kiểm tra mù màu (ΔE ≥ 13 giữa các cặp kề nhau) và tương phản ≥ 3:1 trên nền trắng.
- */
-export const CHART_SERIES = ['#2457E6', '#0D9488', '#C2410C'] as const;
-
 export const FONT_FAMILY = {
   sans: 'var(--font-roboto), system-ui, -apple-system, "Segoe UI", sans-serif',
   serif: 'var(--font-noto-serif), Georgia, "Times New Roman", serif',

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { BandBadge } from '@/components/BandBadge';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StatusTag } from '@/components/StatusTag';
-import { fileUrl, resultPath, TASK_TYPE_LABEL, writingPath } from '@/lib/constants';
+import { fileUrl, TASK_TYPE_LABEL, writingPath } from '@/lib/constants';
 import { getSubmissionDisplayStatus, SUBMISSION_STATUS_META } from '@/lib/theme/status';
 import type { StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
@@ -71,11 +71,6 @@ export function StudentPartView({
             <span className="inline-flex items-center gap-2 text-small text-neutral-500">
               Band <BandBadge band={band} />
             </span>
-          )}
-          {band !== null && (
-            <Link href={resultPath(assignmentId, part.partId)}>
-              <Button type={pending ? 'default' : 'primary'}>Xem kết quả</Button>
-            </Link>
           )}
           {part.currentVersion > 0 && (
             <Button icon={<History size={16} />} onClick={onHistory}>

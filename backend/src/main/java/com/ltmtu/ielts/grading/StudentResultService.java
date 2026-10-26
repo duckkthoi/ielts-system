@@ -19,7 +19,6 @@ import com.ltmtu.ielts.assignment.RubricCriterion;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.grading.BandCalculator.Weighted;
 import com.ltmtu.ielts.grading.GradingEnums.GradeStatus;
-import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
 import com.ltmtu.ielts.grading.GradingRules.ScoreCap;
 import com.ltmtu.ielts.grading.dto.StudentResultDtos.AssignmentResult;
 import com.ltmtu.ielts.grading.dto.StudentResultDtos.ChecklistMark;
@@ -152,12 +151,11 @@ public class StudentResultService {
 			RubricCriterion c = ic.getCriterion();
 			return new StudentInlineComment(ic.getStartOffset(), ic.getEndOffset(), ic.getQuote(), ic.getComment(),
 					ic.getErrorCode(), code == null ? null : code.getName(), c == null ? null : c.getCode(),
-					c == null ? null : c.getName(), hideSuggestion ? null : ic.getSuggestion(), ic.getKind(),
-					hideSuggestion ? null : ic.getEdit(), ic.getResolution());
+					c == null ? null : c.getName(), hideSuggestion ? null : ic.getSuggestion());
 		}
 
 		boolean countsAsError() {
-			return ic.getKind() == InlineKind.ERROR && ic.getErrorCode() != null && (code == null || !code.isPositive());
+			return ic.getErrorCode() != null && (code == null || !code.isPositive());
 		}
 	}
 

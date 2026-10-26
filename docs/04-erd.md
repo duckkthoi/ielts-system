@@ -31,11 +31,9 @@
 | `V6__audit_logs.sql` | Mức 2 / bước 12 | Bảng `audit_logs` (nhật ký hệ thống) | ✅ đã viết |
 | `V7__chat.sql` | Mức 2 / bước 9b | `chat_messages`, `chat_read_markers` | ✅ đã viết |
 | `V8__draft_version.sql` | Mức 2 / bước 10 | `submissions.draft_version` | ✅ đã viết |
-| `V9__inline_comment_kind.sql` | Mức 2 / F5b | `inline_comments.kind` (lỗi / lưu ý / dùng hay), `inline_comments.resolution` (đánh giá đã sửa khi so sánh 2 lần nộp); nới CK `chk_inline_has_content` cho lưu ý / dùng hay; thêm mã hệ thống `GR`, `OTHER` | ✅ đã viết |
-| `V10__inline_comment_edit.sql` | Mức 2 / F5b | `inline_comments.edit` (REPLACE / DELETE / INSERT — sửa kiểu track changes), `kind` thêm `COMMENT`; CK `chk_inline_has_content` tính cả `edit` | ✅ đã viết |
-| `V11__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
+| `V9__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
 
-> Lộ trình đã đánh số lại sau khi nghiên cứu nghiệp vụ chấm IELTS (tài liệu 08). Ở bước 12, migration Mức 2 (trước gộp trong V6) được tách theo từng bước — V6 audit, V7 chat, V8 bản nháp — để mỗi bước tự chứa bảng và entity của mình; Mức 3 dời sang V9 trở đi, rồi V11 trở đi khi V9, V10 dùng cho đánh dấu trên bài (F5b). Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
+> Lộ trình đã đánh số lại sau khi nghiên cứu nghiệp vụ chấm IELTS (tài liệu 08). Ở bước 12, migration Mức 2 (trước gộp trong V6) được tách theo từng bước — V6 audit, V7 chat, V8 bản nháp — để mỗi bước tự chứa bảng và entity của mình; Mức 3 dời sang V9 trở đi. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
 ---
 
@@ -241,9 +239,6 @@ erDiagram
         varchar error_code "bản chụp mã lỗi"
         bigint criterion_id FK
         text suggestion
-        varchar kind "V9"
-        varchar resolution "V9"
-        varchar edit "V10"
     }
     users |o--o{ error_codes : "mã riêng"
     users |o--o{ comment_bank : "nhận xét"
@@ -469,7 +464,7 @@ Một sinh viên có thể thuộc nhiều lớp. Xoá lớp không xoá tài kh
 
 Index: `teacher_id`, `(status, due_at)`.
 
-#### `assignment_parts` — các phần của bài (V1, V4, V11+)
+#### `assignment_parts` — các phần của bài (V1, V4, V9+)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -482,8 +477,8 @@ Index: `teacher_id`, `(status, due_at)`.
 | min_words | INT | CK ≥ 0 | 150 / 250 theo IELTS |
 | suggested_minutes | INT | CK > 0 | 20 / 40 theo IELTS |
 | part_due_at | TIMESTAMPTZ | | NULL = dùng `assignments.due_at` (BR-07) |
-| exam_mode | BOOLEAN | (V11+, Mức 3) DF false | Bật chế độ thi |
-| exam_duration_minutes | INT | (V10+, Mức 3) | Thời gian làm bài của chế độ thi |
+| exam_mode | BOOLEAN | (V9+, Mức 3) DF false | Bật chế độ thi |
+| exam_duration_minutes | INT | (V9+, Mức 3) | Thời gian làm bài của chế độ thi |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
 #### `rubric_criteria` — tiêu chí chấm của một phần (V1)
@@ -590,7 +585,7 @@ PK `(grade_id, criterion_id)`; cột `score NUMERIC(3,1)`, `comment TEXT`. Ứng
 #### `grade_checklist_marks` — tick checklist (V1)
 PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
 
-#### `inline_comments` — nhận xét gắn vào đoạn văn (V1, V5, V9, V10)
+#### `inline_comments` — nhận xét gắn vào đoạn văn (V1, V5)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -601,14 +596,10 @@ PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
 | error_code | VARCHAR(20) | (V5) | Mã lỗi, lưu **dạng chữ** (bản chụp): giáo viên xoá mã riêng thì nhận xét cũ vẫn giữ |
 | criterion_id | BIGINT | (V5) FK → rubric_criteria (SET NULL) | Tiêu chí mà lỗi ảnh hưởng tới |
 | suggestion | TEXT | (V5) | Gợi ý sửa. Ẩn với sinh viên khi "Cần sửa" (BR-21) |
-| kind | VARCHAR(10) | (V9, V10) NN, DF `ERROR`, CK `ERROR` / `HIGHLIGHT` / `GOOD` / `COMMENT` | Kiểu đánh dấu: lỗi (gạch gợn sóng) / lưu ý (vàng) / dùng hay (xanh) / nhận xét (xám, V10). Chỉ `ERROR` được tính vào thống kê lỗi; kiểu khác không mang mã lỗi (trừ mã khen); `COMMENT` phải có `comment` |
-| edit | VARCHAR(10) | (V10) CK `REPLACE` / `DELETE` / `INSERT` | Sửa kiểu track changes, chỉ với `ERROR`: `REPLACE` / `INSERT` dùng `suggestion` làm chữ mới (bắt buộc), `DELETE` không có `suggestion`. Bản ghi cũ có `suggestion` được đặt `REPLACE`. Chữ gốc không đổi |
-| resolution | VARCHAR(10) | (V9) CK `FIXED` / `NOT_FIXED` / `CHANGED` | Giáo viên đánh giá lỗi của lần nộp **cũ** khi so sánh với lần sau: đã sửa / chưa sửa / đổi khác gợi ý. `NULL` = giao diện tự đoán bằng cách ghép đoạn trích |
 | created_at | TIMESTAMPTZ | NN | |
 
 - Offset tính trên version đã nộp. Version không bao giờ đổi, nên offset luôn đúng.
-- CK `chk_inline_has_content` (V10): lỗi phải có ít nhất một trong `error_code`, `comment`, `suggestion`, `edit` (BR-21); `COMMENT` phải có `comment`; `REPLACE` / `INSERT` phải có `suggestion`; lưu ý / dùng hay được để trống (chỉ tô màu).
-- Không lưu prefix / suffix của đoạn trích: khi so sánh 2 lần nộp, giao diện lấy từ nội dung lần nộp cũ (bất biến) theo offset.
+- CK `chk_inline_has_content`: có ít nhất một trong `error_code`, `comment`, `suggestion` (BR-21).
 
 #### `error_codes` — mã lỗi (V5)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -623,7 +614,7 @@ PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
 | order_no | INT | NN | Thứ tự hiển thị của mã hệ thống |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
-UK một phần: `upper(code)` duy nhất trong nhóm mã hệ thống, và `(owner_id, upper(code))` duy nhất trong mã của một giáo viên. Mã riêng trùng mã hệ thống do service chặn (`409 DUPLICATE`). Seed 22 mã theo [08](08-nghiep-vu-cham-ielts.md) mục 4.3 (V5), thêm `GR`, `OTHER` ở V9.
+UK một phần: `upper(code)` duy nhất trong nhóm mã hệ thống, và `(owner_id, upper(code))` duy nhất trong mã của một giáo viên. Mã riêng trùng mã hệ thống do service chặn (`409 DUPLICATE`). Seed 22 mã theo [08](08-nghiep-vu-cham-ielts.md) mục 4.3.
 
 #### `comment_bank` — ngân hàng nhận xét (V5)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -687,7 +678,7 @@ PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp h
 
 Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction với thao tác (rollback thì không có dòng "ma"); riêng đăng nhập sai / bị chặn và import TCP ghi transaction riêng để không mất khi request lỗi.
 
-### 4.7 Nhóm mở rộng (V11 trở đi, Mức 3)
+### 4.7 Nhóm mở rộng (V9 trở đi, Mức 3)
 | Bảng | Mô tả |
 |---|---|
 | `exam_sessions` | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần. `ends_at` cố định từ lúc bắt đầu. `finish_reason` là `SUBMITTED` hoặc `TIMEOUT`. |

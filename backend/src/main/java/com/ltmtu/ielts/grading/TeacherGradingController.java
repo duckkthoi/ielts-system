@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,9 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ltmtu.ielts.common.ApiResponse;
 import com.ltmtu.ielts.grading.dto.GradingDtos.GradeDto;
 import com.ltmtu.ielts.grading.dto.GradingDtos.GradingScreen;
-import com.ltmtu.ielts.grading.dto.GradingDtos.InlineCommentDto;
 import com.ltmtu.ielts.grading.dto.GradingDtos.QueueRow;
-import com.ltmtu.ielts.grading.dto.GradingDtos.ResolutionRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.RevisionRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.SaveGradeRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.VersionSummary;
@@ -62,12 +59,6 @@ public class TeacherGradingController {
 	public ApiResponse<GradeDto> saveGrade(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long id,
 			@Valid @RequestBody SaveGradeRequest body) {
 		return ApiResponse.ok(gradingService.saveGrade(me.id(), id, body), "Đã lưu nháp chấm");
-	}
-
-	@PatchMapping("/{id}/inline-comments/{commentId}")
-	public ApiResponse<InlineCommentDto> setResolution(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long id,
-			@PathVariable Long commentId, @RequestBody ResolutionRequest body) {
-		return ApiResponse.ok(gradingService.setResolution(me.id(), id, commentId, body.resolution()));
 	}
 
 	@PostMapping("/{id}/return")
