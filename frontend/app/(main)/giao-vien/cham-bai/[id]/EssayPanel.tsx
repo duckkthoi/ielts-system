@@ -1,14 +1,34 @@
 import { Alert, Collapse, Image } from 'antd';
 
+import { EssayAnnotator } from '@/components/EssayAnnotator';
+import type { AnnotateAction, AnnotationView } from '@/components/EssayAnnotator';
 import { fileUrl } from '@/lib/constants';
 import type { GradingScreen } from '@/lib/types/grading';
 import { formatDateTime } from '@/lib/utils/date';
 
 // ─── Bài làm bên trái màn chấm: cảnh báo số từ, đề bài (thu gọn được), bài viết ─
 // `prompt` là HTML đã được server lọc — trường duy nhất được render bằng dangerouslySetInnerHTML.
-// Bài làm hiển thị nguyên văn (giữ xuống dòng). Nhận xét inline: bước F5b.
+// Bài làm vẽ bằng EssayAnnotator: đánh dấu kiểu "Word đã chấm", bôi đen để thêm (chỉ khi còn chấm được).
 
-export function EssayPanel({ screen }: { screen: GradingScreen }) {
+export function EssayPanel({
+  screen,
+  annotations,
+  selectedKey,
+  scrollNonce,
+  onSelect,
+  onAction,
+  onEdit,
+  onDelete
+}: {
+  screen: GradingScreen;
+  annotations: AnnotationView[];
+  selectedKey: string | null;
+  scrollNonce: number;
+  onSelect: (key: string | null) => void;
+  onAction: (action: AnnotateAction, range: { start: number; end: number }) => void;
+  onEdit: (key: string) => void;
+  onDelete: (key: string) => void;
+}) {
   const { part, version, warnings } = screen;
   return (
     <div className="flex flex-col gap-3">
@@ -43,9 +63,22 @@ export function EssayPanel({ screen }: { screen: GradingScreen }) {
           }
         ]}
       />
-      <article className="mx-auto w-full max-w-180 rounded-lg border border-neutral-100 bg-neutral-0 px-5 py-6 font-serif text-[16px]/[28px] whitespace-pre-wrap text-neutral-900 shadow-sm sm:px-8 sm:py-8 sm:text-essay">
-        {version.content}
-      </article>
+      {screen.editable && (
+        <p className="text-caption text-neutral-500">
+          Bôi đen chữ trong bài để đánh dấu lỗi, tô màu, sửa hoặc nhận xét.
+        </p>
+      )}
+      <EssayAnnotator
+        content={version.content}
+        annotations={annotations}
+        readOnly={!screen.editable}
+        selectedKey={selectedKey}
+        scrollNonce={scrollNonce}
+        onSelect={onSelect}
+        onAction={onAction}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
     </div>
   );
 }

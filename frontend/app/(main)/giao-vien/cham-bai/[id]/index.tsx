@@ -8,14 +8,20 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { BandBadge } from '@/components/BandBadge';
+import type { AnnotateAction } from '@/components/EssayAnnotator';
 import { StatusTag } from '@/components/StatusTag';
+import { feedbackApi } from '@/lib/api/feedback';
 import { gradingApi } from '@/lib/api/grading';
 import { gradingPath, queueQueryString } from '@/lib/constants';
 import { getSubmissionDisplayStatus, SUBMISSION_STATUS_META } from '@/lib/theme/status';
-import type { GradingScreen, QueueParams, QueueStatus, ZeroReason } from '@/lib/types/grading';
+import type { ErrorCodeDto, GradingScreen, QueueParams, QueueStatus, ZeroReason } from '@/lib/types/grading';
 import { formatDate } from '@/lib/utils/date';
 
-import { QUEUE_WINDOW } from './const';
+import { AnnotationFormModal } from './AnnotationFormModal';
+import type { AnnotationFormTarget } from './AnnotationFormModal';
+import { AnnotationList } from './AnnotationList';
+import { ComparePanel } from './ComparePanel';
+import { QUEUE_WINDOW, toAnnotationView } from './const';
 import { EssayPanel } from './EssayPanel';
 import { GradingPanel } from './GradingPanel';
 import { RevisionModal } from './RevisionModal';
@@ -47,6 +53,57 @@ function Workspace({
   const [busy, setBusy] = useState(false);
   const [zeroOpen, setZeroOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<'grade' | 'marks'>('grade');
+  const [codes, setCodes] = useState<ErrorCodeDto[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [scrollNonce, setScrollNonce] = useState(0);
+  const [formTarget, setFormTarget] = useState<AnnotationFormTarget | null>(null);
+  const [leftMode, setLeftMode] = useState<'essay' | 'compare'>('essay');
+  const content = screen.version.content;
+  const hasOlder = screen.versions.some((v) => v.versionNo < screen.version.versionNo);
+
+  useEffect(() => {
+    feedbackApi
+      .errorCodes()
+      .then(setCodes)
+      .catch(() => undefined);
+  }, []);
+
+  const views = useMemo(
+    () => g.form.inline.map((ic) => toAnnotationView(ic, codes, screen.criteria)),
+    [g.form.inline, codes, screen.criteria]
+  );
+
+  // ─── Đánh dấu trên bài ──────────────────────────────────────────────────────
+  // Tô màu / dùng hay / xoá chữ: thêm ngay; các nút còn lại mở form.
+  const handleAction = (action: AnnotateAction, range: { start: number; end: number }) => {
+    const quote = content.slice(range.start, range.end);
+    const base = { startOffset: range.start, endOffset: range.end, quote, errorCode: null, criterionId: null };
+    const quick = { comment: null, suggestion: null, edit: null };
+    if (action === 'highlight') setSelectedKey(g.addInline({ ...base, ...quick, kind: 'HIGHLIGHT' }));
+    else if (action === 'good') setSelectedKey(g.addInline({ ...base, ...quick, kind: 'GOOD' }));
+    else if (action === 'delete') setSelectedKey(g.addInline({ ...base, ...quick, kind: 'ERROR', edit: 'DELETE' }));
+    else setFormTarget({ range, quote, action });
+  };
+
+  const handleEditAnn = (key: string) => {
+    const ic = g.form.inline.find((x) => x.key === key);
+    if (!ic) return;
+    const { key: k, ...draft } = ic;
+    setFormTarget({ range: { start: ic.startOffset, end: ic.endOffset }, quote: ic.quote, key: k, draft });
+  };
+
+  const handleDeleteAnn = (key: string) => {
+    g.removeInline(key);
+    setSelectedKey(null);
+  };
+
+  const pickFromList = (key: string) => {
+    setSelectedKey(key);
+    setScrollNonce((n) => n + 1);
+    setTab('essay');
+    setLeftMode('essay');
+  };
 
   const finish = (updated: GradingScreen, text: string) => {
     message.success(text);
@@ -93,21 +150,73 @@ function Workspace({
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,58fr)_minmax(0,42fr)]">
         <section className={`min-h-0 overflow-y-auto p-4 sm:p-6 ${tab === 'essay' ? '' : 'hidden lg:block'}`}>
-          <EssayPanel screen={screen} />
+          {hasOlder && (
+            <Segmented
+              className="mb-3"
+              value={leftMode}
+              onChange={(v) => setLeftMode(v as 'essay' | 'compare')}
+              options={[
+                { value: 'essay', label: `Bài làm lần ${screen.version.versionNo}` },
+                { value: 'compare', label: 'So sánh với lần trước' }
+              ]}
+            />
+          )}
+          {leftMode === 'compare' && hasOlder ? (
+            <ComparePanel screen={screen} codes={codes} />
+          ) : (
+            <EssayPanel
+              screen={screen}
+              annotations={views}
+              selectedKey={selectedKey}
+              scrollNonce={scrollNonce}
+              onSelect={setSelectedKey}
+              onAction={handleAction}
+              onEdit={handleEditAnn}
+              onDelete={handleDeleteAnn}
+            />
+          )}
         </section>
         <aside
           className={`min-h-0 overflow-y-auto border-l border-neutral-100 bg-neutral-25 ${tab === 'grade' ? '' : 'hidden lg:block'}`}
         >
-          <GradingPanel
-            screen={screen}
-            g={g}
-            busy={busy}
-            onZero={() => setZeroOpen(true)}
-            onReturn={() => void handleReturn()}
-            onRevision={() => setRevisionOpen(true)}
-          />
+          <div className="sticky top-0 z-10 border-b border-neutral-100 bg-neutral-25 px-4 pt-3 pb-2 sm:px-5">
+            <Segmented
+              block
+              value={rightTab}
+              onChange={(v) => setRightTab(v as 'grade' | 'marks')}
+              options={[
+                { value: 'grade', label: 'Chấm điểm' },
+                { value: 'marks', label: `Đánh dấu (${views.length})` }
+              ]}
+            />
+          </div>
+          {rightTab === 'grade' ? (
+            <GradingPanel
+              screen={screen}
+              g={g}
+              busy={busy}
+              onZero={() => setZeroOpen(true)}
+              onReturn={() => void handleReturn()}
+              onRevision={() => setRevisionOpen(true)}
+            />
+          ) : (
+            <AnnotationList annotations={views} errorCodes={codes} selectedKey={selectedKey} onPick={pickFromList} />
+          )}
         </aside>
       </div>
+      {formTarget && (
+        <AnnotationFormModal
+          target={formTarget}
+          errorCodes={codes}
+          criteria={screen.criteria}
+          onCancel={() => setFormTarget(null)}
+          onSave={(draft) => {
+            if (formTarget.key) g.updateInline(formTarget.key, draft);
+            else setSelectedKey(g.addInline(draft));
+            setFormTarget(null);
+          }}
+        />
+      )}
       <ZeroModal open={zeroOpen} onCancel={() => setZeroOpen(false)} onConfirm={handleZero} />
       <RevisionModal
         open={revisionOpen}

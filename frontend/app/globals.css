@@ -53,6 +53,18 @@
   --color-diff-removed: #fee2e2;
   --color-diff-removed-text: #991b1b;
 
+  /* Đánh dấu trên bài kiểu "Word đã chấm" (F5b) */
+  --color-annot-good: #dcfce7;
+  --color-annot-comment: #e8edf3;
+  --color-annot-comment-active: #d5dde8;
+  --color-annot-edit: #dc2626;
+  --color-annot-grammar: #2563eb;
+  --color-annot-spelling: #dc2626;
+  --color-annot-vocabulary: #7c3aed;
+  --color-annot-coherence: #0d9488;
+  --color-annot-punctuation: #ea580c;
+  --color-annot-other: #64748b;
+
   --color-presence-online: #22c55e;
   --color-presence-away: #f59e0b;
   --color-presence-offline: #cbd5e1;
