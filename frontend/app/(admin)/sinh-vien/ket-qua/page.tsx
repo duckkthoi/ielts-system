@@ -1,9 +1,5 @@
-import type { Metadata } from 'next';
-
-import StudentResultsPage from './index';
-
-export const metadata: Metadata = { title: 'Kết quả học tập — IELTS Writing' };
+import { PagePlaceholder } from '@/components/PagePlaceholder';
 
 export default function Page() {
-  return <StudentResultsPage />;
+  return <PagePlaceholder title="Kết quả học tập" description="Điểm theo thời gian, điểm trung bình theo tiêu chí." />;
 }
