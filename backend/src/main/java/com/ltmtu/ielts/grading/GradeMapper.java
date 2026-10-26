@@ -53,17 +53,13 @@ final class GradeMapper {
 		List<InlineCommentDto> inline = g.getInlineComments().stream()
 				.sorted(Comparator.comparingInt(InlineComment::getStartOffset).thenComparing(InlineComment::getId,
 						Comparator.nullsLast(Comparator.naturalOrder())))
-				.map(GradeMapper::toInlineDto)
+				.map(ic -> new InlineCommentDto(ic.getId(), ic.getStartOffset(), ic.getEndOffset(), ic.getQuote(),
+						ic.getComment(), ic.getErrorCode(), ic.getCriterion() == null ? null : ic.getCriterion().getId(),
+						ic.getSuggestion()))
 				.toList();
 		return new GradeDto(g.getId(), g.getVersion().getVersionNo(), g.getStatus(), g.getZeroReason(),
 				g.getGeneralComment(), g.getOverallScore(), BandCalculator.display(g.getOverallScore()),
 				g.getOverallScore() != null, g.getGrader().getFullName(), g.getUpdatedAt(), g.getReturnedAt(),
 				scoreDtos, marks, inline);
-	}
-
-	static InlineCommentDto toInlineDto(InlineComment ic) {
-		return new InlineCommentDto(ic.getId(), ic.getStartOffset(), ic.getEndOffset(), ic.getQuote(), ic.getComment(),
-				ic.getErrorCode(), ic.getCriterion() == null ? null : ic.getCriterion().getId(), ic.getSuggestion(),
-				ic.getKind(), ic.getEdit(), ic.getResolution());
 	}
 }

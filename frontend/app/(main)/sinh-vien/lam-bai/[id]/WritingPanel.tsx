@@ -7,11 +7,10 @@ import { Send } from 'lucide-react';
 import Link from 'next/link';
 
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { EssayAnnotator, studentAnnotationViews } from '@/components/EssayAnnotator';
 import { studentApi } from '@/lib/api/student';
 import { ApiError } from '@/lib/apiError';
-import { resultPath } from '@/lib/constants';
-import type { StudentInlineComment, StudentPartDetail } from '@/lib/types/student';
+import { studentAssignmentPath } from '@/lib/constants';
+import type { StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
 import { useOnlineStatus } from '@/lib/utils/hooks';
 import { countWords } from '@/lib/utils/wordCount';
@@ -182,19 +181,6 @@ function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: Dr
 
 // ─── Chỉ đọc: đã nộp / quá hạn / bài đóng ─────────────────────────────────────
 
-/** Bản nộp đã trả bài: bài viết kèm đánh dấu của giáo viên, chỉ đọc (cùng giao diện với màn chấm). */
-function AnnotatedEssay({ content, inline }: { content: string; inline: StudentInlineComment[] }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const views = useMemo(() => studentAnnotationViews(inline), [inline]);
-  return (
-    <div className="mx-auto w-full max-w-240">
-      <EssayAnnotator content={content} annotations={views} readOnly selectedKey={selected} onSelect={setSelected} />
-    </div>
-  );
-}
-
-type Submitted = { content: string; submittedAt: string; late: boolean; inline: StudentInlineComment[] | null };
-
 function ViewMode({
   assignmentId,
   assignmentClosed,
@@ -204,7 +190,7 @@ function ViewMode({
   assignmentId: number;
   assignmentClosed: boolean;
   part: StudentPartDetail;
-  submitted: Submitted | null;
+  submitted: { content: string; submittedAt: string; late: boolean } | null;
 }) {
   const pending = part.status === 'NOT_STARTED' || part.status === 'DRAFT' || part.status === 'REVISION_REQUESTED';
   const toolbar = (
@@ -227,7 +213,7 @@ function ViewMode({
           description={part.status === 'RETURNED' ? 'Giáo viên đã trả bài.' : 'Bài đang chờ giáo viên chấm.'}
           action={
             part.status === 'RETURNED' ? (
-              <Link href={resultPath(assignmentId, part.partId)}>
+              <Link href={studentAssignmentPath(assignmentId)}>
                 <Button size="small">Xem kết quả</Button>
               </Link>
             ) : undefined
@@ -239,9 +225,7 @@ function ViewMode({
 
   return (
     <Layout part={part} toolbar={toolbar}>
-      {submitted?.inline ? (
-        <AnnotatedEssay content={submitted.content} inline={submitted.inline} />
-      ) : submitted ? (
+      {submitted ? (
         <EssayEditor
           value={submitted.content}
           readOnly
@@ -256,7 +240,9 @@ function ViewMode({
 
 // ─── Nạp dữ liệu theo chế độ ──────────────────────────────────────────────────
 
-type Loaded = { mode: 'edit'; init: DraftInit } | { mode: 'view'; submitted: Submitted | null };
+type Loaded =
+  | { mode: 'edit'; init: DraftInit }
+  | { mode: 'view'; submitted: { content: string; submittedAt: string; late: boolean } | null };
 
 export function WritingPanel({
   assignmentId,
@@ -281,15 +267,7 @@ export function WritingPanel({
       }
       if (part.currentVersion === 0) return { mode: 'view', submitted: null };
       const v = await studentApi.version(part.partId, part.currentVersion);
-      return {
-        mode: 'view',
-        submitted: {
-          content: v.content,
-          submittedAt: v.submittedAt,
-          late: v.late,
-          inline: v.result?.inlineComments ?? null
-        }
-      };
+      return { mode: 'view', submitted: { content: v.content, submittedAt: v.submittedAt, late: v.late } };
     };
     load()
       .then((data) => {

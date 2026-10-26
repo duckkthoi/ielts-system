@@ -67,7 +67,7 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 	// ─── Mã lỗi ──────────────────────────────────────────────────────────────
 
 	@Test
-	@DisplayName("BR-21: có sẵn 24 mã lỗi hệ thống theo thứ tự (22 mã V5 + GR, OTHER ở V9), kèm nhóm tiêu chí; mã riêng xếp sau và chỉ chủ thấy")
+	@DisplayName("BR-21: có sẵn 22 mã lỗi hệ thống theo thứ tự, kèm nhóm tiêu chí; mã riêng xếp sau và chỉ chủ thấy")
 	void systemAndOwnErrorCodes() throws Exception {
 		JsonNode before = data(call(get("/api/teacher/error-codes"), teacher).andExpect(apiStatus(200)));
 		List<JsonNode> system = new ArrayList<>();
@@ -76,11 +76,10 @@ class FeedbackLibraryIntegrationTest extends IntegrationTest {
 				system.add(n);
 			}
 		});
-		assertThat(system).hasSize(24);
-		assertThat(system.getLast().get("code").asString()).isEqualTo("OTHER");
+		assertThat(system).hasSize(22);
 		assertThat(system.getFirst().get("code").asString()).isEqualTo("SP");
 		assertThat(system.getFirst().get("criterion").asString()).isEqualTo("LR");
-		assertThat(field(before, "code")).contains("SING/PL", "^", "?", "IRR", "GOOD", "GR");
+		assertThat(field(before, "code")).contains("SING/PL", "^", "?", "IRR", "GOOD");
 		JsonNode good = system.stream().filter(n -> n.get("code").asString().equals("GOOD")).findFirst().orElseThrow();
 		assertThat(good.get("positive").asBoolean()).isTrue();
 		assertThat(good.get("criterion").isNull()).isTrue();

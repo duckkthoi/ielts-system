@@ -9,10 +9,8 @@ import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigat
 import { studentApi } from '@/lib/api/student';
 import { timeApi } from '@/lib/api/time';
 import { studentAssignmentPath } from '@/lib/constants';
-import { publishRealtime } from '@/lib/realtime';
 import type { StudentAssignmentDetail } from '@/lib/types/student';
 import { nextStudentAction } from '@/lib/utils/studentAction';
-import { useRealtimeStore } from '@/stores/useRealtimeStore';
 
 import { CLOCK_SYNC_MS, partTabLabel } from './const';
 import { WritingPanel } from './WritingPanel';
@@ -20,10 +18,6 @@ import { WritingPanel } from './WritingPanel';
 // ─── Sinh viên: màn làm bài (UC-23, UC-24, Prompt 7 C) ────────────────────────
 // /sinh-vien/lam-bai/{assignmentId}?phan={partId}. Đổi phần thì panel cũ tự lưu nốt nháp.
 // Đồng hồ đếm ngược theo giờ server (SD-11): đồng bộ khi vào màn và mỗi 5 phút.
-// Báo cho giáo viên biết đang mở phần nào (FR-54, `/app/presence/viewing`): gửi khi mở / đổi phần và
-// sau mỗi lần kết nối lại; rời màn thì gửi `partId = null`.
-
-const PRESENCE_VIEWING = '/app/presence/viewing';
 
 export default function WritingPage() {
   const router = useRouter();
@@ -33,8 +27,6 @@ export default function WritingPage() {
   const [detail, setDetail] = useState<StudentAssignmentDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [version, setVersion] = useState(0);
-
-  const realtimeStatus = useRealtimeStore((s) => s.status);
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
@@ -59,21 +51,6 @@ export default function WritingPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const part = detail
-    ? (detail.parts.find((p) => p.partId === partParam) ??
-      detail.parts.find((p) => p.partId === nextStudentAction(detail.parts).partId) ??
-      detail.parts[0])
-    : undefined;
-  const viewingPartId = part?.partId ?? null;
-
-  useEffect(() => {
-    if (realtimeStatus !== 'CONNECTED' || viewingPartId === null) return;
-    publishRealtime(PRESENCE_VIEWING, { assignmentId: id, partId: viewingPartId });
-    return () => {
-      publishRealtime(PRESENCE_VIEWING, { assignmentId: id, partId: null });
-    };
-  }, [realtimeStatus, id, viewingPartId]);
-
   if (notFound) {
     return (
       <Result
@@ -92,6 +69,11 @@ export default function WritingPage() {
       </div>
     );
   }
+
+  const part =
+    detail.parts.find((p) => p.partId === partParam) ??
+    detail.parts.find((p) => p.partId === nextStudentAction(detail.parts).partId) ??
+    detail.parts[0];
 
   return (
     <div className="flex flex-col">

@@ -180,11 +180,6 @@ export interface StudentInlineComment {
   criterionName: string | null;
   /** null khi bị ẩn (BR-21) hoặc giáo viên không ghi. */
   suggestion: string | null;
-  kind: 'ERROR' | 'HIGHLIGHT' | 'GOOD' | 'COMMENT';
-  /** null khi không sửa, hoặc bị ẩn vì bài đang "Cần sửa" (BR-21). */
-  edit: 'REPLACE' | 'DELETE' | 'INSERT' | null;
-  /** Giáo viên đánh giá lỗi này đã sửa ở lần nộp sau chưa (null = chưa đánh giá). */
-  resolution: 'FIXED' | 'NOT_FIXED' | 'CHANGED' | null;
 }
 
 export interface ErrorCount {

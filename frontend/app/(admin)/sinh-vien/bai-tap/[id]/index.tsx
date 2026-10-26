@@ -210,7 +210,7 @@ export default function StudentAssignmentDetailPage() {
         </div>
       </div>
 
-      <VersionHistoryDrawer assignmentId={detail.id} part={historyPart} onClose={() => setHistoryPart(null)} />
+      <VersionHistoryDrawer part={historyPart} onClose={() => setHistoryPart(null)} />
     </div>
   );
 }

@@ -7,9 +7,6 @@ import java.util.List;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
-import com.ltmtu.ielts.grading.GradingEnums.EditOp;
-import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
-import com.ltmtu.ielts.grading.GradingEnums.Resolution;
 import com.ltmtu.ielts.grading.GradingEnums.ZeroReason;
 
 /**
@@ -39,14 +36,9 @@ public final class StudentResultDtos {
 			BigDecimal score, String comment, BigDecimal limitedTo, String limitReason, List<ChecklistMark> checklist) {
 	}
 
-	/**
-	 * {@code suggestion}, {@code edit}: null khi bị ẩn (BR-21) hoặc giáo viên không ghi. {@code kind}: lỗi / lưu ý /
-	 * dùng hay / nhận xét;
-	 * {@code resolution}: giáo viên đánh giá lỗi này đã sửa ở lần nộp sau chưa (null = chưa đánh giá).
-	 */
+	/** {@code suggestion}: null khi bị ẩn (BR-21) hoặc giáo viên không ghi. */
 	public record StudentInlineComment(int startOffset, int endOffset, String quote, String comment, String errorCode,
-			String errorName, CriterionCode criterionCode, String criterionName, String suggestion, InlineKind kind,
-			EditOp edit, Resolution resolution) {
+			String errorName, CriterionCode criterionCode, String criterionName, String suggestion) {
 	}
 
 	/** Một dòng bảng "Lỗi trong bài": mã lỗi và số lần xuất hiện, theo tiêu chí. Không tính mã khen. */

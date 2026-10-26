@@ -3,27 +3,17 @@
 import { useEffect, useState } from 'react';
 
 import { Empty, Skeleton, Tag } from 'antd';
-import Link from 'next/link';
 
 import { AppDrawer } from '@/components/AppDrawer';
 import { BandBadge } from '@/components/BandBadge';
-import { resultPath } from '@/lib/constants';
 import { studentApi } from '@/lib/api/student';
 import type { StudentPartDetail, VersionSummary } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
 
 // ─── Lịch sử nộp một phần: mỗi lần nộp, số từ, muộn, band nếu đã trả (BR-13) ───
-// Bấm một lần nộp → màn kết quả của lần đó (xem bài, kết quả, so sánh với lần trước — F6a).
+// Xem nội dung + kết quả từng version và so sánh 2 version làm ở F6 (Prompt 7 D, E).
 
-export function VersionHistoryDrawer({
-  assignmentId,
-  part,
-  onClose
-}: {
-  assignmentId: number;
-  part: StudentPartDetail | null;
-  onClose: () => void;
-}) {
+export function VersionHistoryDrawer({ part, onClose }: { part: StudentPartDetail | null; onClose: () => void }) {
   const [loaded, setLoaded] = useState<{ partId: number; items: VersionSummary[] } | null>(null);
   const partId = part?.partId ?? null;
 
@@ -54,33 +44,31 @@ export function VersionHistoryDrawer({
       ) : (
         <ol className="m-0 flex list-none flex-col gap-3 p-0">
           {items.map((v) => (
-            <li key={v.versionNo}>
-              <Link
-                href={resultPath(assignmentId, part!.partId, v.versionNo)}
-                className="flex items-center justify-between gap-3 rounded-md border border-neutral-100 px-4 py-3 text-neutral-900 transition-colors hover:border-brand-200"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold text-neutral-900">
-                    Lần nộp {v.versionNo}
-                    {v.late && (
-                      <Tag color="orange" className="ml-2">
-                        Nộp muộn
-                      </Tag>
-                    )}
-                  </p>
-                  <p className="text-small text-neutral-500 tabular-nums">
-                    {formatDateTime(v.submittedAt)} · {v.wordCount} từ
-                  </p>
-                  {v.returned && v.returnedAt && (
-                    <p className="text-small text-success">Đã trả bài lúc {formatDateTime(v.returnedAt)}</p>
+            <li
+              key={v.versionNo}
+              className="flex items-center justify-between gap-3 rounded-md border border-neutral-100 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="font-semibold text-neutral-900">
+                  Lần nộp {v.versionNo}
+                  {v.late && (
+                    <Tag color="orange" className="ml-2">
+                      Nộp muộn
+                    </Tag>
                   )}
-                </div>
-                {v.returned ? (
-                  <BandBadge band={v.band} />
-                ) : (
-                  <span className="shrink-0 text-small text-neutral-400">Chờ kết quả</span>
+                </p>
+                <p className="text-small text-neutral-500 tabular-nums">
+                  {formatDateTime(v.submittedAt)} · {v.wordCount} từ
+                </p>
+                {v.returned && v.returnedAt && (
+                  <p className="text-small text-success">Đã trả bài lúc {formatDateTime(v.returnedAt)}</p>
                 )}
-              </Link>
+              </div>
+              {v.returned ? (
+                <BandBadge band={v.band} />
+              ) : (
+                <span className="shrink-0 text-small text-neutral-400">Chờ kết quả</span>
+              )}
             </li>
           ))}
         </ol>

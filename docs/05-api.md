@@ -373,9 +373,8 @@
 | PUT | `/api/teacher/submissions/{id}/grade` | Lưu nháp chấm → `GradeDto` (SD-08) |
 | POST | `/api/teacher/submissions/{id}/return` | Trả bài → `GradingScreen`. Yêu cầu đã chấm đủ mọi tiêu chí |
 | POST | `/api/teacher/submissions/{id}/request-revision` | Yêu cầu sửa `{note?, dueAt}` → `GradingScreen` |
-| PATCH | `/api/teacher/submissions/{id}/inline-comments/{commentId}` | So sánh 2 lần nộp: đánh giá lỗi của lần **cũ** `{resolution: FIXED \| NOT_FIXED \| CHANGED \| null}` → `InlineCommentDto` (V9) |
 | POST | `/api/teacher/submissions/{id}/ai-suggest` | Gợi ý AI (Mức 3, chỉ khi có API key) |
-| GET | `/api/teacher/error-codes` | Mã lỗi dùng được: 24 mã của hệ thống (theo thứ tự) rồi tới mã riêng của tôi |
+| GET | `/api/teacher/error-codes` | Mã lỗi dùng được: 22 mã của hệ thống (theo thứ tự) rồi tới mã riêng của tôi |
 | POST | `/api/teacher/error-codes` | Thêm mã riêng `{code, name, criterion?, description?, positive?}` → `200 ErrorCodeDto` |
 | PUT | `/api/teacher/error-codes/{id}` | Sửa mã riêng (cùng body) |
 | DELETE | `/api/teacher/error-codes/{id}` | Xoá mã riêng. Nhận xét inline đã dùng mã vẫn giữ mã dạng chữ |
@@ -403,10 +402,9 @@
   - tiêu chí không gửi = chưa chấm (vẫn lưu được, UC-17 E1); mục checklist không gửi = chưa tick; nhận xét inline không gửi = bị xoá;
   - điểm: trong `[0, maxScore]`, bội số của `step` (BR-11) → nếu sai `400`; vượt giới hạn của mục LIMIT đang tick (BR-17) hoặc bài ≤ 20 từ (BR-18) → `422 SCORE_LIMITED`;
   - `zeroReason` (`NO_ATTEMPT` / `NOT_ENGLISH` / `MEMORISED`, BR-19): server đặt mọi tiêu chí = 0. Gửi kèm điểm khác 0 → `400`;
-  - nhận xét inline (BR-21): offset tính theo đơn vị UTF-16 (giống `String.length` của JavaScript), `0 ≤ start < end ≤ độ dài bài`; `quote` nếu gửi phải **khớp đúng** đoạn văn ở vị trí đó (phát hiện client lệch vị trí), không gửi thì server tự lấy; `kind` (V9, V10): `ERROR` (lỗi, mặc định — mã khen thì thành `GOOD`) / `HIGHLIGHT` (lưu ý) / `GOOD` (dùng hay) / `COMMENT` (chỉ nhận xét, phải có `comment`); `edit` (V10, chỉ với `ERROR`): `REPLACE` / `INSERT` cần `suggestion` là chữ mới, `DELETE` không kèm `suggestion`, bỏ trống mà có `suggestion` = `REPLACE`; lỗi cần ít nhất một trong `errorCode` / `comment` / `suggestion` / `edit`; kiểu khác được để trống nhưng không mang mã lỗi (trừ mã khen); `errorCode` phải là mã của hệ thống hoặc của chính mình (không phân biệt hoa thường, lưu chữ hoa); không gửi `criterionId` thì server tự gắn tiêu chí cùng nhóm với mã lỗi (`TASK` → TA/TR của phần);
+  - nhận xét inline (BR-21): offset tính theo đơn vị UTF-16 (giống `String.length` của JavaScript), `0 ≤ start < end ≤ độ dài bài`; `quote` nếu gửi phải **khớp đúng** đoạn văn ở vị trí đó (phát hiện client lệch vị trí), không gửi thì server tự lấy; cần ít nhất một trong `errorCode` / `comment` / `suggestion`; `errorCode` phải là mã của hệ thống hoặc của chính mình (không phân biệt hoa thường, lưu chữ hoa); không gửi `criterionId` thì server tự gắn tiêu chí cùng nhóm với mã lỗi (`TASK` → TA/TR của phần);
   - giới hạn: 300 nhận xét inline, nhận xét tiêu chí / inline 2000 ký tự, gợi ý sửa 1000, nhận xét chung 5000;
   - band phần do **server** tính bằng `BandCalculator` (BR-12); bài chuyển `SUBMITTED → GRADED`.
-- **Đánh giá "đã sửa" khi so sánh 2 lần nộp** (`PATCH …/inline-comments/{commentId}`, V9): chỉ nhận xét kiểu `ERROR` (lưu ý / dùng hay → `400`) của lần nộp **đã có lần nộp sau** (lần mới nhất → `409 INVALID_STATE`); `resolution = null` = bỏ đánh giá, để giao diện tự đoán. Không đổi kết quả chấm nên làm được cả sau khi trả bài. Bài nộp của giáo viên khác hoặc nhận xét không thuộc bài nộp → `404`. So sánh nội dung 2 lần nộp tính ở client từ `GET …/{id}?versionNo` của từng lần (không có endpoint riêng).
 - **Trả bài**: bài ở `GRADED` và kết quả của version mới nhất đã chấm đủ mọi tiêu chí; thiếu → `409 INVALID_STATE`, message liệt kê tiêu chí còn thiếu. Chưa chấm → `409` "Bài này chưa được chấm".
 - **Yêu cầu sửa**: như trả bài, thêm: còn lượt sửa (`currentVersion − 1 < maxRevisions`, BR-10) → nếu hết `422 REVISION_LIMIT`; `dueAt` ở tương lai → nếu không `400`; bài tập chưa đóng → nếu đã đóng `409` (sinh viên không nộp lại được vào bài đã đóng). Bài tập đã đóng vẫn **chấm và trả bài** được.
 - Trả bài và yêu cầu sửa đều đặt kết quả sang `RETURNED` (sinh viên thấy điểm, BR-13), rồi phát sự kiện `GradingEvents.Returned` / `RevisionRequested` sau khi commit để B7 gửi thông báo.
@@ -438,8 +436,7 @@
                   "maxAllowed": 5.0, "limitReason": "Các phần chính chưa được trả lời đầy đủ" } ],
     "checklist": [ { "checklistItemId": 801, "checked": false }, { "checklistItemId": 802, "checked": true } ],
     "inlineComments": [ { "id": 5001, "startOffset": 120, "endOffset": 129, "quote": "people is",
-                          "comment": null, "errorCode": "SV", "criterionId": 54, "suggestion": "people are",
-                          "kind": "ERROR", "edit": "REPLACE", "resolution": null } ]
+                          "comment": null, "errorCode": "SV", "criterionId": 54, "suggestion": "people are" } ]
   },
   "versions": [ { "versionNo": 2, "submittedAt": "…", "wordCount": 274, "late": false, "gradeStatus": "DRAFT", "band": 6.5 },
                 { "versionNo": 1, "submittedAt": "…", "wordCount": 231, "late": false, "gradeStatus": "RETURNED", "band": 5.5 } ],
@@ -456,8 +453,7 @@
   "scores": [ { "criterionId": 51, "score": 5, "comment": "Ý 2 chưa có ví dụ." } ],
   "checklist": [ { "checklistItemId": 802, "checked": true } ],
   "inlineComments": [ { "startOffset": 120, "endOffset": 129, "quote": "people is",
-                        "errorCode": "SV", "criterionId": null, "comment": null, "suggestion": "people are",
-                        "kind": "ERROR", "edit": "REPLACE" } ],      // kind: ERROR | HIGHLIGHT | GOOD | COMMENT; edit: REPLACE | DELETE | INSERT | null
+                        "errorCode": "SV", "criterionId": null, "comment": null, "suggestion": "people are" } ],
   "generalComment": "Bài khá, cần phát triển ý sâu hơn.",
   "zeroReason": null
 }
@@ -524,13 +520,13 @@
     "inlineComments": [ { "startOffset": 17, "endOffset": 26, "quote": "people is", "comment": null,
                           "errorCode": "SV", "errorName": "Hoà hợp chủ ngữ – động từ",
                           "criterionCode": "GRA", "criterionName": "Grammatical Range and Accuracy",
-                          "suggestion": "people are", "kind": "ERROR", "edit": "REPLACE", "resolution": "FIXED" } ],
+                          "suggestion": "people are" } ],
     "errorSummary": [ { "criterionCode": "GRA", "criterionName": "…", "errorCode": "SV", "errorName": "…", "count": 2 } ]
   }
   ```
   - `limitedTo` / `limitReason`: tiêu chí bị giới hạn bởi mục "Giới hạn điểm" đang tick hoặc bài ≤ 20 từ (để hiện "CC bị giới hạn ở 5 vì: …").
-  - `errorSummary`: bảng "Lỗi trong bài", đếm theo tiêu chí (thứ tự trong rubric) rồi theo mã, nhiều nhất trước. Chỉ tính đánh dấu kiểu `ERROR` có mã (không tính mã khen `GOOD`, lưu ý, dùng hay, nhận xét không có mã). Tên mã lấy theo bộ mã của người chấm.
-  - **Ẩn gợi ý sửa (BR-21)**: khi bài đang "Cần sửa", với version đang bị yêu cầu sửa, và bài tập không bật `showSuggestionsOnRevision` → `suggestion = null`, `edit = null`, `suggestionsHidden = true`. Mã lỗi vẫn hiện để sinh viên tự sửa. Sinh viên nộp bản sửa xong thì gợi ý của bản cũ hiện lại.
+  - `errorSummary`: bảng "Lỗi trong bài", đếm theo tiêu chí (thứ tự trong rubric) rồi theo mã, nhiều nhất trước. Không tính mã khen (`GOOD`) và nhận xét không có mã. Tên mã lấy theo bộ mã của người chấm.
+  - **Ẩn gợi ý sửa (BR-21)**: khi bài đang "Cần sửa", với version đang bị yêu cầu sửa, và bài tập không bật `showSuggestionsOnRevision` → `suggestion = null`, `suggestionsHidden = true`. Mã lỗi vẫn hiện để sinh viên tự sửa. Sinh viên nộp bản sửa xong thì gợi ý của bản cũ hiện lại.
 - `GET /api/student/assignments/{id}/result` → `{assignmentId, title, parts: [{partId, orderNo, title, taskType, weight, versionNo, band}], complete, band, note}`:
   - band từng phần lấy từ **lần nộp gần nhất đã được trả bài** (đang "Cần sửa" thì vẫn là band của bản đã trả);
   - band cả bài = trung bình có trọng số band các phần (chưa làm tròn rồi mới làm tròn .25 / .75), **chỉ có khi mọi phần đã có kết quả**; nếu chưa thì `complete = false`, `band = null`, `note` = "Chưa đủ phần…";

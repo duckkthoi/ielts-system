@@ -8,12 +8,6 @@ import type { ChecklistKind, CriterionCode, TaskType } from '@/lib/types/assignm
 export type GradeStatus = 'DRAFT' | 'RETURNED';
 /** BR-19: lý do chấm 0 cả bài. */
 export type ZeroReason = 'NO_ATTEMPT' | 'NOT_ENGLISH' | 'MEMORISED';
-/** Kiểu đánh dấu (V9, V10): lỗi (gạch gợn sóng, tính vào thống kê) / lưu ý (vàng) / dùng hay (xanh) / nhận xét (xám). */
-export type InlineKind = 'ERROR' | 'HIGHLIGHT' | 'GOOD' | 'COMMENT';
-/** Sửa kiểu track changes (V10): thay chữ / xoá chữ / thêm chữ sau đoạn — chữ gốc không đổi. */
-export type EditOp = 'REPLACE' | 'DELETE' | 'INSERT';
-/** Đánh giá lỗi của lần nộp cũ khi so sánh: đã sửa / chưa sửa / đổi khác gợi ý. */
-export type Resolution = 'FIXED' | 'NOT_FIXED' | 'CHANGED';
 /** Nhóm tiêu chí để khớp mã lỗi / nhận xét mẫu (TA, TR → TASK). */
 export type CriterionGroup = 'TASK' | 'CC' | 'LR' | 'GRA';
 /** Trạng thái lọc hàng đợi (NOT_STARTED / DRAFT không có trong hàng đợi). */
@@ -91,10 +85,6 @@ export interface InlineCommentDto {
   errorCode: string | null;
   criterionId: number | null;
   suggestion: string | null;
-  kind: InlineKind;
-  edit: EditOp | null;
-  /** Chỉ đặt trên lần nộp cũ; null = giao diện tự đoán. */
-  resolution: Resolution | null;
 }
 
 export interface GradeDto {
@@ -174,31 +164,6 @@ export interface InlineCommentRequest {
   errorCode?: string | null;
   criterionId?: number | null;
   suggestion?: string | null;
-  kind?: InlineKind;
-  edit?: EditOp | null;
-}
-
-// ─── Mã lỗi và ngân hàng nhận xét (BR-21, BR-22) ─────────────────────────────
-
-export interface ErrorCodeDto {
-  id: number;
-  code: string;
-  name: string;
-  criterion: CriterionGroup | null;
-  description: string | null;
-  /** Mã khen (GOOD) — không tính là lỗi. */
-  positive: boolean;
-  /** Mã của hệ thống (không sửa / xoá được). */
-  system: boolean;
-}
-
-export interface CommentBankDto {
-  id: number;
-  criterion: CriterionGroup | null;
-  content: string;
-  useCount: number;
-  lastUsedAt: string | null;
-  system: boolean;
 }
 
 /** PUT …/grade thay toàn bộ kết quả chấm của version (tiêu chí / mục / nhận xét không gửi = chưa chấm / bỏ). */
