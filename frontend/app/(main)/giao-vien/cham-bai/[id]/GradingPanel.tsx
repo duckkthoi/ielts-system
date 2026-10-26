@@ -5,10 +5,10 @@ import clsx from 'clsx';
 import { AlertTriangle, Check, Loader2, Pencil, Send } from 'lucide-react';
 
 import { BandBadge } from '@/components/BandBadge';
-import { ZERO_REASON_LABEL } from '@/lib/constants';
 import type { GradingScreen } from '@/lib/types/grading';
 import { formatDateTime, formatTime } from '@/lib/utils/date';
 
+import { ZERO_REASON_LABEL } from './const';
 import { CriterionCard } from './CriterionCard';
 import { capOf, useGradeForm } from './useGradeForm';
 

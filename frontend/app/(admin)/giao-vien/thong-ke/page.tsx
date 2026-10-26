@@ -1,15 +1,5 @@
-import { Suspense } from 'react';
-
-import type { Metadata } from 'next';
-
-import ClassStatsPage from './index';
-
-export const metadata: Metadata = { title: 'Thống kê lớp — IELTS Writing' };
+import { PagePlaceholder } from '@/components/PagePlaceholder';
 
 export default function Page() {
-  return (
-    <Suspense>
-      <ClassStatsPage />
-    </Suspense>
-  );
+  return <PagePlaceholder title="Thống kê" description="Thống kê theo lớp và theo sinh viên, xuất Excel." />;
 }

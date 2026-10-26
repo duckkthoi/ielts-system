@@ -4,14 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Alert, Segmented, Select, Skeleton } from 'antd';
 
-import { ResolutionList, VersionDiff } from '@/components/VersionCompare';
-import type { ResolvedItem } from '@/components/VersionCompare';
 import { gradingApi } from '@/lib/api/grading';
 import type { ErrorCodeDto, GradingScreen, Resolution } from '@/lib/types/grading';
 import { formatDate } from '@/lib/utils/date';
 import { diffWords, guessResolution } from '@/lib/utils/textDiff';
 
 import { toAnnotationView } from './const';
+import { VersionDiff } from './VersionDiff';
+import { ResolutionList } from './ResolutionList';
+import type { ResolvedItem } from './ResolutionList';
 
 // ─── So sánh lần nộp đang xem với một lần trước (F5b, docs/08 mục 4.3) ───────
 // Nội dung và lỗi của lần cũ lấy từ GET …/{id}?versionNo (không có endpoint riêng); diff theo từ tính ở client.
@@ -133,7 +134,7 @@ export function ComparePanel({ screen, codes }: { screen: GradingScreen; codes: 
           {old.grade ? (
             <ResolutionList
               items={items}
-              groupOf={(code) => codes.find((c) => c.code === code)?.criterion ?? null}
+              errorCodes={codes}
               oldNo={oldNo}
               selectedId={selectedId}
               savingId={savingId}
