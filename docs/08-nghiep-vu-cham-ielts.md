@@ -151,15 +151,22 @@ Bộ **mã lỗi mặc định của hệ thống**. Giáo viên thêm được 
 | `LINK` | Từ nối / liên kết | CC | | `PARA` | Chia đoạn | CC |
 | `IRR` | Không liên quan đề | TA/TR | | `DEV` | Ý chưa được phát triển | TA/TR |
 | `?` | Không rõ nghĩa | — | | `GOOD` | Dùng hay (khen) | — |
+| `GR` | Ngữ pháp (chung) — V9 | GRA | | `OTHER` | Khác — V9 | — |
+
+**Chọn nhanh khi bôi đen (F5b):** 7 nút nhóm — Ngữ pháp `GR`, Chính tả `SP`, Từ vựng `WW`, Collocation `COL`, Liên kết `LINK`, Dấu câu `P`, Khác `OTHER` — bấm một lần là xong; muốn chi tiết thì chọn mã IELTS cụ thể ở bên dưới (VT, SV, ART…).
 
 Một nhận xét inline gồm:
+- **kiểu đánh dấu** (V9, V10): **lỗi** (gạch chân gợn sóng, tính vào thống kê lỗi), **lưu ý** (nền vàng), **dùng hay** (nền xanh), **nhận xét** (nền xám, chỉ có lời nhận xét);
+- **cách sửa** (V10, chỉ với lỗi) theo kiểu track changes của Word: **thay** (gạch chữ cũ, hiện chữ mới), **xoá** (gạch chữ cũ), **thêm chữ** (chèn sau đoạn đã chọn). Chữ gốc của sinh viên không đổi;
 - **đoạn văn** được bôi đen;
 - **mã lỗi** (tuỳ chọn);
 - **tiêu chí** (tự điền theo mã, sửa được);
 - **lời nhận xét** (tuỳ chọn);
-- **gợi ý sửa** (tuỳ chọn), hiển thị dạng ~~cũ~~ → **mới**.
+- **gợi ý sửa** (tuỳ chọn) = chữ mới của "thay" / "thêm chữ".
 
-Phải có ít nhất một trong ba: mã lỗi, nhận xét, gợi ý sửa.
+Đánh dấu **lỗi** phải có ít nhất một trong: mã lỗi, nhận xét, cách sửa. Khi bài đang "Cần sửa", sinh viên không thấy chữ sửa và cách sửa (BR-21) — chỉ thấy mã lỗi và nhận xét. Lưu ý / dùng hay được để trống (chỉ tô màu) và không gắn mã lỗi (trừ mã khen `GOOD`).
+
+**So sánh 2 lần nộp (F5b):** với mỗi lỗi của lần nộp cũ, giao diện tự đoán **Đã sửa** (đoạn trích không còn / đã đổi đúng gợi ý), **Chưa sửa** (đoạn trích còn nguyên), **Đã đổi nhưng khác gợi ý**, bằng cách ghép đoạn trích kèm vài chữ trước / sau (không dựa offset vì bài đã đổi). Giáo viên chỉnh tay được nếu đoán sai; sinh viên thấy kết quả này với các lần nộp đã trả bài. Cách đoán (F5b-3, `lib/utils/textDiff.ts`): đoạn trích + 3 từ mỗi bên còn trong bài mới, hoặc diff theo từ cho thấy đoạn không đổi → Chưa sửa; đã đổi: lỗi có gợi ý thay chữ thì chữ mới chứa gợi ý → Đã sửa, khác → Đổi khác gợi ý; lỗi xoá chữ / chỉ có mã → Đã sửa; thêm chữ → xem chữ ngay sau đoạn trích. Tóm tắt "Đã sửa X/Y" chỉ tính lỗi có mã, như thống kê lỗi.
 
 **Nguyên tắc sư phạm:** nghiên cứu về phản hồi bằng mã lỗi (indirect feedback) cho thấy nó giúp người học tự sửa và có tác dụng lâu dài tốt hơn sửa trực tiếp ([MacDonald – tổng quan 14 nghiên cứu](https://kuis.repo.nii.ac.jp/record/1706/files/JKIS_32_323_335.pdf)). Vì vậy **gợi ý sửa mặc định ẩn với sinh viên khi bài đang ở trạng thái "Cần sửa"**: sinh viên thấy mã lỗi để tự sửa. Gợi ý sửa chỉ hiện sau khi nộp bản sửa, hoặc khi bài được trả hẳn. Giáo viên bật / tắt được ở từng bài tập.
 

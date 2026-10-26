@@ -9,7 +9,10 @@ import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
 import com.ltmtu.ielts.grading.GradingEnums.CriterionGroup;
+import com.ltmtu.ielts.grading.GradingEnums.EditOp;
 import com.ltmtu.ielts.grading.GradingEnums.GradeStatus;
+import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
+import com.ltmtu.ielts.grading.GradingEnums.Resolution;
 import com.ltmtu.ielts.grading.GradingEnums.ZeroReason;
 import com.ltmtu.ielts.submission.SubmissionStatus;
 
@@ -73,8 +76,13 @@ public final class GradingDtos {
 	public record MarkDto(Long checklistItemId, boolean checked) {
 	}
 
+	/** {@code resolution}: giáo viên đánh giá lại lỗi khi so sánh với lần nộp sau (null = tự đoán). */
 	public record InlineCommentDto(Long id, int startOffset, int endOffset, String quote, String comment,
-			String errorCode, Long criterionId, String suggestion) {
+			String errorCode, Long criterionId, String suggestion, InlineKind kind, EditOp edit, Resolution resolution) {
+	}
+
+	/** Đặt / bỏ ({@code null}) đánh giá "đã sửa" cho một lỗi của lần nộp cũ. */
+	public record ResolutionRequest(Resolution resolution) {
 	}
 
 	/**
@@ -118,7 +126,9 @@ public final class GradingDtos {
 			@Size(max = 2000, message = "Nhận xét inline tối đa 2000 ký tự") String comment,
 			@Size(max = 20, message = "Mã lỗi tối đa 20 ký tự") String errorCode,
 			Long criterionId,
-			@Size(max = 1000, message = "Gợi ý sửa tối đa 1000 ký tự") String suggestion) {
+			@Size(max = 1000, message = "Gợi ý sửa tối đa 1000 ký tự") String suggestion,
+			InlineKind kind,
+			EditOp edit) {
 	}
 
 	/**
