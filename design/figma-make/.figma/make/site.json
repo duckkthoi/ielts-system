@@ -1,0 +1,10 @@
+{
+  "description": "Streamline content management and collaboration for teams by providing a centralized platform to view, edit, and share documents efficiently.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

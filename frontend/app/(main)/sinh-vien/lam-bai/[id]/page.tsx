@@ -1,5 +1,15 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import { Suspense } from 'react';
+
+import type { Metadata } from 'next';
+
+import WritingPage from './index';
+
+export const metadata: Metadata = { title: 'Làm bài — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Làm bài" description="Soạn bài từng phần, đếm số từ, tự lưu nháp, nộp bài." />;
+  return (
+    <Suspense>
+      <WritingPage />
+    </Suspense>
+  );
 }

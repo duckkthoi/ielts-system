@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -33,7 +33,11 @@ export function useAuthGuard(): { ready: boolean; user: AccountInfo | null } {
 
   const redirectTo = useMemo(() => {
     if (!isInitialized) return null;
-    if (!isAuthenticated || !user) return `${ROUTES.login}?returnUrl=${encodeURIComponent(pathname)}`;
+    if (!isAuthenticated || !user) {
+      // Giữ cả query (vd ?phan=…&lan=…) để đăng nhập xong mở đúng chỗ; chỉ chạy ở client (isInitialized)
+      const search = typeof window === 'undefined' ? '' : window.location.search;
+      return `${ROUTES.login}?returnUrl=${encodeURIComponent(pathname + search)}`;
+    }
     if (user.mustChangePassword) return ROUTES.changePassword;
     if (!canAccessPath(user, pathname)) return ROLE_HOME[user.role];
     return null;
@@ -77,4 +81,24 @@ export function useServerList<T, Q extends object>(
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
   return { data: result?.data ?? [], total: result?.total ?? 0, loading: result?.key !== key, reload };
+}
+
+// ─── Trạng thái mạng của trình duyệt (sự kiện online / offline) ───────────────
+
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener('online', onChange);
+  window.addEventListener('offline', onChange);
+  return () => {
+    window.removeEventListener('online', onChange);
+    window.removeEventListener('offline', onChange);
+  };
+}
+
+/** `false` khi trình duyệt báo mất mạng. Phía server render coi như có mạng. */
+export function useOnlineStatus(): boolean {
+  return useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true
+  );
 }
