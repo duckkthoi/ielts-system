@@ -3,9 +3,14 @@ package com.ltmtu.ielts.grading;
 import java.time.Instant;
 
 import com.ltmtu.ielts.assignment.RubricCriterion;
+import com.ltmtu.ielts.grading.GradingEnums.EditOp;
+import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
+import com.ltmtu.ielts.grading.GradingEnums.Resolution;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,7 +24,8 @@ import lombok.Setter;
 
 /**
  * Nhận xét gắn vào một đoạn của bài (BR-21). Offset tính theo ký tự trên nội dung version đã nộp — version bất
- * biến nên offset luôn đúng. Cần ít nhất một trong: mã lỗi, lời nhận xét, gợi ý sửa.
+ * biến nên offset luôn đúng. Lỗi ({@link InlineKind#ERROR}) cần ít nhất một trong: mã lỗi, lời nhận xét, gợi ý sửa;
+ * đánh dấu vàng / xanh được để trống.
  */
 @Getter
 @Setter
@@ -60,6 +66,20 @@ public class InlineComment {
 	/** Gợi ý sửa; ẩn với sinh viên khi bài đang "Cần sửa" nếu bài tập không bật hiển thị (BR-21). */
 	@Column(columnDefinition = "text")
 	private String suggestion;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private InlineKind kind = InlineKind.ERROR;
+
+	/** Sửa kiểu track changes (V10): REPLACE / INSERT dùng {@link #suggestion} làm chữ mới; null = không sửa. */
+	@Enumerated(EnumType.STRING)
+	@Column(length = 10)
+	private EditOp edit;
+
+	/** Đánh giá lại khi so sánh với lần nộp sau; null = để giao diện tự đoán (V9). */
+	@Enumerated(EnumType.STRING)
+	@Column(length = 10)
+	private Resolution resolution;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
