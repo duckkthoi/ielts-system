@@ -91,12 +91,6 @@ export function publishRealtime(destination: string, body: unknown): boolean {
   return true;
 }
 
-/** Để trống NEXT_PUBLIC_WS_URL → cùng origin với trang (/ws, đi qua proxy của Next hoặc nginx). */
-function wsUrl(): string {
-  if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
-  return `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
-}
-
 export function connectRealtime(options: { onReconnected: () => Promise<void> }) {
   if (client) return;
   onReconnected = options.onReconnected;
@@ -104,7 +98,7 @@ export function connectRealtime(options: { onReconnected: () => Promise<void> })
   setStatus('CONNECTING');
 
   client = new Client({
-    brokerURL: wsUrl(),
+    brokerURL: process.env.NEXT_PUBLIC_WS_URL,
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,
     reconnectDelay: 1_000,

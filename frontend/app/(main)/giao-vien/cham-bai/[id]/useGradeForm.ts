@@ -4,21 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { gradingApi } from '@/lib/api/grading';
 import { getErrorMessage } from '@/lib/apiError';
-import type {
-  EditOp,
-  GradeDto,
-  GradingCriterion,
-  GradingScreen,
-  InlineKind,
-  SaveGradeRequest,
-  ZeroReason
-} from '@/lib/types/grading';
+import type { GradeDto, GradingCriterion, GradingScreen, SaveGradeRequest, ZeroReason } from '@/lib/types/grading';
 import { clampScore, partBandRaw, roundBand, scoreCap } from '@/lib/utils/grading';
 
 // ─── Form chấm một version (SD-08) ────────────────────────────────────────────
 // Giữ điểm / checklist / nhận xét trên client, tự lưu nháp sau 2 giây ngừng sửa (PUT …/grade thay toàn bộ).
 // Giới hạn điểm và band chỉ tính để XEM TRƯỚC (BR-12, BR-17, BR-18); server tính lại khi lưu.
-// Đánh dấu trên bài (F5b) cũng nằm trong form: thêm / sửa / xoá rồi tự lưu như điểm.
+// Nhận xét inline hiện có được gửi lại nguyên vẹn để không bị xoá (sửa nhận xét inline: bước F5b).
 
 export type GradeSaveState = 'SAVED' | 'DIRTY' | 'SAVING' | 'ERROR';
 
@@ -30,24 +22,7 @@ export interface GradeForm {
   checked: Record<number, boolean>;
   generalComment: string;
   zeroReason: ZeroReason | null;
-  /** Đánh dấu trên bài; `key` ổn định phía client (id server đổi sau mỗi lần lưu vì PUT thay toàn bộ). */
-  inline: LocalInline[];
 }
-
-export interface LocalInline {
-  key: string;
-  startOffset: number;
-  endOffset: number;
-  quote: string;
-  kind: InlineKind;
-  errorCode: string | null;
-  criterionId: number | null;
-  comment: string | null;
-  suggestion: string | null;
-  edit: EditOp | null;
-}
-
-export type InlineDraft = Omit<LocalInline, 'key'>;
 
 function initForm(screen: GradingScreen): GradeForm {
   const g = screen.grade;
@@ -56,19 +31,7 @@ function initForm(screen: GradingScreen): GradeForm {
     comments: {},
     checked: {},
     generalComment: g?.generalComment ?? '',
-    zeroReason: g?.zeroReason ?? null,
-    inline: (g?.inlineComments ?? []).map((ic) => ({
-      key: `s${ic.id}`,
-      startOffset: ic.startOffset,
-      endOffset: ic.endOffset,
-      quote: ic.quote,
-      kind: ic.kind,
-      errorCode: ic.errorCode,
-      criterionId: ic.criterionId,
-      comment: ic.comment,
-      suggestion: ic.suggestion,
-      edit: ic.edit
-    }))
+    zeroReason: g?.zeroReason ?? null
   };
   for (const c of screen.criteria) {
     const s = g?.scores.find((x) => x.criterionId === c.id);
@@ -91,19 +54,15 @@ function toRequest(screen: GradingScreen, form: GradeForm): SaveGradeRequest {
     checklist: Object.entries(form.checked)
       .filter(([, checked]) => checked)
       .map(([id]) => ({ checklistItemId: Number(id), checked: true })),
-    inlineComments: [...form.inline]
-      .sort((a, b) => a.startOffset - b.startOffset)
-      .map((ic) => ({
-        startOffset: ic.startOffset,
-        endOffset: ic.endOffset,
-        quote: ic.quote,
-        kind: ic.kind,
-        errorCode: ic.errorCode,
-        criterionId: ic.criterionId,
-        comment: ic.comment,
-        suggestion: ic.suggestion,
-        edit: ic.edit
-      })),
+    inlineComments: (screen.grade?.inlineComments ?? []).map((ic) => ({
+      startOffset: ic.startOffset,
+      endOffset: ic.endOffset,
+      quote: ic.quote,
+      comment: ic.comment,
+      errorCode: ic.errorCode,
+      criterionId: ic.criterionId,
+      suggestion: ic.suggestion
+    })),
     generalComment: form.generalComment.trim() || null,
     zeroReason: form.zeroReason
   };
@@ -205,30 +164,6 @@ export function useGradeForm(screen: GradingScreen) {
     [change, wordCount]
   );
 
-  const keySeq = useRef(0);
-
-  /** Thêm một đánh dấu, trả về key để chọn ngay. */
-  const addInline = useCallback(
-    (draft: InlineDraft) => {
-      keySeq.current += 1;
-      const key = `n${keySeq.current}`;
-      change((f) => ({ ...f, inline: [...f.inline, { ...draft, key }] }));
-      return key;
-    },
-    [change]
-  );
-
-  const updateInline = useCallback(
-    (key: string, draft: InlineDraft) =>
-      change((f) => ({ ...f, inline: f.inline.map((x) => (x.key === key ? { ...draft, key } : x)) })),
-    [change]
-  );
-
-  const removeInline = useCallback(
-    (key: string) => change((f) => ({ ...f, inline: f.inline.filter((x) => x.key !== key) })),
-    [change]
-  );
-
   const setGeneralComment = useCallback((v: string) => change((f) => ({ ...f, generalComment: v })), [change]);
   const setZeroReason = useCallback((r: ZeroReason | null) => change((f) => ({ ...f, zeroReason: r })), [change]);
 
@@ -268,9 +203,6 @@ export function useGradeForm(screen: GradingScreen) {
     toggleItem,
     setGeneralComment,
     setZeroReason,
-    addInline,
-    updateInline,
-    removeInline,
     save,
     flush
   };

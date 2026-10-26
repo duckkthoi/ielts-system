@@ -88,17 +88,6 @@ Cần JDK 21+, Maven, Node 22, PostgreSQL 18 (DB `ielts` và `ielts_test`, user 
 | Frontend | `cd frontend` → `npm install` → `npm run dev` → http://localhost:3000 |
 | admin-cli | `cd admin-cli` → `mvn package` → `java -jar target/admin-cli.jar import --class DEMO-A --file ds.csv --user gv.demo` |
 
-Frontend gọi backend **qua proxy của Next** (`next.config.ts` → `rewrites` cho `/api`, `/uploads`, `/ws`): trình duyệt chỉ nói chuyện với cổng 3000, không dính CORS khi chạy trên máy.
-
-**Mở ra ngoài qua một tunnel** (cho người khác thử từ máy khác): chỉ cần tunnel **cổng 3000**, ví dụ `cloudflared tunnel --url http://localhost:3000` hoặc `ngrok http 3000`. Domain tunnel phải nằm trong `allowedDevOrigins` của `next.config.ts` (đã có Cloudflare, ngrok, localtunnel, Dev Tunnels) — thiếu thì trang hiện ra nhưng JavaScript không chạy, bấm nút không có tác dụng. Backend phải cho phép domain của tunnel (cả REST lẫn WebSocket đều kiểm tra `Origin`), nhận được mẫu có `*`:
-
-```powershell
-$env:CORS_ALLOWED_ORIGINS = "http://localhost:3000,https://*.trycloudflare.com,https://*.ngrok-free.app"
-mvn spring-boot:run "-Dspring-boot.run.profiles=dev,demo"
-```
-
-Link trong email vẫn trỏ `APP_URL` (mặc định http://localhost:3000) — muốn link trỏ về tunnel thì đặt thêm `APP_URL` và `APP_LOGIN_URL`. Tunnel chỉ để thử nhanh; demo chính thức dùng Docker + HTTPS (mục trên).
-
 ## Kiểm thử
 
 | Loại | Lệnh | Kết quả gần nhất |

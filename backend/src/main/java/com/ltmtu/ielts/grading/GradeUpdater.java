@@ -18,8 +18,6 @@ import com.ltmtu.ielts.assignment.RubricCriterion;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.grading.BandCalculator.Weighted;
 import com.ltmtu.ielts.grading.GradingEnums.CriterionGroup;
-import com.ltmtu.ielts.grading.GradingEnums.EditOp;
-import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
 import com.ltmtu.ielts.grading.GradingRules.LimitMark;
 import com.ltmtu.ielts.grading.GradingRules.ScoreCap;
 import com.ltmtu.ielts.grading.dto.GradingDtos.InlineCommentRequest;
@@ -136,11 +134,7 @@ final class GradeUpdater {
 		return map;
 	}
 
-	/**
-	 * BR-21: vị trí hợp lệ, đoạn trích khớp nội dung, mã lỗi tồn tại. Lỗi (ERROR) cần ít nhất mã lỗi / nhận xét / gợi ý
-	 * sửa; đánh dấu vàng / xanh được để trống nhưng không mang mã lỗi (để thống kê lỗi không lẫn). Không gửi
-	 * {@code kind} = ERROR, trừ khi mã là mã khen → GOOD (tương thích client cũ).
-	 */
+	/** BR-21: vị trí hợp lệ, đoạn trích khớp nội dung, có ít nhất mã lỗi / nhận xét / gợi ý sửa, mã lỗi tồn tại. */
 	private static List<InlineComment> buildInline(List<InlineCommentRequest> requests, List<RubricCriterion> criteria,
 			Map<Long, RubricCriterion> criteriaById, String content, Map<String, ErrorCode> codes, Instant now) {
 		List<InlineComment> result = new ArrayList<>();
@@ -165,27 +159,8 @@ final class GradeUpdater {
 					throw invalid(at + ": mã lỗi '" + key + "' không tồn tại");
 				}
 			}
-			InlineKind kind = r.kind() != null ? r.kind()
-					: code != null && code.isPositive() ? InlineKind.GOOD : InlineKind.ERROR;
-			// Có gợi ý sửa mà không nói kiểu sửa = thay thế (client cũ).
-			EditOp edit = r.edit() != null ? r.edit() : suggestion != null && kind == InlineKind.ERROR ? EditOp.REPLACE : null;
-			if (kind == InlineKind.ERROR && code == null && comment == null && suggestion == null && edit == null) {
-				throw invalid(at + ": cần có mã lỗi, lời nhận xét, gợi ý sửa hoặc thao tác sửa");
-			}
-			if (kind != InlineKind.ERROR && code != null && !code.isPositive()) {
-				throw invalid(at + ": chỉ đánh dấu lỗi mới gắn mã lỗi '" + code.getCode() + "'");
-			}
-			if (kind == InlineKind.COMMENT && comment == null) {
-				throw invalid(at + ": nhận xét không được để trống");
-			}
-			if (edit != null && kind != InlineKind.ERROR) {
-				throw invalid(at + ": chỉ đánh dấu lỗi mới kèm thao tác sửa");
-			}
-			if ((edit == EditOp.REPLACE || edit == EditOp.INSERT) && suggestion == null) {
-				throw invalid(at + ": cần nhập chữ mới");
-			}
-			if (edit == EditOp.DELETE && suggestion != null) {
-				throw invalid(at + ": xoá chữ thì không kèm chữ mới");
+			if (code == null && comment == null && suggestion == null) {
+				throw invalid(at + ": cần có mã lỗi, lời nhận xét hoặc gợi ý sửa");
 			}
 			RubricCriterion criterion = null;
 			if (r.criterionId() != null) {
@@ -204,8 +179,6 @@ final class GradeUpdater {
 			ic.setErrorCode(code == null ? null : code.getCode());
 			ic.setCriterion(criterion);
 			ic.setSuggestion(suggestion);
-			ic.setKind(kind);
-			ic.setEdit(edit);
 			ic.setCreatedAt(now);
 			result.add(ic);
 		}

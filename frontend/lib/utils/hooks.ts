@@ -33,11 +33,7 @@ export function useAuthGuard(): { ready: boolean; user: AccountInfo | null } {
 
   const redirectTo = useMemo(() => {
     if (!isInitialized) return null;
-    if (!isAuthenticated || !user) {
-      // Giữ cả query (vd ?phan=…&lan=…) để đăng nhập xong mở đúng chỗ; chỉ chạy ở client (isInitialized)
-      const search = typeof window === 'undefined' ? '' : window.location.search;
-      return `${ROUTES.login}?returnUrl=${encodeURIComponent(pathname + search)}`;
-    }
+    if (!isAuthenticated || !user) return `${ROUTES.login}?returnUrl=${encodeURIComponent(pathname)}`;
     if (user.mustChangePassword) return ROUTES.changePassword;
     if (!canAccessPath(user, pathname)) return ROLE_HOME[user.role];
     return null;
