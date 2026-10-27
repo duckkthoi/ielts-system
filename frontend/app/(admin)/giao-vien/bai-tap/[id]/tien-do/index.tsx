@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar, Button, Card, Input, Select, Table, Tooltip } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { AlertCircle, Bell, CheckCircle2, Clock, Download, Search, Wifi } from 'lucide-react';
+import { Activity, AlertCircle, Bell, CheckCircle2, Clock, Download, Search, Wifi } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 
 import { PageHeader } from '@/components/PageHeader';
@@ -24,6 +24,7 @@ import { useRealtimeStore } from '@/stores/useRealtimeStore';
 import { AssignmentHeaderFallback, AssignmentSubNav, useAssignmentHeader } from '../AssignmentSubNav';
 import { ProgressCell } from './ProgressCell';
 import { RemindModal } from './RemindModal';
+import { ActivityDrawer } from './ActivityDrawer';
 
 // ─── Giáo viên: tiến độ một bài theo thời gian thực (UC-16, FR-54, FR-61, Prompt 5) ─
 // Trạng thái ban đầu lấy từ REST; sau đó nghe 2 kênh `/topic/assignments/{id}/progress|presence`
@@ -58,6 +59,7 @@ export default function ProgressPage() {
   const [keyword, setKeyword] = useState('');
   const [selected, setSelected] = useState<number[]>([]);
   const [remindOpen, setRemindOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   // Ô vừa đổi → số lần đổi (để chạy lại hiệu ứng pulse).
   const [pulses, setPulses] = useState<Record<string, number>>({});
@@ -296,6 +298,9 @@ export default function ProgressPage() {
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button icon={<Activity size={16} />} onClick={() => setActivityOpen(true)}>
+              Hoạt động làm bài
+            </Button>
             <Tooltip title={closed ? 'Bài đã đóng, không gửi nhắc nhở được' : undefined}>
               <Button icon={<Bell size={16} />} disabled={closed || !matrix} onClick={() => setRemindOpen(true)}>
                 {selected.length > 0 ? `Nhắc ${selected.length} người đã chọn` : 'Nhắc nhở'}
@@ -350,6 +355,12 @@ export default function ProgressPage() {
           }}
         />
       )}
+      <ActivityDrawer
+        assignmentId={id}
+        classId={classId}
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
+      />
     </div>
   );
 }

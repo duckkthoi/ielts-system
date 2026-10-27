@@ -13,7 +13,7 @@ import com.ltmtu.ielts.user.Role;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Quyền các kênh theo bài tập (docs/05 B.2): chỉ <b>giáo viên chủ bài</b> nghe được tiến độ live và online của bài;
+ * Quyền các kênh theo bài tập (docs/05 B.2): chỉ <b>giáo viên chủ bài</b> nghe được tiến độ, online và hoạt động của bài;
  * chỉ <b>sinh viên</b> gửi được trạng thái đang mở phần nào (bài có được thấy hay không kiểm ở
  * {@link PresenceService}).
  */
@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AssignmentChannelRule implements StompAccessRule {
 
-	private static final Pattern TOPIC = Pattern.compile("^/topic/assignments/(\\d{1,18})/(progress|presence)$");
+	private static final Pattern TOPIC = Pattern.compile("^/topic/assignments/(\\d{1,18})/(progress|presence|activity)$");
 	private static final String VIEWING = "/app/presence/viewing";
 
 	private final TeacherAssignmentAccess assignmentAccess;
