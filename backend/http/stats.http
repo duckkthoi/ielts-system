@@ -23,6 +23,10 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/progress?status=NOT_STARTED
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
+### 100 hoạt động gần nhất khi làm bài (tối đa 200; có thể lọc classId)
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/activity?limit=100&classId={{classId}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
 ### Thống kê một bài: số nộp, tỉ lệ đúng hạn, band trung bình phần / tiêu chí, phân bố band, mã lỗi hay gặp
 GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/stats
 Authorization: Bearer {{login.response.body.data.accessToken}}

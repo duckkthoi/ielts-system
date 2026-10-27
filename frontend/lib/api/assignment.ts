@@ -7,6 +7,7 @@ import type {
   AssignmentRequest,
   AssignmentSettingsRequest,
   AssignmentSummary,
+  BandDescriptors,
   RubricTemplateDto,
   StudentOption,
   Targets,
@@ -110,6 +111,16 @@ export async function rubricTemplates(taskType?: TaskType): Promise<RubricTempla
   return res.data;
 }
 
+/** Bảng mô tả band thu gọn (diễn giải tiếng Việt, docs/08 mục 5.4) + link bản chính thức. Dữ liệu tĩnh. */
+export async function bandDescriptors(taskType?: TaskType): Promise<BandDescriptors> {
+  const res = (await axiosClient.get('/api/teacher/rubric-templates/descriptors', {
+    params: { taskType },
+    controlLoading: true,
+    toastError: false
+  })) as unknown as ApiResponse<BandDescriptors>;
+  return res.data;
+}
+
 /** Tìm sinh viên theo mã / tên để giao bài cho từng người (tối đa 20 kết quả). */
 export async function searchStudents(keyword: string): Promise<StudentOption[]> {
   const res = (await axiosClient.get('/api/teacher/students/search', {
@@ -128,6 +139,7 @@ export const assignmentApi = {
   remove,
   publish,
   getTargets,
+  bandDescriptors,
   addTargets,
   close,
   reopen,

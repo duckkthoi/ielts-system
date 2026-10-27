@@ -25,7 +25,11 @@ class ChatQueries {
 
 	/** Điều kiện "tin thuộc kênh" theo loại kênh; tên cột lấy từ enum, không từ dữ liệu người dùng. */
 	private static String channelColumn(Type type) {
-		return type == Type.SUBMISSION ? "submission_id" : "classroom_id";
+		return switch (type) {
+		case SUBMISSION -> "submission_id";
+		case CLASSROOM -> "classroom_id";
+		case DIRECT -> "direct_channel_id";
+		};
 	}
 
 	private final NamedParameterJdbcTemplate jdbc;
@@ -36,16 +40,67 @@ class ChatQueries {
 	 */
 	boolean isMember(Long userId, ChatChannel channel) {
 		MapSqlParameterSource p = new MapSqlParameterSource("ref", channel.refId()).addValue("me", userId);
-		String sql = channel.type() == Type.SUBMISSION ? """
+		String sql = switch (channel.type()) {
+		case SUBMISSION -> """
 				SELECT EXISTS (
 				    SELECT 1 FROM submissions s JOIN assignment_parts ap ON ap.id = s.part_id
 				    JOIN assignments a ON a.id = ap.assignment_id
-				    WHERE s.id = :ref AND (s.student_id = :me OR a.teacher_id = :me))""" : """
+				    WHERE s.id = :ref AND (s.student_id = :me OR a.teacher_id = :me))""";
+		case CLASSROOM -> """
 				SELECT EXISTS (
 				    SELECT 1 FROM classrooms c WHERE c.id = :ref
 				      AND (c.teacher_id = :me
 				           OR EXISTS (SELECT 1 FROM class_members m WHERE m.classroom_id = c.id AND m.student_id = :me)))""";
+		case DIRECT -> """
+				SELECT EXISTS (
+				    SELECT 1 FROM direct_chat_channels d
+				    WHERE d.id = :ref AND (d.teacher_id = :me OR d.student_id = :me))""";
+		};
 		return Boolean.TRUE.equals(jdbc.queryForObject(sql, p, Boolean.class));
+	}
+
+	/** Tên đăng nhập của bên còn lại trong kênh bài nộp (sinh viên chủ bài nộp / giáo viên chủ bài tập), trừ người gửi. */
+	List<String> otherSubmissionMembers(long submissionId, Long exceptUserId) {
+		return jdbc.queryForList("""
+				SELECT u.username FROM submissions s JOIN assignment_parts ap ON ap.id = s.part_id
+				JOIN assignments a ON a.id = ap.assignment_id
+				JOIN users u ON u.id IN (s.student_id, a.teacher_id)
+				WHERE s.id = :ref AND u.id <> :me""",
+				new MapSqlParameterSource("ref", submissionId).addValue("me", exceptUserId), String.class);
+	}
+
+	/** Tên đăng nhập của bên kia trong kênh riêng giáo viên–sinh viên. */
+	List<String> otherDirectMembers(long channelId, Long exceptUserId) {
+		return jdbc.queryForList("""
+				SELECT u.username FROM direct_chat_channels d JOIN users u ON u.id IN (d.teacher_id, d.student_id)
+				WHERE d.id = :ref AND u.id <> :me""",
+				new MapSqlParameterSource("ref", channelId).addValue("me", exceptUserId), String.class);
+	}
+
+	/** Giáo viên chỉ được mở chat với sinh viên đang thuộc lớp hoặc bài mình phụ trách. */
+	boolean canTeacherContactStudent(Long teacherId, Long studentId) {
+		return Boolean.TRUE.equals(jdbc.queryForObject("""
+				SELECT EXISTS (
+				    SELECT 1 FROM users s
+				    WHERE s.id = :student AND s.role = 'STUDENT' AND EXISTS (
+				        SELECT 1 FROM classrooms c JOIN class_members m ON m.classroom_id = c.id
+				        WHERE c.teacher_id = :teacher AND m.student_id = s.id
+				    )
+				) OR EXISTS (
+				    SELECT 1 FROM assignment_targets t JOIN assignments a ON a.id = t.assignment_id
+				    WHERE a.teacher_id = :teacher AND (t.student_id = :student OR EXISTS (
+				        SELECT 1 FROM class_members m WHERE m.classroom_id = t.classroom_id AND m.student_id = :student
+				    ))
+				)""", new MapSqlParameterSource("teacher", teacherId).addValue("student", studentId), Boolean.class));
+	}
+
+	ChannelSummary directSummary(long channelId, long viewerId) {
+		return jdbc.queryForObject("""
+				SELECT CASE WHEN d.teacher_id = :me THEN 'Trao đổi với ' || su.full_name
+				            ELSE 'Trao đổi với ' || tu.full_name END AS title
+				FROM direct_chat_channels d JOIN users tu ON tu.id = d.teacher_id JOIN users su ON su.id = d.student_id
+				WHERE d.id = :ref""", new MapSqlParameterSource("ref", channelId).addValue("me", viewerId),
+				(rs, i) -> new ChannelSummary("direct-" + channelId, Type.DIRECT.name(), rs.getString("title"), null, 0));
 	}
 
 	String fullName(Long userId) {
@@ -106,11 +161,21 @@ class ChatQueries {
 				    JOIN users u ON u.id = s.student_id
 				    WHERE (s.student_id = :me OR a.teacher_id = :me)
 				      AND EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.submission_id = s.id)
+				    UNION ALL
+				    SELECT 'DIRECT', d.id,
+				           CASE WHEN d.teacher_id = :me THEN 'Trao đổi với ' || su.full_name
+				                ELSE 'Trao đổi với ' || tu.full_name END
+				    FROM direct_chat_channels d
+				    JOIN users tu ON tu.id = d.teacher_id
+				    JOIN users su ON su.id = d.student_id
+				    WHERE (d.teacher_id = :me OR d.student_id = :me)
+				      AND EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.direct_channel_id = d.id)
 				), msg AS (
 				    SELECT ch.type, ch.ref, cm.id, cm.sender_id, cm.content, cm.created_at
 				    FROM ch JOIN chat_messages cm
 				      ON (ch.type = 'SUBMISSION' AND cm.submission_id = ch.ref)
 				      OR (ch.type = 'CLASSROOM' AND cm.classroom_id = ch.ref)
+				      OR (ch.type = 'DIRECT' AND cm.direct_channel_id = ch.ref)
 				)
 				SELECT ch.type, ch.ref, ch.title,
 				       last.id AS last_id, last.content AS last_content, last.created_at AS last_at, lu.full_name AS last_sender,

@@ -537,8 +537,8 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 | Mục | Nội dung |
 |---|---|
 | Tác nhân | Giáo viên, Sinh viên |
-| Mô tả | Nhắn tin realtime qua WebSocket. Có hai loại kênh: kênh riêng của một **bài nộp** (giữa giáo viên và sinh viên đó) và kênh chung của **lớp**. |
-| Tiền điều kiện | Người dùng thuộc kênh: là chủ bài nộp hoặc giáo viên của bài; hoặc là thành viên hoặc giáo viên của lớp. |
+| Mô tả | Nhắn tin realtime qua WebSocket. Có kênh riêng của một **bài nộp**, kênh **trao đổi riêng giáo viên–học sinh**, và kênh chung của **lớp**. |
+| Tiền điều kiện | Người dùng thuộc kênh: là chủ bài nộp hoặc giáo viên của bài; là cặp giáo viên–học sinh đã mở kênh riêng; hoặc là thành viên hoặc giáo viên của lớp. |
 | Hậu điều kiện | Tin nhắn được lưu DB và tới mọi người đang mở kênh. *(Đã cài ở bước 9b.)* |
 
 **Luồng chính**

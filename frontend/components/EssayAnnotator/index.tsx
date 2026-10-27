@@ -13,6 +13,7 @@ import { AnnotationCard } from './AnnotationCard';
 import { BUBBLE_HEIGHT, CARD_HEIGHT, LAYER_LABEL, TOOLBAR_ACTIONS, WAVY_CLASS } from './const';
 import type { AnnotateAction, AnnotationView } from './type';
 
+export { studentAnnotationViews } from './studentViews';
 export type { AnnotateAction, AnnotationView } from './type';
 
 // ─── Bài viết kèm đánh dấu kiểu "Word đã chấm" (F5b) ──────────────────────────

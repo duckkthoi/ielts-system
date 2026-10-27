@@ -5,19 +5,19 @@ import clsx from 'clsx';
 
 import type { AnnotationView } from '@/components/EssayAnnotator';
 import { CATEGORY_DOT } from '@/components/EssayAnnotator/const';
-import type { ErrorCodeDto, Resolution } from '@/lib/types/grading';
+import type { Resolution } from '@/lib/types/grading';
 import { CATEGORY_LABEL, effectiveEdit } from '@/lib/utils/annotations';
 import { fixSummary } from '@/lib/utils/textDiff';
 
 import { RESOLUTION_META } from './const';
 
-// ─── So sánh: tóm tắt "Đã sửa X/Y" + từng lỗi của lần cũ (tự đoán, giáo viên chỉnh tay được) ─
+// ─── So sánh: tóm tắt "Đã sửa X/Y" + từng lỗi của lần cũ (tự đoán; giáo viên chỉnh tay được, sinh viên chỉ xem) ─
 
 export interface ResolvedItem {
   id: number;
   view: AnnotationView;
   guess: Resolution;
-  /** Giáo viên đã chỉnh tay (lưu ở server); null = theo tự đoán. */
+  /** Giáo viên đã đánh giá (lưu ở server); null = theo tự đoán. */
   manual: Resolution | null;
 }
 
@@ -28,7 +28,7 @@ const OPTIONS = (['FIXED', 'CHANGED', 'NOT_FIXED'] as const).map((r) => ({
 
 export function ResolutionList({
   items,
-  errorCodes,
+  groupOf,
   oldNo,
   selectedId,
   savingId,
@@ -36,12 +36,14 @@ export function ResolutionList({
   onChange
 }: {
   items: ResolvedItem[];
-  errorCodes: ErrorCodeDto[];
+  /** Nhóm tiêu chí của một mã lỗi (để xếp nhóm lỗi). */
+  groupOf: (code: string) => string | null;
   oldNo: number;
   selectedId: number | null;
-  savingId: number | null;
+  savingId?: number | null;
   onPick: (id: number) => void;
-  onChange: (id: number, resolution: Resolution | null) => void;
+  /** Không truyền = chỉ xem (sinh viên). */
+  onChange?: (id: number, resolution: Resolution | null) => void;
 }) {
   const summary = fixSummary(
     items.map((it) => ({
@@ -49,7 +51,7 @@ export function ResolutionList({
       resolution: it.manual ?? it.guess,
       criterionLabel: it.view.criterionLabel
     })),
-    (code) => errorCodes.find((c) => c.code === code)?.criterion ?? null
+    groupOf
   );
 
   if (items.length === 0) {
@@ -67,8 +69,10 @@ export function ResolutionList({
           lỗi của lần {oldNo}
         </h3>
         <p className="mt-0.5 text-small text-neutral-500">
-          Đổi khác gợi ý {summary.changed} · Chưa sửa {summary.notFixed}. Tự đoán theo đoạn trích; bấm để chỉnh nếu đoán
-          sai.
+          Đổi khác gợi ý {summary.changed} · Chưa sửa {summary.notFixed}.{' '}
+          {onChange
+            ? 'Tự đoán theo đoạn trích; bấm để chỉnh nếu đoán sai.'
+            : 'Mục "(tự đoán)" do hệ thống đoán theo đoạn trích, giáo viên chưa đánh giá.'}
         </p>
         {summary.total > 0 && (
           <div className="mt-2 flex flex-col gap-2">
@@ -144,20 +148,22 @@ export function ResolutionList({
                 </span>
                 {a.comment && <span className="line-clamp-2 text-neutral-500">{a.comment}</span>}
               </button>
-              <span className="flex flex-wrap items-center gap-2">
-                <Segmented
-                  size="small"
-                  value={value}
-                  disabled={savingId === id}
-                  options={OPTIONS}
-                  onChange={(v) => onChange(id, v as Resolution)}
-                />
-                {manual && (
-                  <Button size="small" type="link" disabled={savingId === id} onClick={() => onChange(id, null)}>
-                    Về tự đoán
-                  </Button>
-                )}
-              </span>
+              {onChange && (
+                <span className="flex flex-wrap items-center gap-2">
+                  <Segmented
+                    size="small"
+                    value={value}
+                    disabled={savingId === id}
+                    options={OPTIONS}
+                    onChange={(v) => onChange(id, v as Resolution)}
+                  />
+                  {manual && (
+                    <Button size="small" type="link" disabled={savingId === id} onClick={() => onChange(id, null)}>
+                      Về tự đoán
+                    </Button>
+                  )}
+                </span>
+              )}
             </li>
           );
         })}

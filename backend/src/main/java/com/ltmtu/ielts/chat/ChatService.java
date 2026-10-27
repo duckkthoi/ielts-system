@@ -40,6 +40,7 @@ public class ChatService {
 	private static final long TYPING_GAP_MS = 2000;
 
 	private final ChatMessageRepository messageRepository;
+	private final DirectChatChannelRepository directChannelRepository;
 	private final ChatReadMarkerRepository readRepository;
 	private final ChatQueries queries;
 	private final SimpMessagingTemplate messaging;
@@ -49,8 +50,15 @@ public class ChatService {
 	/** Lần "đang gõ" gần nhất của (người, kênh) — trong bộ nhớ. */
 	private final Map<String, Instant> lastTyping = new ConcurrentHashMap<>();
 
+	/** Hàng đợi riêng: tin mới ở kênh bài nộp, để người chưa có kênh trong danh sách biết mà tải lại. */
+	static final String USER_QUEUE = "/queue/chat";
+
 	/** Sự kiện nội bộ: phát tin sau commit. */
 	record Broadcast(String topic, Object payload) {
+	}
+
+	/** Sự kiện nội bộ: gửi riêng từng người sau commit. */
+	record UserBroadcast(List<String> usernames, Object payload) {
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -58,10 +66,26 @@ public class ChatService {
 		messaging.convertAndSend(b.topic(), b.payload());
 	}
 
+	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+	public void afterCommit(UserBroadcast b) {
+		b.usernames().forEach(u -> messaging.convertAndSendToUser(u, USER_QUEUE, b.payload()));
+	}
+
 	/** Kênh của tôi (REST {@code GET /api/chat/channels}). */
 	@Transactional(readOnly = true)
 	public List<ChannelSummary> channels(Long userId) {
 		return queries.channelsOf(userId);
+	}
+
+	/** Mở hoặc lấy kênh riêng với sinh viên đang thuộc lớp hoặc bài của giáo viên. */
+	@Transactional
+	public ChannelSummary openDirect(Long teacherId, Long studentId) {
+		if (!queries.canTeacherContactStudent(teacherId, studentId)) {
+			throw ApiException.notFound("Không tìm thấy sinh viên");
+		}
+		DirectChatChannel channel = directChannelRepository.findByTeacherIdAndStudentId(teacherId, studentId)
+				.orElseGet(() -> createDirect(teacherId, studentId));
+		return queries.directSummary(channel.getId(), teacherId);
 	}
 
 	/** Lịch sử, mới nhất trước. Không thuộc kênh hoặc mã kênh sai → 404 (không lộ kênh tồn tại). */
@@ -100,6 +124,12 @@ public class ChatService {
 		MessageEvent event = new MessageEvent("MESSAGE", saved.getId(), channel.id(), userId, queries.fullName(userId),
 				saved.getContent(), saved.getClientMsgId(), saved.getCreatedAt());
 		events.publishEvent(new Broadcast(channel.topic(), event));
+		if (channel.type() == ChatChannel.Type.SUBMISSION) {
+			// Kênh bài nộp chỉ vào danh sách khi đã có tin → bên kia có thể chưa nghe topic của kênh.
+			events.publishEvent(new UserBroadcast(queries.otherSubmissionMembers(channel.refId(), userId), event));
+		} else if (channel.type() == ChatChannel.Type.DIRECT) {
+			events.publishEvent(new UserBroadcast(queries.otherDirectMembers(channel.refId(), userId), event));
+		}
 		return event;
 	}
 
@@ -134,5 +164,14 @@ public class ChatService {
 			throw ApiException.notFound("Không tìm thấy kênh chat");
 		}
 		return channel;
+	}
+
+	private DirectChatChannel createDirect(Long teacherId, Long studentId) {
+		try {
+			return directChannelRepository.saveAndFlush(DirectChatChannel.of(teacherId, studentId, clock.instant()));
+		} catch (DataIntegrityViolationException e) {
+			return directChannelRepository.findByTeacherIdAndStudentId(teacherId, studentId)
+					.orElseThrow(() -> ApiException.conflict("DUPLICATE", "Không thể mở cuộc trò chuyện"));
+		}
 	}
 }

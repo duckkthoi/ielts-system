@@ -1,5 +1,15 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import { Suspense } from 'react';
+
+import type { Metadata } from 'next';
+
+import ChatPage from './index';
+
+export const metadata: Metadata = { title: 'Trao đổi — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Trao đổi" description="Chat theo bài nộp và theo lớp." />;
+  return (
+    <Suspense>
+      <ChatPage />
+    </Suspense>
+  );
 }

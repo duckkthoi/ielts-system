@@ -1,22 +1,8 @@
 import type { AnnotationView } from '@/components/EssayAnnotator';
-import type { ErrorCodeDto, GradingCriterion, Resolution, ZeroReason } from '@/lib/types/grading';
+import type { ErrorCodeDto, GradingCriterion } from '@/lib/types/grading';
 import { categoryOf } from '@/lib/utils/annotations';
 
 import type { LocalInline } from './useGradeForm';
-
-/** BR-19: lý do chấm 0 (docs/08 mục 3.3). */
-export const ZERO_REASON_LABEL: Record<ZeroReason, string> = {
-  NO_ATTEMPT: 'Không làm bài',
-  NOT_ENGLISH: 'Không viết bằng tiếng Anh',
-  MEMORISED: 'Bài học thuộc hoàn toàn'
-};
-
-/** So sánh 2 lần nộp: lỗi của lần cũ ở lần sau (docs/08 mục 4.3). Class viết nguyên văn để Tailwind sinh được. */
-export const RESOLUTION_META: Record<Resolution, { label: string; text: string; dot: string }> = {
-  FIXED: { label: 'Đã sửa', text: 'text-success', dot: 'bg-success' },
-  CHANGED: { label: 'Đổi khác gợi ý', text: 'text-warning', dot: 'bg-warning' },
-  NOT_FIXED: { label: 'Chưa sửa', text: 'text-error', dot: 'bg-error' }
-};
 
 /** Số bài tối đa lấy về để tính vị trí "3/12" và nút Trước / Sau. */
 export const QUEUE_WINDOW = 200;

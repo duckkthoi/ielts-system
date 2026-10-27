@@ -18,8 +18,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ChatChannelRule implements StompAccessRule {
 
-	private static final Pattern TOPIC = Pattern.compile("^/topic/chat/([a-z]+-\\d{1,18})$");
-	private static final Pattern SEND = Pattern.compile("^/app/chat/([a-z]+-\\d{1,18})/(send|typing|read)$");
+	private static final Pattern TOPIC = Pattern.compile("^/topic/chat/((?:submission|class|direct)-\\d{1,18})$");
+	private static final Pattern SEND = Pattern.compile("^/app/chat/((?:submission|class|direct)-\\d{1,18})/(send|typing|read)$");
 
 	/** Chỉ phụ thuộc truy vấn (không phụ thuộc {@code ChatService}): luật được tạo cùng lúc với cấu hình WebSocket,
 	 * mà {@code ChatService} lại cần {@code SimpMessagingTemplate} của chính cấu hình đó → vòng phụ thuộc bean. */

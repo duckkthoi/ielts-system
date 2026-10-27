@@ -4,16 +4,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Một kênh chat (docs/05 B.2): {@code submission-{id}} (giáo viên ↔ sinh viên của một bài nộp) hoặc {@code class-{id}}
- * (cả lớp). Mã kênh xuất hiện trong đường dẫn REST và destination STOMP.
+ * Một kênh chat (docs/05 B.2): bài nộp, lớp hoặc cặp giáo viên–sinh viên. Mã kênh xuất hiện trong đường dẫn REST và
+ * destination STOMP.
  */
 public record ChatChannel(Type type, long refId) {
 
 	public enum Type {
-		SUBMISSION, CLASSROOM
+		SUBMISSION, CLASSROOM, DIRECT
 	}
 
-	private static final Pattern ID = Pattern.compile("^(submission|class)-(\\d{1,18})$");
+	private static final Pattern ID = Pattern.compile("^(submission|class|direct)-(\\d{1,18})$");
 
 	/** Phân tích mã kênh; sai dạng → {@code null}. */
 	public static ChatChannel parse(String channelId) {
@@ -24,12 +24,20 @@ public record ChatChannel(Type type, long refId) {
 		if (!m.matches()) {
 			return null;
 		}
-		return new ChatChannel("submission".equals(m.group(1)) ? Type.SUBMISSION : Type.CLASSROOM,
-				Long.parseLong(m.group(2)));
+		Type type = switch (m.group(1)) {
+		case "submission" -> Type.SUBMISSION;
+		case "class" -> Type.CLASSROOM;
+		default -> Type.DIRECT;
+		};
+		return new ChatChannel(type, Long.parseLong(m.group(2)));
 	}
 
 	public String id() {
-		return (type == Type.SUBMISSION ? "submission-" : "class-") + refId;
+		return switch (type) {
+		case SUBMISSION -> "submission-" + refId;
+		case CLASSROOM -> "class-" + refId;
+		case DIRECT -> "direct-" + refId;
+		};
 	}
 
 	public String topic() {

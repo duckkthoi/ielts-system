@@ -1,10 +1,15 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import { Suspense } from 'react';
+
+import type { Metadata } from 'next';
+
+import AssignmentStatsPage from './index';
+
+export const metadata: Metadata = { title: 'Thống kê bài tập — IELTS Writing' };
 
 export default function Page() {
   return (
-    <PagePlaceholder
-      title="Thống kê bài tập"
-      description="Điểm trung bình theo tiêu chí, phân bố band, tỉ lệ đúng hạn."
-    />
+    <Suspense>
+      <AssignmentStatsPage />
+    </Suspense>
   );
 }
