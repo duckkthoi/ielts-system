@@ -160,6 +160,8 @@ export interface RankingRow {
   gradedAssignments: number;
   submittedParts: number;
   lateParts: number;
+  /** Band cả bài theo assignmentId; null nếu chưa được trả đủ mọi phần. */
+  assignmentBands: Record<string, number | null>;
 }
 
 export interface ClassStats {

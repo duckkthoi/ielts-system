@@ -267,6 +267,21 @@
 - Giới hạn: 10 phần / bài, 10 tiêu chí / phần, 30 mục checklist / tiêu chí.
 - Bài nháp được phép chưa đủ phần hay tiêu chí. Điều kiện đủ chỉ kiểm tra khi **phát hành**.
 
+**Ngân hàng đề (UC-20, FR-25):**
+
+| Method | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `/api/teacher/question-bank?keyword&taskType&tag&page&size&sort` | Danh sách đề của tôi; `sort`: `title`, `taskType`, `createdAt`, `updatedAt` |
+| POST | `/api/teacher/question-bank` | Lưu đề + rubric/checklist + tag → `QuestionBankDetail` |
+| GET | `/api/teacher/question-bank/{id}` | Chi tiết đề của tôi |
+| PUT | `/api/teacher/question-bank/{id}` | Thay toàn bộ đề + rubric + tag |
+| DELETE | `/api/teacher/question-bank/{id}` | Xoá đề và rubric riêng đi kèm |
+
+Request dùng các trường `title`, `taskType`, `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `tags` và
+`criteria` cùng dạng với một phần trong `AssignmentRequest`. Tag được bỏ khoảng trắng, chuyển chữ thường và loại
+trùng; tối đa 20 tag, mỗi tag 50 ký tự. Giáo viên khác truy cập id của đề → `404`. Đề và rubric được sao chép khi
+nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo.
+
 ---
 
 ### A.6 Giáo viên — tiến độ, thống kê
@@ -274,6 +289,7 @@
 | Method | Đường dẫn | Mô tả |
 |---|---|---|
 | GET | `/api/teacher/assignments/{id}/progress?classId&status` | Ma trận tiến độ (UC-16) |
+| GET | `/api/teacher/assignments/{id}/activity?classId&limit` | 100 hoạt động gần nhất (tối đa 200), chỉ bài của giáo viên; lọc lớp theo thành viên hiện tại |
 | POST | `/api/teacher/assignments/{id}/remind` | Nhắc nhở `{studentIds, partId?}` → `{sent}` (đã cài ở B7b): chỉ bài đang mở (khác → `409`); mọi `studentIds` phải là người nhận bài, `partId` phải thuộc bài (sai → `400`); bài của người khác → `404`. Mỗi sinh viên nhận thông báo `MANUAL_REMINDER` kèm email. Mỗi (giáo viên, bài) tối đa 3 lần / 10 phút, vượt → `429 RATE_LIMITED` (bước 12) |
 | GET | `/api/teacher/assignments/{id}/stats?classId` | Thống kê một bài (UC-19) |
 | GET | `/api/teacher/assignments/{id}/export?classId` | Bảng điểm `.xlsx` (FR-66) |
@@ -308,6 +324,12 @@
   "summary": { "students": 45, "completedCount": 28, "completedRate": 0.6222, "lateCount": 4, "overdueCount": 9 }
 }
 ```
+
+**Hoạt động khi làm bài (FR-54, SD-14):**
+- Sinh viên gửi `POST /api/student/assignments/{id}/activity` với `{ "type": "PAGE_ENTERED" | "PAGE_LEFT" | "TAB_HIDDEN" | "TAB_VISIBLE" }` khi mở/rời màn làm bài hoặc tab bị ẩn/hiện. Bài không được giao/không được thấy → `404`.
+- Mỗi sự kiện được lưu vào `student_activity_events`; giáo viên chủ bài tải lịch sử qua endpoint trên, `limit` mặc định 100, tối đa 200. Giáo viên có thể lọc `classId`.
+- Sau commit, sự kiện được phát tới `/topic/assignments/{id}/activity`. Payload: `{id, studentId, studentCode, fullName, type, occurredAt}`. Chỉ giáo viên chủ bài được SUBSCRIBE.
+- `TAB_HIDDEN` chỉ cho biết tab/cửa sổ IELTS bị ẩn hoặc mất focus (chuyển tab/cửa sổ, thu nhỏ); ứng dụng không thể đọc URL hay nội dung trang ngoài.
 
 **Thống kê một bài (UC-19, FR-63, đã cài ở B8b):**
 - Tập sinh viên **giống ma trận tiến độ** (kể cả lọc `classId`); `students` = số sinh viên đó.
@@ -345,7 +367,7 @@
 - Tính trên **thành viên hiện tại** của lớp và các bài (đã phát hành / đã đóng) của giáo viên **giao cho lớp**. Bài chỉ giao trực tiếp cho từng người không tính; người được giao trực tiếp nhưng không ở lớp không tính.
 - Chỉ kết quả đã trả (BR-13), cùng cách chọn với các thống kê khác.
 - `assignments[]` (sắp theo hạn nộp): `completedCount` = thành viên đã nộp mọi phần, `completedRate` = `completedCount / memberCount`, `gradedCount` = thành viên đã được trả mọi phần, `averageBand` = trung bình band cả bài (BR-12) của những người đó.
-- `ranking[]`: mỗi thành viên một hàng — `averageBand` = trung bình band cả bài của các bài đã đủ phần (`gradedAssignments`), `submittedParts` / `lateParts` = số phần đã nộp / có lần nộp đầu muộn. Xếp band cao trước, **bằng band thì cùng hạng** (1, 1, 3), cùng hạng xếp theo mã SV; chưa có band → `rank = null`, đứng cuối.
+- `ranking[]`: mỗi thành viên một hàng — `averageBand` = trung bình band cả bài của các bài đã đủ phần (`gradedAssignments`), `submittedParts` / `lateParts` = số phần đã nộp / có lần nộp đầu muộn. `assignmentBands` là ánh xạ `assignmentId → band` (2 chữ số); bài chưa được trả đủ phần có giá trị `null`. Xếp band cao trước, **bằng band thì cùng hạng** (1, 1, 3), cùng hạng xếp theo mã SV; chưa có band → `rank = null`, đứng cuối.
 - `averageBand` của lớp = trung bình mọi band cả bài (thành viên × bài) đã đủ phần. Trung bình giữ 2 chữ số, không có dữ liệu → `null`.
 - Lớp của giáo viên khác → `404`. 4 câu SQL cố định.
 
@@ -357,7 +379,8 @@
   "assignments": [ { "assignmentId": 7, "title": "Tuần 5", "status": "CLOSED", "dueAt": "2026-11-07T16:59:00Z",
                      "partCount": 2, "completedCount": 40, "completedRate": 0.8889, "gradedCount": 38, "averageBand": 6.04 } ],
   "ranking": [ { "rank": 1, "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
-                 "averageBand": 7.17, "gradedAssignments": 3, "submittedParts": 6, "lateParts": 0 } ]
+                 "averageBand": 7.17, "gradedAssignments": 3, "submittedParts": 6, "lateParts": 0,
+                 "assignmentBands": { "7": 7.25 } } ]
 }
 ```
 
@@ -472,6 +495,7 @@
 |---|---|---|
 | GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION` | Bài được giao, theo tab (UC-22); bỏ trống `tab` = mọi bài. Không phân trang |
 | GET | `/api/student/assignments/{id}` | Chi tiết bài + trạng thái từng phần của tôi |
+| POST | `/api/student/assignments/{id}/activity` | Ghi nhận `PAGE_ENTERED`, `PAGE_LEFT`, `TAB_HIDDEN` hoặc `TAB_VISIBLE` trong lúc làm bài (FR-54, SD-14) |
 | GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion}` |
 | PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion}` (SD-06) |
 | POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}` (SD-07) |
@@ -580,7 +604,6 @@
 | GET | `/api/chat/{channelId}/messages?beforeId&size=50` | Lịch sử chat, tải ngược về trước (bước 9b) | 2 ✅ |
 | GET | `/api/teacher/parts/{partId}/exam-sessions` | Các phiên thi của một phần | 3 |
 | GET | `/api/teacher/exam-sessions/{id}/events` | Dòng thời gian sự kiện (UC-21) | 3 |
-| CRUD | `/api/teacher/question-bank` | Ngân hàng đề (UC-20) | 3 |
 
 **Chat (đã cài ở bước 9b; UC-29, FR-55, SD-12):**
 - Kênh `submission-{id}`: sinh viên chủ bài nộp và giáo viên chủ bài tập. Kênh `class-{id}`: giáo viên của lớp và **thành viên hiện tại**. Kênh `direct-{id}`: đúng cặp giáo viên–sinh viên đã mở kênh. Không thuộc kênh / mã kênh sai → `404` (REST) hoặc `ERROR` (STOMP).
@@ -643,6 +666,7 @@
 | SUBSCRIBE | `/user/queue/session` | Mọi người | `{type: "FORCE_LOGOUT", reason}` — `reason` ∈ `NEW_LOGIN`, `PASSWORD_CHANGED`, `ACCOUNT_LOCKED`, `ADMIN_FORCED`, `TOKEN_REUSE` | 2 ✅ |
 | SUBSCRIBE | `/topic/assignments/{id}/progress` | Giáo viên chủ bài | `{submissionId, studentId, partId, status, late, score, at}` | 2 ✅ |
 | SUBSCRIBE | `/topic/assignments/{id}/presence` | Giáo viên chủ bài | `{studentId, online, viewingPartId, at}` | 2 ✅ |
+| SUBSCRIBE | `/topic/assignments/{id}/activity` | Giáo viên chủ bài | `{id, studentId, studentCode, fullName, type, occurredAt}` | 2 ✅ |
 | SEND | `/app/presence/viewing` | Sinh viên | `{assignmentId, partId}` khi mở / đổi phần; `partId = null` khi rời trang | 2 ✅ |
 | SUBSCRIBE | `/topic/chat/{channelId}` | Thành viên kênh | `ChatEvent` | 2 ✅ |
 | SUBSCRIBE | `/user/queue/chat` | Mọi người | `ChatEvent` loại `MESSAGE` của kênh bài nộp mình là bên nhận (để biết kênh mới) | 2 ✅ |
@@ -668,8 +692,9 @@
 **Tiến độ live và online (FR-54, FR-61, bước 9a):**
 - `progress`: đẩy sau commit khi sinh viên **lưu nháp lần đầu** (`DRAFT`), **nộp** (`SUBMITTED`, kèm `late`), giáo viên **trả bài** (`RETURNED`, kèm `score` đã làm tròn) hoặc **yêu cầu sửa** (`REVISION_REQUESTED`, kèm `score`). Lưu chấm nháp (`GRADED`) không đẩy — chỉ giáo viên đó thấy, ở màn chấm.
 - `presence`: giữ trong bộ nhớ. Sinh viên có kết nối đầu tiên / mất kết nối cuối cùng → `online` true / false gửi tới kênh của **mọi bài sinh viên đang được giao**. Mở / đổi / rời phần → `viewingPartId` gửi tới kênh của bài đó. Bài không được thấy hoặc phần không thuộc bài → bỏ qua (không lỗi, không lộ thông tin).
+- `activity`: lưu `PAGE_ENTERED`, `PAGE_LEFT`, `TAB_HIDDEN`, `TAB_VISIBLE` vào `student_activity_events`; sau commit phát lịch sử cho kênh của bài. Sinh viên chỉ ghi được hoạt động của bài mình được thấy; giáo viên chỉ SUBSCRIBE / xem lịch sử của bài mình sở hữu.
 - Ma trận tiến độ REST (A.6) có sẵn `online`, `viewingPartId` của mỗi hàng làm trạng thái ban đầu; sau đó client cập nhật theo hai kênh trên.
-- Luật hiện có: chỉ **giáo viên chủ bài** SUBSCRIBE được `/topic/assignments/{id}/progress|presence`; chỉ **sinh viên** SEND được `/app/presence/viewing`. Kênh chat (`chat.ChatChannelRule`, bước 9b): chỉ chủ bài nộp và giáo viên của bài vào được `submission-{id}`; thành viên và giáo viên của lớp vào được `class-{id}`.
+- Luật hiện có: chỉ **giáo viên chủ bài** SUBSCRIBE được `/topic/assignments/{id}/progress|presence|activity`; chỉ **sinh viên** SEND được `/app/presence/viewing`. Kênh chat (`chat.ChatChannelRule`, bước 9b): chỉ chủ bài nộp và giáo viên của bài vào được `submission-{id}`; thành viên và giáo viên của lớp vào được `class-{id}`.
 
 Sai quyền thì server trả khung `ERROR`.
 

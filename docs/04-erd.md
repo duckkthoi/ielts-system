@@ -35,7 +35,9 @@
 | `V10__inline_comment_edit.sql` | Mức 2 / F5b | `inline_comments.edit` (REPLACE / DELETE / INSERT — sửa kiểu track changes), `kind` thêm `COMMENT`; CK `chk_inline_has_content` tính cả `edit` | ✅ đã viết |
 | `V11__direct_student_chat.sql` | Mức 2 mở rộng | `direct_chat_channels`, thêm kênh `DIRECT` cho chat riêng giáo viên–học sinh | ✅ đã viết |
 | `V12__direct_chat_message_type.sql` | Mức 2 sửa lỗi | Nới CHECK của `chat_messages.channel_type` để lưu tin nhắn `DIRECT` | ✅ đã viết |
-| `V13__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
+| `V13__question_bank.sql` | Mức 3 / bước 17 | `question_bank_items`, `question_bank_tags`; mỗi đề tham chiếu một rubric riêng của giáo viên | ✅ đã viết |
+| `V14__student_activity_events.sql` | FR-54 | Nhật ký vào/rời màn làm bài và chuyển tab | ✅ |
+| `V15__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), đạo văn, gợi ý AI | ⬜ |
 
 > V6–V8 phục vụ Mức 2; V9–V10 phục vụ đánh dấu bài; V11–V12 mở rộng và sửa kênh chat riêng. Mức 3 bắt đầu từ V13. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
@@ -282,6 +284,8 @@ erDiagram
     direct_chat_channels |o--o{ chat_messages : "kênh riêng"
     users ||--o{ chat_read_markers : "đã đọc tới"
     users |o--o{ audit_logs : "thực hiện"
+    assignments ||--o{ student_activity_events : "ghi hoạt động"
+    users ||--o{ student_activity_events : "tạo hoạt động"
 
     notifications {
         bigint id PK
@@ -332,6 +336,13 @@ erDiagram
         jsonb detail
         timestamptz created_at
     }
+    student_activity_events {
+        bigint id PK
+        bigint assignment_id FK
+        bigint student_id FK
+        varchar event_type "PAGE_ENTERED | PAGE_LEFT | TAB_HIDDEN | TAB_VISIBLE"
+        timestamptz occurred_at
+    }
 ```
 
 ### 3.5 Mở rộng (Mức 3)
@@ -374,7 +385,7 @@ erDiagram
     }
     question_bank_items {
         bigint id PK
-        bigint owner_id FK
+        bigint teacher_id FK
         varchar title
         varchar task_type
         text prompt
@@ -698,13 +709,26 @@ PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp, 
 
 Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction với thao tác (rollback thì không có dòng "ma"); riêng đăng nhập sai / bị chặn và import TCP ghi transaction riêng để không mất khi request lỗi.
 
-### 4.7 Nhóm mở rộng (V13 trở đi, Mức 3)
+#### `student_activity_events` (V14, FR-54)
+
+| Cột | Kiểu | Ràng buộc | Ý nghĩa |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| assignment_id | BIGINT | FK → assignments (cascade), NN | Bài làm |
+| student_id | BIGINT | FK → users (cascade), NN | Sinh viên |
+| event_type | VARCHAR(20) | NN, CK | `PAGE_ENTERED`, `PAGE_LEFT`, `TAB_HIDDEN`, `TAB_VISIBLE` |
+| occurred_at | TIMESTAMPTZ | NN | Thời điểm do server ghi |
+
+Index `(assignment_id, occurred_at DESC, id DESC)` để tải lịch sử bài; `(student_id, assignment_id, occurred_at DESC, id DESC)` để truy vấn theo sinh viên. Không lưu URL ngoài hoặc nội dung trang được mở.
+
+### 4.7 Nhóm mở rộng (V13, V15 trở đi, Mức 3)
 | Bảng | Mô tả |
 |---|---|
 | `exam_sessions` | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần. `ends_at` cố định từ lúc bắt đầu. `finish_reason` là `SUBMITTED` hoặc `TIMEOUT`. |
 | `exam_events` | Các sự kiện trong phiên thi: chuyển tab, dán, mất kết nối, kết nối lại, kèm IP. |
 | `similarity_reports` | Cặp version cùng phần có độ giống cao, `score` từ 0 tới 1. Lưu `version_a_id < version_b_id` để không trùng cặp. |
-| `question_bank_items`, `question_bank_tags` | Ngân hàng đề của giáo viên. Rubric tham chiếu tới `rubric_templates` (mẫu riêng của giáo viên). |
+| `question_bank_items` (V13) | Ngân hàng đề riêng của giáo viên: loại Task, đề HTML đã lọc, ảnh, số từ, thời gian gợi ý; `rubric_template_id` NN, UK trỏ tới rubric riêng của cùng giáo viên. Index `(teacher_id, updated_at DESC)` và `(teacher_id, task_type)`. |
+| `question_bank_tags` (V13) | Tag đã chuẩn hoá chữ thường; PK `(item_id, tag)`, xoá theo đề. |
 | `ai_suggestions` | Kết quả gợi ý của AI cho một version, dạng JSONB, chỉ giáo viên xem được. |
 
 ---

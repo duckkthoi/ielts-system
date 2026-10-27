@@ -134,7 +134,7 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | FR-51 | Email thông báo: giao bài mới, đã trả bài, yêu cầu sửa, nhắc hạn | Hệ thống | 1 |
 | FR-52 | Nhắc hạn nộp tự động khi còn 24 giờ và còn 2 giờ, áp dụng cả hạn sửa bài; không gửi trùng | Bộ lập lịch | 1 |
 | FR-53 | Giáo viên nhận thông báo realtime khi sinh viên nộp bài | Giáo viên | 1 |
-| FR-54 | Trạng thái online: giáo viên thấy sinh viên nào đang online, đang làm bài nào | Giáo viên | 2 |
+| FR-54 | Trạng thái online và hoạt động khi làm bài: giáo viên xem sinh viên nào đang online, đang mở phần nào, khi nào vào/rời màn làm bài hoặc chuyển tab ra/vào | Giáo viên | 2 |
 | FR-55 | Chat theo bài nộp (giữa giáo viên và sinh viên) và theo lớp, có "đang gõ…" và "đã xem" | GV / SV | 2 |
 | FR-56 | Đồng hồ đếm ngược hạn nộp chạy theo giờ server | Sinh viên | 2 |
 

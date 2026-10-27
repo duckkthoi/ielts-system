@@ -1,7 +1,7 @@
 # 10. Hướng dẫn sử dụng
 
 > Dành cho người chạy thử, người demo và người chấm đồ án: mở hệ thống ở đâu, đăng nhập bằng tài khoản nào, từng vai trò làm được gì.
-> Cập nhật: 26/10/2026, theo trạng thái giao diện F1 → F6 (xem mục 1).
+> Cập nhật: 29/10/2026, theo trạng thái giao diện F1 → F6 và Ngân hàng đề B17 (xem mục 1).
 
 ---
 
@@ -13,9 +13,10 @@
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
 | Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, đánh dấu trên bài kiểu Word, nhận xét mẫu, thống kê lỗi, trả bài, yêu cầu sửa, so sánh 2 lần nộp) | ✅ Dùng được | |
-| Giáo viên: tiến độ realtime (ma trận, online, nhắc nhở, xuất Excel) | ✅ Dùng được | |
+| Giáo viên: tiến độ realtime (ma trận, online, hoạt động vào/rời màn và chuyển tab, nhắc nhở, xuất Excel) | ✅ Dùng được | |
 | Giáo viên: thống kê một bài, thống kê lớp + xếp hạng, kết quả học tập từng sinh viên | ✅ Dùng được | |
 | Giáo viên: tổng quan (dashboard) | ✅ Dùng được | |
+| Giáo viên: ngân hàng đề | ✅ Dùng được | Danh sách, tìm/lọc, xem rubric, thêm từ rubric mẫu, sửa, xoá, giao trực tiếp và lưu/nạp trong trình soạn |
 | Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài (cả khi mất mạng), nộp bài, kết quả từng phần + so sánh các lần nộp | ✅ Dùng được | |
 | Sinh viên: kết quả học tập (band theo thời gian, theo tiêu chí, hồ sơ lỗi) | ✅ Dùng được | |
 | Trao đổi (chat) theo lớp / theo bài nộp — giáo viên và sinh viên | ✅ Dùng được | |
@@ -48,10 +49,12 @@ docker compose up --build -d       # lần đầu mất vài phút
 | Thành phần | Lệnh | Địa chỉ |
 |---|---|---|
 | Backend có dữ liệu mẫu | `cd backend` → `mvn spring-boot:run -Dspring-boot.run.profiles=dev,demo` | http://localhost:8080 · Swagger UI: http://localhost:8080/swagger-ui.html |
-| Frontend | `cd frontend` → `npm install` → `npm run dev` | **http://localhost:3000** |
+| Frontend | `cd frontend` → `npm install` → `npm run dev -- -H 0.0.0.0` | **http://localhost:3000** hoặc `http://<IP-LAN-máy-chạy>:3000` |
 | Xem email | `tools\mailpit\mailpit.exe` | http://localhost:8025 |
 
-Frontend cần file `frontend/.env.local` (chép từ `frontend/.env.example`) để biết địa chỉ backend.
+Khi mở từ máy khác cùng mạng, dùng IP LAN của máy chạy frontend (ví dụ `http://172.11.250.63:3000`), không dùng `localhost`.
+Profile `dev` đã cho phép CORS từ các dải IP LAN phổ biến. Nếu đã đặt `NEXT_PUBLIC_API_BASE_URL` hoặc `NEXT_PUBLIC_WS_URL`,
+hãy trỏ chúng tới IP LAN của máy chạy backend; cách đơn giản hơn là để trống để Next.js proxy API cùng origin.
 
 ---
 
@@ -152,6 +155,7 @@ Admin không tự khoá được chính mình.
    - Bấm **Tải file tài khoản** để lấy mật khẩu tạm của sinh viên mới. **Chỉ tải được một lần, trong 15 phút** — đóng hộp thoại khi chưa tải, hệ thống sẽ hỏi lại. Lỡ mất file thì nhờ admin đặt lại mật khẩu từng sinh viên.
 3. **Thêm sinh viên** (đã có tài khoản): nhập mã SV, mỗi dòng một mã; mã không tồn tại được liệt kê lại.
 4. **Xoá khỏi lớp**: biểu tượng thùng rác ở cuối dòng — tài khoản sinh viên vẫn giữ nguyên.
+5. **Bảng điểm lớp**: mở chi tiết lớp, chọn tab **Bảng điểm** để xem toàn bộ sinh viên theo từng bài đã giao cho lớp. Có thể tìm theo tên / mã SV; ô trống là bài chưa được trả đủ các phần. Bấm tên bài ở đầu cột để mở thống kê bài đã lọc theo lớp.
 
 Import bằng dòng lệnh (qua TCP, cho người quen terminal): `java -jar admin-cli/target/admin-cli.jar import --class DEMO-A --file ds.csv --user gv.demo` (xem `admin-cli/README.md`).
 
@@ -165,6 +169,18 @@ Import bằng dòng lệnh (qua TCP, cho người quen terminal): `java -jar adm
 | 2. Các phần | Mặc định Task 1 + Task 2; thêm Task 1 / Task 2 / phần tự do, đổi thứ tự (↑ ↓), xoá. Mỗi phần: tiêu đề, loại, **đề bài** (để một dòng trống giữa các đoạn), **ảnh đề** (biểu đồ Task 1 — PNG/JPG/WEBP ≤ 5 MB), số từ tối thiểu, thời gian gợi ý, trọng số, hạn riêng |
 | 3. Tiêu chí & checklist | Bấm **Nạp rubric mẫu** để lấy 4 tiêu chí IELTS (TA/TR, CC, LR, GRA) kèm checklist. Mục **Cần có** = đặc điểm bài nên có; mục **Giới hạn điểm** = lỗi nặng, kèm **band tối đa** (vd "Không có overview → tối đa 5"). Sửa, thêm, xoá tự do |
 | 4. Giao bài | Tóm tắt và danh sách việc còn thiếu (chưa đặt hạn, phần chưa có đề / tiêu chí…). Đủ điều kiện → **Lưu & giao bài** → chọn lớp và / hoặc từng sinh viên (gõ mã / tên để tìm) → **Phát hành** |
+
+Ở bước **Các phần**, mỗi phần có hai thao tác ngân hàng đề:
+
+- **Lưu vào ngân hàng**: phần phải có đề bài; nhập tên và các tag rồi lưu. Đề, ảnh, số từ, thời gian gợi ý và rubric/checklist hiện tại được sao chép vào ngân hàng.
+- **Chọn từ ngân hàng**: tìm theo tên/nội dung, lọc loại Task hoặc bấm tag, rồi chọn **Dùng đề này**. Hệ thống thay đề + rubric của phần nhưng giữ nguyên **hạn riêng** và **trọng số** đang đặt cho bài hiện tại.
+- Bản trong ngân hàng và phần đã nạp là hai bản độc lập; sửa hoặc xoá một bên không làm đổi bên còn lại.
+
+Menu **Ngân hàng đề** mở trang quản lý các đề riêng của giáo viên:
+
+- Tìm theo tên/nội dung; lọc **Task 1** (biểu đồ, bảng, quy trình, bản đồ) hoặc **Task 2** (essay); bấm tag để lọc nhanh và sắp xếp theo ngày cập nhật hoặc tên.
+- Bấm tên đề để xem nội dung, ảnh, rubric và checklist. **Thêm đề** cho phép chọn rubric mẫu tương ứng; **Sửa** cập nhật bản trong ngân hàng; **Xoá** không làm thay đổi những bài tập đã sao chép đề đó trước đây.
+- **Giao bài** ở mỗi dòng hoặc trong chi tiết đề: đặt tên bài, thời điểm mở, hạn nộp và tuỳ chọn sửa; hệ thống tạo một bài gồm một phần từ đề + rubric này, sau đó chọn lớp / từng sinh viên để phát hành. Nếu đóng ở bước chọn người nhận, bài đã tạo vẫn được giữ dưới dạng nháp trong menu **Bài tập**.
 
 Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: tới giờ mở mới gửi).
 
@@ -205,6 +221,7 @@ Mở từ nút **Tiến độ** ở chi tiết bài / danh sách bài tập (bà
 - **Bốn thẻ đầu trang**: tỉ lệ hoàn thành (sinh viên đã nộp đủ mọi phần), số sinh viên nộp muộn, số sinh viên quá hạn mà chưa nộp, số người **đang trực tuyến** và số người đang mở bài này.
 - **Ma trận**: mỗi hàng một sinh viên, mỗi cột một phần (tiêu đề cột ghi số đã nộp, vd "Task 1 · 16/20"). Ô tô màu theo trạng thái (Chưa làm, Đang làm, Đã nộp, Nộp muộn, Đang chấm, Đã trả bài, Cần sửa); đã trả thì ô ghi band; đồng hồ = nộp muộn, chấm than đỏ = quá hạn chưa nộp, `v2` = lần nộp thứ 2. Rê chuột vào ô để xem chi tiết; **bấm ô đã nộp để mở màn chấm**.
 - **Realtime**: sinh viên lưu nháp lần đầu, nộp bài, hoặc bạn trả bài / yêu cầu sửa → ô đổi ngay và nháy viền. Chấm xanh ở avatar = sinh viên đang trực tuyến; dòng "đang mở Task 2" và viền xanh quanh ô = sinh viên đang mở màn làm phần đó. Nhãn **Cập nhật trực tiếp** ở góc phải chuyển sang "Đang kết nối lại…" khi mất kết nối; có lại kết nối thì ma trận tự tải lại.
+- **Hoạt động làm bài**: bấm nút **Hoạt động làm bài** để xem 100 sự kiện gần nhất (lọc theo lớp): vào/rời màn làm bài, tab/cửa sổ IELTS mất focus và quay lại. Sự kiện mới hiện trực tiếp. Trình duyệt không cho ứng dụng biết địa chỉ trang bên ngoài hoặc nội dung mà học sinh xem.
 - **Lọc**: theo lớp, theo trạng thái (hàng có ít nhất một ô ở trạng thái đó), tìm theo mã SV / họ tên.
 - **Nhắc nhở**: tick chọn sinh viên rồi bấm **Nhắc N người đã chọn**; không chọn ai thì nhắc mọi người còn phần chưa nộp / cần sửa (chọn "Nhắc về phần" để chỉ nhắc một phần). Sinh viên nhận thông báo + email. Mỗi bài nhắc tối đa 3 lần trong 10 phút; bài đã đóng không nhắc được.
 - **Xuất Excel**: tải bảng điểm `.xlsx` theo lớp đang lọc (điểm từng tiêu chí, band từng phần, trạng thái, band cả bài).
@@ -225,6 +242,7 @@ Menu **Thống kê**. Chọn lớp ở góc phải (nhớ trên đường dẫn 
 - **Thẻ đầu trang**: band trung bình của lớp, số thành viên, số bài đã giao cho lớp, tỉ lệ hoàn thành trung bình.
 - **Các bài đã giao cho lớp**: trạng thái, hạn nộp, số thành viên nộp đủ mọi phần (thanh tiến độ), số người đã có đủ kết quả, band trung bình. Bấm tên bài → thống kê của bài đó, lọc sẵn theo lớp.
 - **Bảng xếp hạng**: theo band cả bài trung bình; bằng band thì cùng hạng (1, 1, 3), chưa có band đứng cuối. Kèm số bài đủ kết quả, số phần đã nộp, số phần nộp muộn. **Bấm một sinh viên** → ngăn bên phải hiện **kết quả học tập** của sinh viên đó trên các bài của bạn (giống trang của sinh viên ở mục 7.5).
+- Muốn xem nhanh **danh sách điểm của toàn bộ học sinh theo từng bài**, vào **Lớp học → chọn lớp → Bảng điểm**; bảng này dùng cùng dữ liệu thống kê và cập nhật sau khi giáo viên trả bài.
 
 ### 6.8. Trao đổi (chat)
 

@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Dự án hiện chưa có tài nguyên tĩnh; vẫn tạo public để stage chạy luôn copy được
+# và sẵn sàng nhận favicon / ảnh tĩnh về sau.
+RUN mkdir -p public
 ARG NEXT_PUBLIC_API_BASE_URL=""
 ARG NEXT_PUBLIC_WS_URL="wss://localhost/ws"
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL \

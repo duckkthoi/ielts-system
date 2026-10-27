@@ -196,8 +196,8 @@ export default function AssignmentEditorPage() {
           scrollToFirstError
         >
           {step === 0 && <GeneralStep />}
-          {step === 1 && <PartsStep form={form} />}
-          {step === 2 && <CriteriaStep form={form} />}
+          {step === 1 && <PartsStep form={form} onChanged={() => setDirty(true)} />}
+          {step === 2 && <CriteriaStep form={form} onChanged={() => setDirty(true)} />}
           {step === 3 && <PublishStep form={form} saving={saving} onPublish={handlePublish} />}
         </Form>
       )}

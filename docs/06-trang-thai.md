@@ -204,3 +204,16 @@ Phiên thi tách riêng với trạng thái bài nộp. Phiên kết thúc thì 
 ## 9. Phiên kết nối TCP
 
 Xem máy trạng thái ở [05-api.md – mục C.5](05-api.md#c5-máy-trạng-thái-của-một-phiên).
+
+## 10. Sự kiện hoạt động khi làm bài (FR-54)
+
+Các sự kiện được lưu thành lịch sử theo bài, không phải trạng thái thay thế cho `online` / `viewingPartId`:
+
+| Sự kiện | Ý nghĩa |
+|---|---|
+| `PAGE_ENTERED` | Mở màn làm bài |
+| `PAGE_LEFT` | Rời màn làm bài, tải lại hoặc đóng trang |
+| `TAB_HIDDEN` | Tab IELTS bị ẩn hoặc cửa sổ mất focus |
+| `TAB_VISIBLE` | Quay lại tab IELTS |
+
+Ứng dụng nhận trạng thái ẩn/hiện do trình duyệt cung cấp. Không nhận URL hay nội dung trang bên ngoài.
