@@ -17,6 +17,13 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 GET {{baseUrl}}/api/student/assignments/1
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
+### Ghi nhận trạng thái trong lúc làm bài
+POST {{baseUrl}}/api/student/assignments/1/activity
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{ "type": "TAB_HIDDEN" }
+
 ### Nạp bản nháp (source: DRAFT | LAST_VERSION | EMPTY)
 GET {{baseUrl}}/api/student/parts/{{partId}}/draft
 Authorization: Bearer {{login.response.body.data.accessToken}}
