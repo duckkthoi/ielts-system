@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import ProfilePage from './index';
+
+export const metadata: Metadata = { title: 'Thông tin cá nhân — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Thông tin cá nhân" description="Hồ sơ tài khoản." />;
+  return <ProfilePage />;
 }

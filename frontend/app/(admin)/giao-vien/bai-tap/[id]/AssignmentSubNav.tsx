@@ -69,7 +69,15 @@ export function AssignmentSubNav({ id, view }: { id: number; view: AssignmentVie
 }
 
 /** Trạng thái chờ / không tìm thấy dùng chung cho hai trang. */
-export function AssignmentHeaderFallback({ id, view, notFound }: { id: number; view: AssignmentView; notFound: boolean }) {
+export function AssignmentHeaderFallback({
+  id,
+  view,
+  notFound
+}: {
+  id: number;
+  view: AssignmentView;
+  notFound: boolean;
+}) {
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
       <AssignmentSubNav id={id} view={view} />

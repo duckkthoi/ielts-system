@@ -13,8 +13,10 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 /** Vai trò có được vào đường dẫn này không. */
 export function canAccessPath(user: AccountInfo, pathname: string): boolean {
-  if (SHARED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
-  return pathname.startsWith(ROLE_PATH_PREFIX[user.role]);
+  // returnUrl có thể kèm query (vd /chat?kenh=class-3) → chỉ so phần đường dẫn.
+  const path = pathname.split(/[?#]/)[0];
+  if (SHARED_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) return true;
+  return path.startsWith(ROLE_PATH_PREFIX[user.role]);
 }
 
 /**

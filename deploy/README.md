@@ -1,5 +1,7 @@
 # Chạy toàn bộ hệ thống bằng Docker (bước 13)
 
+> Hướng dẫn đầy đủ từ lúc clone, đưa lên máy chủ có tên miền (Let's Encrypt, đóng cổng 8025 / 9090, email thật), cập nhật và sao lưu: [docs/11](../docs/11-huong-dan-trien-khai.md).
+
 Một lệnh dựng đủ 5 container: **PostgreSQL 18, Mailpit, backend (Spring Boot), frontend (Next.js), nginx**. nginx là cổng vào duy nhất cho web (HTTPS / WSS); server TCP import mở thẳng cổng 9090 cho `admin-cli`.
 
 ```

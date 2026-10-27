@@ -27,13 +27,19 @@ const matrix = (): ProgressMatrix => ({
       student: { id: 1, studentCode: 'SV1', fullName: 'An' },
       online: false,
       viewingPartId: null,
-      cells: [cell(11, { submissionId: 5, status: 'RETURNED', currentVersion: 1, score: 6 }), cell(12, { overdue: true })]
+      cells: [
+        cell(11, { submissionId: 5, status: 'RETURNED', currentVersion: 1, score: 6 }),
+        cell(12, { overdue: true })
+      ]
     },
     {
       student: { id: 2, studentCode: 'SV2', fullName: 'Bình' },
       online: true,
       viewingPartId: 12,
-      cells: [cell(11, { submissionId: 7, status: 'SUBMITTED', currentVersion: 1 }), cell(12, { status: 'DRAFT', submissionId: 8 })]
+      cells: [
+        cell(11, { submissionId: 7, status: 'SUBMITTED', currentVersion: 1 }),
+        cell(12, { status: 'DRAFT', submissionId: 8 })
+      ]
     }
   ],
   summary: { students: 2, completedCount: 0, completedRate: 0, lateCount: 0, overdueCount: 1 }
@@ -43,15 +49,30 @@ const at = '2026-11-05T10:00:00Z';
 
 test('applyProgressEvent: nộp → SUBMITTED, tăng version, ghi muộn, bỏ quá hạn, chưa có band', () => {
   const next = applyProgressEvent(matrix(), {
-    submissionId: 9, studentId: 1, partId: 12, status: 'SUBMITTED', late: true, score: null, at
+    submissionId: 9,
+    studentId: 1,
+    partId: 12,
+    status: 'SUBMITTED',
+    late: true,
+    score: null,
+    at
   });
-  assert.deepEqual(next.rows[0].cells[1], cell(12, { submissionId: 9, status: 'SUBMITTED', currentVersion: 1, late: true }));
+  assert.deepEqual(
+    next.rows[0].cells[1],
+    cell(12, { submissionId: 9, status: 'SUBMITTED', currentVersion: 1, late: true })
+  );
   assert.equal(next.rows[0].cells[0].score, 6, 'ô khác giữ nguyên');
 });
 
 test('applyProgressEvent: trả bài / yêu cầu sửa → lấy band của sự kiện', () => {
   const next = applyProgressEvent(matrix(), {
-    submissionId: 7, studentId: 2, partId: 11, status: 'REVISION_REQUESTED', late: false, score: 5.5, at
+    submissionId: 7,
+    studentId: 2,
+    partId: 11,
+    status: 'REVISION_REQUESTED',
+    late: false,
+    score: 5.5,
+    at
   });
   assert.equal(next.rows[1].cells[0].status, 'REVISION_REQUESTED');
   assert.equal(next.rows[1].cells[0].score, 5.5);
@@ -60,7 +81,13 @@ test('applyProgressEvent: trả bài / yêu cầu sửa → lấy band của s�
 
 test('applyProgressEvent: nộp lại bản sửa → band cũ bị bỏ (lần mới chưa trả)', () => {
   const next = applyProgressEvent(matrix(), {
-    submissionId: 5, studentId: 1, partId: 11, status: 'SUBMITTED', late: false, score: null, at
+    submissionId: 5,
+    studentId: 1,
+    partId: 11,
+    status: 'SUBMITTED',
+    late: false,
+    score: null,
+    at
   });
   assert.equal(next.rows[0].cells[0].currentVersion, 2);
   assert.equal(next.rows[0].cells[0].score, null);
@@ -68,7 +95,18 @@ test('applyProgressEvent: nộp lại bản sửa → band cũ bị bỏ (lần 
 
 test('applyProgressEvent: sinh viên không có trong ma trận → giữ nguyên tham chiếu', () => {
   const m = matrix();
-  assert.equal(applyProgressEvent(m, { submissionId: 1, studentId: 99, partId: 11, status: 'DRAFT', late: false, score: null, at }), m);
+  assert.equal(
+    applyProgressEvent(m, {
+      submissionId: 1,
+      studentId: 99,
+      partId: 11,
+      status: 'DRAFT',
+      late: false,
+      score: null,
+      at
+    }),
+    m
+  );
 });
 
 test('applyPresenceEvent: online / đang mở phần; offline thì bỏ phần đang mở', () => {

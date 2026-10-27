@@ -159,7 +159,9 @@ export default function ClassStatsPage() {
                   title: 'Trạng thái',
                   dataIndex: 'status',
                   width: 120,
-                  render: (s: ClassAssignmentStats['status']) => <StatusTag meta={ASSIGNMENT_STATUS_META[s]} size="sm" />
+                  render: (s: ClassAssignmentStats['status']) => (
+                    <StatusTag meta={ASSIGNMENT_STATUS_META[s]} size="sm" />
+                  )
                 },
                 {
                   title: 'Hạn nộp',
@@ -217,7 +219,9 @@ export default function ClassStatsPage() {
                     rank === null ? (
                       <span className="text-neutral-400">—</span>
                     ) : (
-                      <span className={`font-semibold tabular-nums ${rank <= 3 ? 'text-brand-700' : 'text-neutral-700'}`}>
+                      <span
+                        className={`font-semibold tabular-nums ${rank <= 3 ? 'text-brand-700' : 'text-neutral-700'}`}
+                      >
                         {rank}
                       </span>
                     )

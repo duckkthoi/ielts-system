@@ -42,7 +42,12 @@ export function buildBandTrend(assignments: AssignmentBand[], parts: PartBand[])
       label: 'Band cả bài',
       points: assignments
         .filter((a) => a.complete && a.band !== null)
-        .map((a) => ({ key: `asg-${a.assignmentId}`, label: a.title, band: a.band as number, at: Date.parse(a.returnedAt) }))
+        .map((a) => ({
+          key: `asg-${a.assignmentId}`,
+          label: a.title,
+          band: a.band as number,
+          at: Date.parse(a.returnedAt)
+        }))
         .sort(byTime)
     },
     { key: 'task1', label: 'Task 1', points: partPoints('WRITING_TASK1') },

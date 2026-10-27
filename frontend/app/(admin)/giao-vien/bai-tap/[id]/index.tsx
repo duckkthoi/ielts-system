@@ -3,7 +3,17 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { App, Button, Card, Descriptions, Dropdown, Empty, Result, Skeleton, Tabs, Tag } from 'antd';
-import { ArrowLeft, BarChart3, ClipboardCheck, MoreHorizontal, Pencil, PieChart, Send, Settings, UserPlus } from 'lucide-react';
+import {
+  ArrowLeft,
+  BarChart3,
+  ClipboardCheck,
+  MoreHorizontal,
+  Pencil,
+  PieChart,
+  Send,
+  Settings,
+  UserPlus
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 

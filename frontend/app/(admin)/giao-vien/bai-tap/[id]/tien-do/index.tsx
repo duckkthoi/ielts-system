@@ -226,7 +226,9 @@ export default function ProgressPage() {
         extra={
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-small font-medium ${
-              live ? 'border-success-border bg-success-bg text-success' : 'border-warning-border bg-warning-bg text-warning'
+              live
+                ? 'border-success-border bg-success-bg text-success'
+                : 'border-warning-border bg-warning-bg text-warning'
             }`}
             role="status"
           >

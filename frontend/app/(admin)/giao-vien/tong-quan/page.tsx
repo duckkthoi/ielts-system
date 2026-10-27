@@ -1,5 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import TeacherDashboardPage from './index';
+
+export const metadata: Metadata = { title: 'Tổng quan — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Tổng quan" description="Bài cần chấm, hạn nộp sắp tới, tiến độ các lớp." />;
+  return <TeacherDashboardPage />;
 }

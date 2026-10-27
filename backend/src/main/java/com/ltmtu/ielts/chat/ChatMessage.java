@@ -39,6 +39,9 @@ public class ChatMessage {
 	@Column(name = "classroom_id")
 	private Long classroomId;
 
+	@Column(name = "direct_channel_id")
+	private Long directChannelId;
+
 	@Column(name = "sender_id", nullable = false)
 	private Long senderId;
 
@@ -56,8 +59,10 @@ public class ChatMessage {
 		m.channelType = channel.type();
 		if (channel.type() == Type.SUBMISSION) {
 			m.submissionId = channel.refId();
-		} else {
+		} else if (channel.type() == Type.CLASSROOM) {
 			m.classroomId = channel.refId();
+		} else {
+			m.directChannelId = channel.refId();
 		}
 		m.senderId = senderId;
 		m.content = content;

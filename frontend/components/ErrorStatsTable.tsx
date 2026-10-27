@@ -46,9 +46,7 @@ export function ErrorStatsTable({ errors, showStudentCount }: { errors: ErrorSta
             </div>
           )
         },
-        ...(showStudentCount
-          ? [{ title: 'Số SV', dataIndex: 'studentCount', width: 70, align: 'right' as const }]
-          : [])
+        ...(showStudentCount ? [{ title: 'Số SV', dataIndex: 'studentCount', width: 70, align: 'right' as const }] : [])
       ]}
     />
   );

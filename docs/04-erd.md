@@ -33,9 +33,11 @@
 | `V8__draft_version.sql` | Mức 2 / bước 10 | `submissions.draft_version` | ✅ đã viết |
 | `V9__inline_comment_kind.sql` | Mức 2 / F5b | `inline_comments.kind` (lỗi / lưu ý / dùng hay), `inline_comments.resolution` (đánh giá đã sửa khi so sánh 2 lần nộp); nới CK `chk_inline_has_content` cho lưu ý / dùng hay; thêm mã hệ thống `GR`, `OTHER` | ✅ đã viết |
 | `V10__inline_comment_edit.sql` | Mức 2 / F5b | `inline_comments.edit` (REPLACE / DELETE / INSERT — sửa kiểu track changes), `kind` thêm `COMMENT`; CK `chk_inline_has_content` tính cả `edit` | ✅ đã viết |
-| `V11__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
+| `V11__direct_student_chat.sql` | Mức 2 mở rộng | `direct_chat_channels`, thêm kênh `DIRECT` cho chat riêng giáo viên–học sinh | ✅ đã viết |
+| `V12__direct_chat_message_type.sql` | Mức 2 sửa lỗi | Nới CHECK của `chat_messages.channel_type` để lưu tin nhắn `DIRECT` | ✅ đã viết |
+| `V13__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
 
-> Lộ trình đã đánh số lại sau khi nghiên cứu nghiệp vụ chấm IELTS (tài liệu 08). Ở bước 12, migration Mức 2 (trước gộp trong V6) được tách theo từng bước — V6 audit, V7 chat, V8 bản nháp — để mỗi bước tự chứa bảng và entity của mình; Mức 3 dời sang V9 trở đi, rồi V11 trở đi khi V9, V10 dùng cho đánh dấu trên bài (F5b). Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
+> V6–V8 phục vụ Mức 2; V9–V10 phục vụ đánh dấu bài; V11–V12 mở rộng và sửa kênh chat riêng. Mức 3 bắt đầu từ V13. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
 ---
 
@@ -277,6 +279,7 @@ erDiagram
     users ||--o{ chat_messages : "gửi"
     submissions |o--o{ chat_messages : "kênh bài nộp"
     classrooms |o--o{ chat_messages : "kênh lớp"
+    direct_chat_channels |o--o{ chat_messages : "kênh riêng"
     users ||--o{ chat_read_markers : "đã đọc tới"
     users |o--o{ audit_logs : "thực hiện"
 
@@ -298,9 +301,10 @@ erDiagram
     }
     chat_messages {
         bigint id PK
-        varchar channel_type "SUBMISSION | CLASSROOM"
+        varchar channel_type "SUBMISSION | CLASSROOM | DIRECT"
         bigint submission_id FK
         bigint classroom_id FK
+        bigint direct_channel_id FK
         bigint sender_id FK
         text content
         varchar client_msg_id
@@ -311,6 +315,12 @@ erDiagram
         varchar channel_type PK
         bigint channel_ref_id PK
         bigint last_read_message_id
+    }
+    direct_chat_channels {
+        bigint id PK
+        bigint teacher_id FK
+        bigint student_id FK
+        timestamptz created_at
     }
     audit_logs {
         bigint id PK
@@ -469,7 +479,7 @@ Một sinh viên có thể thuộc nhiều lớp. Xoá lớp không xoá tài kh
 
 Index: `teacher_id`, `(status, due_at)`.
 
-#### `assignment_parts` — các phần của bài (V1, V4, V11+)
+#### `assignment_parts` — các phần của bài (V1, V4, V13+)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -482,7 +492,7 @@ Index: `teacher_id`, `(status, due_at)`.
 | min_words | INT | CK ≥ 0 | 150 / 250 theo IELTS |
 | suggested_minutes | INT | CK > 0 | 20 / 40 theo IELTS |
 | part_due_at | TIMESTAMPTZ | | NULL = dùng `assignments.due_at` (BR-07) |
-| exam_mode | BOOLEAN | (V11+, Mức 3) DF false | Bật chế độ thi |
+| exam_mode | BOOLEAN | (V13+, Mức 3) DF false | Bật chế độ thi |
 | exam_duration_minutes | INT | (V10+, Mức 3) | Thời gian làm bài của chế độ thi |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
@@ -657,22 +667,23 @@ Index: `(user_id, created_at DESC)`, và `(user_id) WHERE read_at IS NULL` để
 #### `reminder_log` (V1)
 PK `(part_id, student_id, kind)`; `kind ∈ {H24, H2, REVISION_H24, REVISION_H2}`; `sent_at`. Chống nhắc trùng bằng `INSERT … ON CONFLICT DO NOTHING` (BR-14, SD-10). Khi giáo viên yêu cầu sửa lần mới, các dòng `REVISION_*` của (phần, sinh viên) bị xoá để vòng sửa mới được nhắc lại.
 
-#### `chat_messages` (V7, đã cài ở bước 9b)
+#### `chat_messages` (V7, mở rộng V11–V12)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
-| channel_type | VARCHAR(20) | NN, CK | `SUBMISSION` hoặc `CLASSROOM` |
+| channel_type | VARCHAR(20) | NN, CK | `SUBMISSION`, `CLASSROOM` hoặc `DIRECT` |
 | submission_id | BIGINT | FK (cascade) | Khác NULL khi `channel_type = SUBMISSION` |
 | classroom_id | BIGINT | FK (cascade) | Khác NULL khi `channel_type = CLASSROOM` |
+| direct_channel_id | BIGINT | FK → direct_chat_channels (cascade) | Khác NULL khi `channel_type = DIRECT` |
 | sender_id | BIGINT | FK → users (cascade), NN | |
 | content | TEXT | NN, CK độ dài ≤ 4000 | |
 | client_msg_id | VARCHAR(40) | UK cùng sender_id | Client tự sinh, để khớp "đã gửi" và chống gửi trùng khi gửi lại |
 | created_at | TIMESTAMPTZ | NN | |
 
-CK: `channel_type` phải khớp đúng một cột khoá ngoại (`chk_chat_channel`). UK `(sender_id, client_msg_id)` chống lưu trùng khi gửi lại. Index một phần: `(submission_id, id DESC) WHERE submission_id IS NOT NULL`, `(classroom_id, id DESC) WHERE classroom_id IS NOT NULL`. Entity `ChatMessage` giữ id dạng số (không quan hệ entity) để module chat không gắn chặt module khác.
+CK: `channel_type` cho ba loại kênh (`chat_messages_channel_type_check`, V12) và phải khớp đúng một cột khoá ngoại (`chk_chat_channel`, V11). UK `(sender_id, client_msg_id)` chống lưu trùng khi gửi lại. Index một phần theo từng cột kênh. Entity `ChatMessage` giữ id dạng số (không quan hệ entity) để module chat không gắn chặt module khác.
 
 #### `chat_read_markers` (V7, đã cài ở bước 9b)
-PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp hoặc id lớp; `last_read_message_id BIGINT NN`; `updated_at`. Dùng cho "đã xem" và đếm tin chưa đọc. Ghi bằng upsert `ON CONFLICT … DO UPDATE SET last_read_message_id = GREATEST(…)` — mốc chỉ tăng.
+PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp, lớp hoặc kênh riêng; `last_read_message_id BIGINT NN`; `updated_at`. Dùng cho "đã xem" và đếm tin chưa đọc. Ghi bằng upsert `ON CONFLICT … DO UPDATE SET last_read_message_id = GREATEST(…)` — mốc chỉ tăng.
 
 #### `audit_logs` (V6, đã cài ở bước 12)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -687,7 +698,7 @@ PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp h
 
 Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction với thao tác (rollback thì không có dòng "ma"); riêng đăng nhập sai / bị chặn và import TCP ghi transaction riêng để không mất khi request lỗi.
 
-### 4.7 Nhóm mở rộng (V11 trở đi, Mức 3)
+### 4.7 Nhóm mở rộng (V13 trở đi, Mức 3)
 | Bảng | Mô tả |
 |---|---|
 | `exam_sessions` | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần. `ends_at` cố định từ lúc bắt đầu. `finish_reason` là `SUBMITTED` hoặc `TIMEOUT`. |

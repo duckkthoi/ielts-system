@@ -72,10 +72,7 @@ export function RemindModal({
           <Select<number>
             value={partId ?? 0}
             onChange={(v) => setPartId(v === 0 ? undefined : v)}
-            options={[
-              { value: 0, label: 'Cả bài' },
-              ...matrix.parts.map((p) => ({ value: p.id, label: p.title }))
-            ]}
+            options={[{ value: 0, label: 'Cả bài' }, ...matrix.parts.map((p) => ({ value: p.id, label: p.title }))]}
           />
         </label>
         {targets.length === 0 ? (

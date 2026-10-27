@@ -1,7 +1,7 @@
 # 10. Hướng dẫn sử dụng
 
 > Dành cho người chạy thử, người demo và người chấm đồ án: mở hệ thống ở đâu, đăng nhập bằng tài khoản nào, từng vai trò làm được gì.
-> Cập nhật: 24/10/2026, theo trạng thái giao diện F1 → F3 (xem mục 1).
+> Cập nhật: 26/10/2026, theo trạng thái giao diện F1 → F6 (xem mục 1).
 
 ---
 
@@ -9,16 +9,16 @@
 
 | Phần | Giao diện | Ghi chú |
 |---|---|---|
-| Đăng nhập, đổi mật khẩu, khung ứng dụng, thông báo realtime | ✅ Dùng được | |
+| Đăng nhập, đổi mật khẩu, thông tin cá nhân, khung ứng dụng, thông báo realtime | ✅ Dùng được | |
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
 | Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, đánh dấu trên bài kiểu Word, nhận xét mẫu, thống kê lỗi, trả bài, yêu cầu sửa, so sánh 2 lần nộp) | ✅ Dùng được | |
 | Giáo viên: tiến độ realtime (ma trận, online, nhắc nhở, xuất Excel) | ✅ Dùng được | |
 | Giáo viên: thống kê một bài, thống kê lớp + xếp hạng, kết quả học tập từng sinh viên | ✅ Dùng được | |
-| Giáo viên: dashboard, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
+| Giáo viên: tổng quan (dashboard) | ✅ Dùng được | |
 | Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài (cả khi mất mạng), nộp bài, kết quả từng phần + so sánh các lần nộp | ✅ Dùng được | |
 | Sinh viên: kết quả học tập (band theo thời gian, theo tiêu chí, hồ sơ lỗi) | ✅ Dùng được | |
-| Sinh viên: trao đổi | ⏳ Đang làm | |
+| Trao đổi (chat) theo lớp / theo bài nộp — giáo viên và sinh viên | ✅ Dùng được | |
 
 Những phần "đang làm" vẫn gọi thử được qua Swagger UI (mục 2.2) hoặc file `backend/http/*.http`.
 
@@ -117,6 +117,7 @@ Sinh viên mới do giáo viên **import** từ file: mật khẩu tạm nằm t
 | Thông báo | Chuông ở góc phải trên: số chưa đọc, 6 thông báo mới nhất, "Đánh dấu đã đọc tất cả". Thông báo mới hiện ngay ở góc màn hình; bấm vào để mở trang liên quan. "Xem tất cả" → trang Thông báo (lọc Chưa đọc, nhóm theo ngày) |
 | Trạng thái kết nối | Chấm **xanh "Trực tuyến"** cạnh chuông. Mất mạng / máy chủ khởi động lại → chấm vàng và thanh vàng "Mất kết nối… đang thử lại (lần n)"; khi có mạng lại, hệ thống tự kết nối và tải các thông báo bị lỡ |
 | Đăng nhập ở máy khác | Mỗi tài khoản chỉ một phiên: đăng nhập ở máy mới thì máy cũ hiện hộp thoại **"Tài khoản vừa đăng nhập ở nơi khác"** và về trang đăng nhập |
+| Thông tin cá nhân | Bấm tên mình → **Thông tin cá nhân**: họ tên, tên đăng nhập, mã SV, email, vai trò (chỉ xem — muốn sửa họ tên / email thì báo giáo viên hoặc quản trị viên), nút **Đổi mật khẩu** và **Đăng xuất** |
 | Thu gọn menu | Nút ở đầu thanh tiêu đề (máy tính); trên điện thoại bấm ☰ để mở menu |
 | Đăng xuất | Bấm tên mình → **Đăng xuất** |
 
@@ -137,6 +138,8 @@ Admin không tự khoá được chính mình.
 ---
 
 ## 6. Giáo viên
+
+**Tổng quan** (trang chủ của giáo viên): lời chào; 4 thẻ — **bài chờ chấm** (bấm để mở hàng đợi; kèm số bài đang chấm dở), **bài tập đang mở** (số bài hết hạn trong 48 giờ), **tỉ lệ nộp đủ** của các bài đang mở, **lớp học**; danh sách **bài đang mở** (hạn gần nhất trước, đồng hồ đếm ngược, thanh nộp đủ, số bài chờ chấm — bấm tên bài để xem tiến độ); **hoạt động gần đây** (thông báo mới nhất, tự cập nhật khi sinh viên nộp bài); các **lớp học** với lối tắt sang Thống kê lớp. Nút **Tạo bài tập** ở góc phải.
 
 ### 6.1. Lớp học và sinh viên
 
@@ -178,6 +181,7 @@ Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: t
 
 1. **Hàng đợi** (menu **Chấm bài**, hoặc nút "Chấm bài" ở danh sách / chi tiết bài tập): lọc theo bài tập, phần, lớp, mã SV / họ tên; tab **Chờ chấm / Đang chấm / Đã trả / Cần sửa**. Bài nộp trước xếp trước; nhãn `v2` = bài nộp lại sau khi yêu cầu sửa, nhãn "Nộp muộn" nếu nộp sau hạn. Bấm **Chấm**.
 2. **Màn chấm**: bài làm bên trái (cảnh báo khi bài ≤ 20 từ hoặc dưới số từ tối thiểu; bấm "Đề bài" để xem đề), bảng chấm bên phải. Màn hình nhỏ: chuyển giữa tab **Bài làm** / **Chấm điểm**.
+   - Bấm **ⓘ** cạnh tên tiêu chí IELTS để xem bảng mô tả band thu gọn (diễn giải tiếng Việt, mức đang chọn được tô xanh) và link **bản chính thức (ielts.org)**.
    - Mỗi tiêu chí: tick checklist, chọn điểm (bấm lại để bỏ chọn, hoặc dùng phím ← →), ghi nhận xét. Tick mục **"Giới hạn điểm"** (nhãn cam "Tối đa N") thì các mức cao hơn bị khoá kèm lý do, điểm đang chọn cao hơn sẽ tự hạ xuống. Bài ≤ 20 từ: mọi tiêu chí tối đa 1.
    - **Band của phần** hiện ngay khi chấm đủ (trung bình các tiêu chí, làm tròn kiểu IELTS .25 / .75).
    - **Chấm 0** (góc trên bảng chấm): chọn lý do Không làm bài / Không viết bằng tiếng Anh / Học thuộc hoàn toàn; bấm "Bỏ chấm 0" để chấm lại bình thường.
@@ -222,9 +226,14 @@ Menu **Thống kê**. Chọn lớp ở góc phải (nhớ trên đường dẫn 
 - **Các bài đã giao cho lớp**: trạng thái, hạn nộp, số thành viên nộp đủ mọi phần (thanh tiến độ), số người đã có đủ kết quả, band trung bình. Bấm tên bài → thống kê của bài đó, lọc sẵn theo lớp.
 - **Bảng xếp hạng**: theo band cả bài trung bình; bằng band thì cùng hạng (1, 1, 3), chưa có band đứng cuối. Kèm số bài đủ kết quả, số phần đã nộp, số phần nộp muộn. **Bấm một sinh viên** → ngăn bên phải hiện **kết quả học tập** của sinh viên đó trên các bài của bạn (giống trang của sinh viên ở mục 7.5).
 
-### 6.8. Đang làm
+### 6.8. Trao đổi (chat)
 
-Dashboard và trao đổi (chat) sẽ có ở các bước tiếp theo.
+Menu **Trao đổi**, hoặc nút **Trao đổi** trên màn chấm bài (mở thẳng kênh của bài nộp đó). Trong kênh bài nộp có nút **Mở bài nộp** để quay lại màn chấm.
+
+- Cột trái: các cuộc trò chuyện chia **Theo bài nộp**, **Theo lớp** và **Trao đổi riêng**. Một ô tìm kiếm vừa lọc cuộc trò chuyện, vừa gợi ý học sinh theo tên / mã để giáo viên chọn và mở chat riêng. Kênh theo bài nộp cũng mở từ màn chấm bài; học sinh thấy kênh riêng khi có tin đầu tiên.
+- Cột phải: tin nhắn theo ngày ("Hôm nay", "Hôm qua"…), tin của mình bên phải. **Enter** để gửi, **Shift + Enter** xuống dòng (tối đa 4000 ký tự). Tin hiện ngay với chữ "Đang gửi…"; mất kết nối hoặc quá 10 giây chưa gửi được thì ghi **Chưa gửi được · Gửi lại** (gửi lại không tạo tin trùng).
+- Dòng dưới tiêu đề hiện **"… đang gõ"** khi người kia gõ; dưới tin cuối của mình có **Đã xem** (kênh lớp ghi tên người xem). Kéo lên đầu và bấm **Tải tin cũ hơn** để xem lịch sử.
+- Mất kết nối rồi có lại: tin bị lỡ được tải bù tự động. Trên điện thoại, danh sách và khung chat hiện lần lượt (nút ← để quay lại danh sách).
 
 ---
 
@@ -285,9 +294,14 @@ Menu **Kết quả học tập**. Chỉ tính những phần giáo viên **đã 
 - **Hồ sơ lỗi**: tối đa 10 mã lỗi giáo viên đánh dấu nhiều nhất trong các bài của bạn — nên ôn những lỗi đứng đầu.
 - **Kết quả từng bài**: bài trả gần nhất lên đầu, số phần đã trả, band cả bài (hoặc "Chưa đủ phần"). Bấm **+** để xem band từng phần và **Xem kết quả** chi tiết của phần đó; bấm tên bài để mở chi tiết bài.
 
-### 7.6. Đang làm
+### 7.6. Trao đổi (chat)
 
-**Trao đổi** (chat với giáo viên) sẽ có ở bước tiếp theo.
+Menu **Trao đổi**: trò chuyện với giáo viên trong kênh chung của lớp, kênh riêng về một bài nộp, hoặc kênh riêng với giáo viên khi giáo viên nhắn cho bạn.
+
+- Cột trái: các cuộc trò chuyện chia **Theo bài nộp**, **Theo lớp** và **Trao đổi riêng**; một ô tìm theo tên cuộc trò chuyện, kèm tin cuối, thời gian và số tin chưa đọc. Kênh lớp có sẵn; kênh riêng hiện khi giáo viên gửi tin đầu tiên.
+- Cột phải: tin nhắn theo ngày ("Hôm nay", "Hôm qua"…), tin của mình bên phải. **Enter** để gửi, **Shift + Enter** xuống dòng (tối đa 4000 ký tự). Tin hiện ngay với chữ "Đang gửi…"; mất kết nối hoặc quá 10 giây chưa gửi được thì ghi **Chưa gửi được · Gửi lại** (gửi lại không tạo tin trùng).
+- Dòng dưới tiêu đề hiện **"… đang gõ"** khi người kia gõ; dưới tin cuối của mình có **Đã xem** (kênh lớp ghi tên người xem). Kéo lên đầu và bấm **Tải tin cũ hơn** để xem lịch sử.
+- Mất kết nối rồi có lại: tin bị lỡ được tải bù tự động. Trên điện thoại, danh sách và khung chat hiện lần lượt (nút ← để quay lại danh sách).
 
 ---
 

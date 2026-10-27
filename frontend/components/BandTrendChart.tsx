@@ -113,7 +113,14 @@ export function BandTrendChart({ series }: { series: TrendSeries[] }) {
                 >
                   <g className="cursor-default">
                     <circle cx={x(p.at)} cy={y(p.band)} r={12} fill="transparent" />
-                    <circle cx={x(p.at)} cy={y(p.band)} r={4} fill={SERIES_COLOR[s.key]} stroke={NEUTRAL[0]} strokeWidth={2} />
+                    <circle
+                      cx={x(p.at)}
+                      cy={y(p.band)}
+                      r={4}
+                      fill={SERIES_COLOR[s.key]}
+                      stroke={NEUTRAL[0]}
+                      strokeWidth={2}
+                    />
                   </g>
                 </Tooltip>
               ))
@@ -122,7 +129,9 @@ export function BandTrendChart({ series }: { series: TrendSeries[] }) {
         )}
       </div>
       <figcaption className="sr-only">
-        {series.map((s) => `${s.label}: ${s.points.map((p) => `${p.label} ${formatBand(p.band)}`).join(', ')}`).join('. ')}
+        {series
+          .map((s) => `${s.label}: ${s.points.map((p) => `${p.label} ${formatBand(p.band)}`).join(', ')}`)
+          .join('. ')}
       </figcaption>
     </figure>
   );

@@ -108,7 +108,9 @@ export default function AssignmentStatsPage() {
                 <div className="min-w-0">
                   <p className="text-caption font-medium text-neutral-500">Band cả bài trung bình</p>
                   <p className="mt-0.5 text-h3 font-semibold text-neutral-900">
-                    {overallBand === null ? 'Chưa có' : `${overallBand.toFixed(2)} · ${getBandLevel(overallBand).label}`}
+                    {overallBand === null
+                      ? 'Chưa có'
+                      : `${overallBand.toFixed(2)} · ${getBandLevel(overallBand).label}`}
                   </p>
                   <p className="mt-0.5 text-small text-neutral-500">
                     {stats.overall.count} sinh viên đã được trả đủ mọi phần

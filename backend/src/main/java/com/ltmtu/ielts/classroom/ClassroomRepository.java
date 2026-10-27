@@ -1,7 +1,5 @@
 package com.ltmtu.ielts.classroom;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -42,8 +40,4 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
 			SELECT count(DISTINCT t.assignment.id) FROM AssignmentTarget t
 			WHERE t.classroom.id = :classroomId AND t.assignment.status = PUBLISHED""")
 	long countOpenAssignments(@Param("classroomId") Long classroomId);
-
-	/** Số lớp của từng giáo viên: mỗi phần tử là {@code [teacherId, count]}. */
-	@Query("SELECT c.teacher.id, count(c) FROM Classroom c WHERE c.teacher.id IN :teacherIds GROUP BY c.teacher.id")
-	List<Object[]> countByTeacherIds(@Param("teacherIds") Collection<Long> teacherIds);
 }

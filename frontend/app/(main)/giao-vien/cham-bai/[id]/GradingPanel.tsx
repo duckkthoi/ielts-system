@@ -114,6 +114,7 @@ export function GradingPanel({
           <CriterionCard
             key={c.id}
             criterion={c}
+            taskType={screen.part.taskType}
             score={zero ? 0 : g.form.scores[c.id]}
             comment={g.form.comments[c.id] ?? ''}
             checked={g.form.checked}

@@ -28,7 +28,11 @@ const part = (id: number, taskType: PartBand['taskType'], band: number | null, a
 
 test('buildBandTrend: band cả bài chỉ lấy bài đủ phần, sắp theo thời gian', () => {
   const series = buildBandTrend(
-    [asg(2, 6.5, true, '2026-11-10T00:00:00Z'), asg(1, 6, true, '2026-11-01T00:00:00Z'), asg(3, null, false, '2026-11-12T00:00:00Z')],
+    [
+      asg(2, 6.5, true, '2026-11-10T00:00:00Z'),
+      asg(1, 6, true, '2026-11-01T00:00:00Z'),
+      asg(3, null, false, '2026-11-12T00:00:00Z')
+    ],
     []
   );
   assert.equal(series.length, 1);
