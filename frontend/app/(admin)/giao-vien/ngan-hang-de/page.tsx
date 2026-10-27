@@ -1,5 +1,7 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import QuestionBankPage from './index';
+
+export const metadata = { title: 'Ngân hàng đề — IELTS Writing' };
 
 export default function Page() {
-  return <PagePlaceholder title="Ngân hàng đề" description="Đề và rubric lưu sẵn để dùng lại, gắn tag dạng đề." />;
+  return <QuestionBankPage />;
 }

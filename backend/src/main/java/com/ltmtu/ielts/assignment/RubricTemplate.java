@@ -57,6 +57,12 @@ public class RubricTemplate extends BaseEntity {
 	@OrderBy("orderNo")
 	private List<Criterion> criteria = new ArrayList<>();
 
+	/** Gắn tiêu chí vào đúng template trước khi thêm vào collection hai chiều. */
+	public void addCriterion(Criterion criterion) {
+		criterion.setTemplate(this);
+		criteria.add(criterion);
+	}
+
 	@Getter
 	@Setter
 	@NoArgsConstructor
@@ -97,6 +103,12 @@ public class RubricTemplate extends BaseEntity {
 		@OneToMany(mappedBy = "criterion", cascade = CascadeType.ALL, orphanRemoval = true)
 		@OrderBy("orderNo")
 		private List<Item> checklist = new ArrayList<>();
+
+		/** Gắn checklist vào đúng tiêu chí trước khi thêm vào collection hai chiều. */
+		public void addItem(Item item) {
+			item.setCriterion(this);
+			checklist.add(item);
+		}
 	}
 
 	@Getter

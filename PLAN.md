@@ -112,10 +112,10 @@ Phần backend của Mức 2 làm được trước khi có Figma; phần giao d
 | **13** Docker hoá | `docker-compose.yml`: postgres, mailpit, backend, frontend, nginx; `.env.example`; profile `docker` | `docker compose up --build` chạy đủ luồng demo; `docker compose restart backend` → client tự kết nối lại, không mất thông báo (NFR-04) |
 | **14** Load test ✅ | k6: 200 sinh viên nộp trong 5 phút cuối + 500 kết nối WebSocket | p95 < 500 ms, lỗi < 1%; kết quả ghi vào `docs/` — đã đạt: p95 9,9 ms, 0% lỗi; 500 / 500 kết nối, thông báo p95 228 ms ([docs/09](docs/09-kiem-thu-tai.md)) |
 
-### Mức 3 — Mở rộng (mỗi mục độc lập, migration V7)
+### Mức 3 — Mở rộng (mỗi mục độc lập, migration từ V13)
 15. Chế độ thi tính giờ: `exam_sessions`, tự nộp khi hết giờ, ghi sự kiện chuyển tab / dán / mất kết nối.
 16. Kiểm tra đạo văn nội bộ (n-gram + Jaccard), cảnh báo cho giáo viên.
-17. Ngân hàng đề + tag dạng đề.
+17. Ngân hàng đề + tag dạng đề. **B17a backend ✅** (V13, CRUD/tìm kiếm/lọc, rubric riêng, phân quyền theo giáo viên) · **B17b trình soạn ✅** (lưu/nạp đề + rubric, giữ hạn riêng/trọng số) · còn B17c giao diện `/giao-vien/ngan-hang-de`.
 18. Gợi ý chấm bằng AI (Claude API, chỉ khi có `ANTHROPIC_API_KEY`; chỉ gợi ý, giáo viên quyết định).
 19. TCP qua TLS (`SSLServerSocket`) + bản NIO (`Selector`) để so sánh hiệu năng.
 20. ✅ README, profile `demo` (1 giáo viên, 2 lớp, 20 sinh viên, 2 bài), hướng dẫn chụp ảnh Wireshark, tài liệu báo cáo (`docs/09` + file Word gộp). Ảnh Wireshark do người dùng tự chụp. *(Làm trước Mức 3 vì cần cho nộp đồ án.)*

@@ -32,6 +32,7 @@
 | SD-11 | Đồng bộ giờ với server | UC-23 | 2 |
 | SD-12 | Chat realtime | UC-29 | 2 |
 | SD-13 | Chế độ thi và tự nộp khi hết giờ | UC-27, UC-31 | 3 |
+| SD-14 | Ghi nhận học sinh vào/rời màn làm bài và chuyển tab | UC-16 | 2 |
 
 ---
 
@@ -567,4 +568,39 @@ sequenceDiagram
         E->>DB: Nộp bản nháp mới nhất thành version mới, finished_at = now
         E->>WS: /user/queue/notifications "Đã hết giờ, bài đã được nộp"
     end
+```
+
+## SD-14 · Hoạt động khi sinh viên làm bài (Mức 2)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor SV as Sinh viên
+    participant FE as Màn làm bài
+    participant API as StudentActivityController / Service
+    participant DB as PostgreSQL
+    participant WS as STOMP broker
+    participant GV as Màn tiến độ giáo viên
+
+    GV->>WS: SUBSCRIBE /topic/assignments/{id}/activity
+    GV->>API: GET /api/teacher/assignments/{id}/activity?limit=100
+    API->>DB: Đọc lịch sử mới nhất (chỉ bài giáo viên sở hữu)
+    API-->>GV: Danh sách hoạt động
+    SV->>FE: Mở màn làm bài
+    FE->>API: POST /api/student/assignments/{id}/activity — PAGE_ENTERED
+    API->>DB: Kiểm tra bài được giao, ghi student_activity_events
+    API-->>WS: Sau commit, StudentActivityPushListener phát sự kiện
+    WS-->>GV: /topic/assignments/{id}/activity {id, studentId, type, occurredAt}
+    loop Khi tab chuyển nền / quay lại
+        FE->>API: POST activity TAB_HIDDEN hoặc TAB_VISIBLE
+        API->>DB: INSERT sự kiện
+        API-->>WS: Sau commit, phát sự kiện
+        WS-->>GV: Cập nhật danh sách hoạt động
+    end
+    opt Rời màn hoặc tải lại trang
+        FE->>API: POST activity PAGE_LEFT
+        API->>DB: INSERT sự kiện
+        API-->>WS: Sau commit, phát sự kiện
+    end
+    Note over FE,GV: Browser reports tab visibility only
 ```
