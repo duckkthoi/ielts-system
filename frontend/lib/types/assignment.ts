@@ -160,3 +160,13 @@ export interface RubricTemplateDto {
   system: boolean;
   criteria: CriterionDto[];
 }
+
+// ─── Bảng mô tả band thu gọn (GET /api/teacher/rubric-templates/descriptors) ──
+// Chỉ là diễn giải ngắn tiếng Việt, không phải văn bản chính thức (docs/08 mục 5.4).
+
+export interface BandDescriptors {
+  source: { title: string; url: string };
+  note: string;
+  /** Theo mã tiêu chí; `bands` theo band dạng chuỗi "9" → "0". */
+  criteria: Partial<Record<CriterionCode, { name: string; taskTypes: TaskType[]; bands: Record<string, string> }>>;
+}

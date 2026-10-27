@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { App, Button, Result, Segmented, Select, Skeleton } from 'antd';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
@@ -346,6 +346,9 @@ export default function GradingPage() {
           />
           {screen.version.late && <StatusTag meta={SUBMISSION_STATUS_META.LATE} size="sm" />}
           <StatusTag meta={SUBMISSION_STATUS_META[status]} size="sm" />
+          <Link href={`/chat?kenh=submission-${id}`}>
+            <Button icon={<MessageSquare size={16} />}>Trao đổi</Button>
+          </Link>
           <span className="inline-flex items-center gap-1">
             <Button
               icon={<ChevronLeft size={16} />}

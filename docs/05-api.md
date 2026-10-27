@@ -576,16 +576,18 @@
 | POST | `/api/notifications/{id}/read` | Đánh dấu đã đọc | 1 |
 | POST | `/api/notifications/read-all` | Đánh dấu tất cả | 1 |
 | GET | `/api/chat/channels` | Các kênh chat của tôi, kèm tin cuối và số tin chưa đọc (bước 9b) | 2 ✅ |
+| POST | `/api/chat/direct/{studentId}` | Giáo viên mở / lấy kênh chat riêng với học sinh mình đang dạy | 2 ✅ |
 | GET | `/api/chat/{channelId}/messages?beforeId&size=50` | Lịch sử chat, tải ngược về trước (bước 9b) | 2 ✅ |
 | GET | `/api/teacher/parts/{partId}/exam-sessions` | Các phiên thi của một phần | 3 |
 | GET | `/api/teacher/exam-sessions/{id}/events` | Dòng thời gian sự kiện (UC-21) | 3 |
 | CRUD | `/api/teacher/question-bank` | Ngân hàng đề (UC-20) | 3 |
 
 **Chat (đã cài ở bước 9b; UC-29, FR-55, SD-12):**
-- Kênh `submission-{id}`: sinh viên chủ bài nộp và giáo viên chủ bài tập. Kênh `class-{id}`: giáo viên của lớp và **thành viên hiện tại**. Không thuộc kênh / mã kênh sai → `404` (REST) hoặc `ERROR` (STOMP).
-- `GET /api/chat/channels` → `[{channelId, type, title, lastMessage: {id, senderName, preview, createdAt} | null, unreadCount}]`: mọi lớp mình dạy / học (kể cả chưa có tin) và các bài nộp **đã có tin nhắn**; kênh có tin mới nhất trước. `title`: lớp = "mã – tên", bài nộp = "bài – phần · tên sinh viên". `unreadCount` = tin **của người khác** sau mốc "đã đọc" của mình.
+- Kênh `submission-{id}`: sinh viên chủ bài nộp và giáo viên chủ bài tập. Kênh `class-{id}`: giáo viên của lớp và **thành viên hiện tại**. Kênh `direct-{id}`: đúng cặp giáo viên–sinh viên đã mở kênh. Không thuộc kênh / mã kênh sai → `404` (REST) hoặc `ERROR` (STOMP).
+- `POST /api/chat/direct/{studentId}` chỉ cho giáo viên; học sinh phải thuộc lớp hoặc là người nhận một bài của giáo viên. Kết quả là kênh `direct-{id}` và tiêu đề "Trao đổi với …"; kênh này độc lập với bài nộp.
+- `GET /api/chat/channels` → `[{channelId, type, title, lastMessage: {id, senderName, preview, createdAt} | null, unreadCount}]`: mọi lớp mình dạy / học (kể cả chưa có tin), các bài nộp và kênh riêng **đã có tin nhắn**; kênh có tin mới nhất trước. `title`: lớp = "mã – tên", bài nộp = "bài – phần · tên sinh viên", kênh riêng = "Trao đổi với …". `unreadCount` = tin **của người khác** sau mốc "đã đọc" của mình.
 - `GET /api/chat/{channelId}/messages?beforeId&size` → `{messages, reads}`: `messages` **mới nhất trước** (`size` mặc định 50, tối đa 100; `beforeId` để tải tiếp các tin cũ hơn), mỗi tin là `ChatEvent` loại `MESSAGE`; `reads` = `[{userId, userName, lastMessageId}]` mốc đã đọc của những người khác (hiện "Đã xem").
-- Gửi tin chỉ qua STOMP (`/app/chat/{id}/send {content, clientMsgId}`): nội dung 1–4000 ký tự sau khi bỏ khoảng trắng hai đầu; `clientMsgId` ≤ 40 ký tự, **cùng người gửi + cùng `clientMsgId` không lưu lần hai** (UNIQUE trong DB) — server phát lại tin đã lưu để client đánh dấu "đã gửi". Tin được lưu rồi **sau commit** mới phát tới `/topic/chat/{id}`.
+- Gửi tin chỉ qua STOMP (`/app/chat/{id}/send {content, clientMsgId}`): nội dung 1–4000 ký tự sau khi bỏ khoảng trắng hai đầu; `clientMsgId` ≤ 40 ký tự, **cùng người gửi + cùng `clientMsgId` không lưu lần hai** (UNIQUE trong DB) — server phát lại tin đã lưu để client đánh dấu "đã gửi". Tin được lưu rồi **sau commit** mới phát tới `/topic/chat/{id}`. Kênh bài nộp: tin còn được gửi riêng **bên còn lại** (không gửi người gửi) qua `/user/queue/chat` — kênh bài nộp chỉ vào danh sách khi đã có tin, nên người chưa nghe topic của kênh vẫn biết để tải lại danh sách kênh.
 - `typing`: không lưu; server bỏ bớt nếu một người gửi dày hơn 2 giây / kênh. `read {lastMessageId}`: tin phải thuộc kênh; mốc chỉ tăng (upsert `GREATEST`); phát `READ` tới kênh.
 - Lỗi dữ liệu của lệnh STOMP (tin rỗng, quá dài, tin không thuộc kênh) → gửi riêng người gửi trên `/user/queue/errors` dạng `{errorCode, errorMessage}` (cùng tên trường với body lỗi REST); không lưu, không phát.
 
@@ -643,13 +645,14 @@
 | SUBSCRIBE | `/topic/assignments/{id}/presence` | Giáo viên chủ bài | `{studentId, online, viewingPartId, at}` | 2 ✅ |
 | SEND | `/app/presence/viewing` | Sinh viên | `{assignmentId, partId}` khi mở / đổi phần; `partId = null` khi rời trang | 2 ✅ |
 | SUBSCRIBE | `/topic/chat/{channelId}` | Thành viên kênh | `ChatEvent` | 2 ✅ |
+| SUBSCRIBE | `/user/queue/chat` | Mọi người | `ChatEvent` loại `MESSAGE` của kênh bài nộp mình là bên nhận (để biết kênh mới) | 2 ✅ |
 | SUBSCRIBE | `/user/queue/errors` | Mọi người | `{errorCode, errorMessage}` — lỗi của lệnh STOMP mình vừa gửi (vd tin chat rỗng) | 2 ✅ |
 | SEND | `/app/chat/{channelId}/send` | Thành viên kênh | `{content, clientMsgId}` | 2 ✅ |
 | SEND | `/app/chat/{channelId}/typing` | Thành viên kênh | `{}` (gửi tối đa 1 lần / 3 giây) | 2 ✅ |
 | SEND | `/app/chat/{channelId}/read` | Thành viên kênh | `{lastMessageId}` | 2 ✅ |
 | SEND | `/app/exam/{sessionId}/event` | Sinh viên trong phiên thi | `{type: "TAB_HIDDEN" \| "TAB_VISIBLE" \| "PASTE"}` | 3 |
 
-- `channelId` có dạng `submission-{submissionId}` hoặc `class-{classroomId}`.
+- `channelId` có dạng `submission-{submissionId}`, `class-{classroomId}` hoặc `direct-{directChannelId}`.
 - `ChatEvent` có dạng `{type: "MESSAGE" | "TYPING" | "READ", ...}`:
   - `MESSAGE`: `{id, channelId, senderId, senderName, content, clientMsgId, createdAt}`
   - `TYPING`: `{userId, userName}`
@@ -657,7 +660,7 @@
 
 **Phân quyền SUBSCRIBE / SEND:** `StompAuthInterceptor` kiểm tra mỗi khung tin.
 - `CONNECT`: access token hợp lệ, phiên chưa bị thu hồi, tài khoản còn hoạt động và không đang bị bắt đổi mật khẩu (cùng cách kiểm tra với REST). Sai → khung `ERROR` có `message` tiếng Việt, không kết nối được.
-- **Mức 1 (đã cài ở B7a):** luôn cho SUBSCRIBE `/user/queue/notifications` và `/user/queue/session`.
+- **Mức 1 (đã cài ở B7a):** luôn cho SUBSCRIBE `/user/queue/notifications` và `/user/queue/session` (Mức 2 thêm `/user/queue/errors`, `/user/queue/chat`).
 - **Mức 2 (bước 9a):** các kênh còn lại do các luật `StompAccessRule` quyết định (module `security` định nghĩa interface, module nghiệp vụ cài luật — `realtime.AssignmentChannelRule`). Kênh không luật nào phụ trách → `ERROR`.
 
 **Một tài khoản một phiên (FR-06, bước 9a):** đăng nhập thành công thì mọi phiên cũ của tài khoản bị thu hồi (`NEW_LOGIN`, bật / tắt bằng `app.session.single-login`). Mọi lần thu hồi hàng loạt (đăng nhập mới, đổi mật khẩu, khoá, đặt lại mật khẩu, dùng lại refresh token cũ) đi qua `SessionRevoker`, phát sự kiện `SessionsRevoked`; **sau commit**, mỗi kết nối WebSocket của phiên bị thu hồi nhận riêng `FORCE_LOGOUT` (gửi theo `simpSessionId`, thiết bị mới không nhận nhầm) rồi bị server đóng sau ~0,5 giây. REST với token cũ → 401 ngay; CONNECT lại bằng token cũ → `ERROR`.

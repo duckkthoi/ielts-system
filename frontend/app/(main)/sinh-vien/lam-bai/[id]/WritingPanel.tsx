@@ -7,10 +7,10 @@ import { Send } from 'lucide-react';
 import Link from 'next/link';
 
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { EssayAnnotator } from '@/components/EssayAnnotator';
+import { EssayAnnotator, studentAnnotationViews } from '@/components/EssayAnnotator';
 import { studentApi } from '@/lib/api/student';
 import { ApiError } from '@/lib/apiError';
-import { studentAssignmentPath } from '@/lib/constants';
+import { resultPath } from '@/lib/constants';
 import type { StudentInlineComment, StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
 import { useOnlineStatus } from '@/lib/utils/hooks';
@@ -18,7 +18,7 @@ import { countWords } from '@/lib/utils/wordCount';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 import { AutosaveIndicator } from './AutosaveIndicator';
-import { isWritable, studentAnnotationViews } from './const';
+import { isWritable } from './const';
 import { DraftConflictModal } from './DraftConflictModal';
 import { EssayEditor } from './EssayEditor';
 import { PromptPanel } from './PromptPanel';
@@ -227,7 +227,7 @@ function ViewMode({
           description={part.status === 'RETURNED' ? 'Giáo viên đã trả bài.' : 'Bài đang chờ giáo viên chấm.'}
           action={
             part.status === 'RETURNED' ? (
-              <Link href={studentAssignmentPath(assignmentId)}>
+              <Link href={resultPath(assignmentId, part.partId)}>
                 <Button size="small">Xem kết quả</Button>
               </Link>
             ) : undefined

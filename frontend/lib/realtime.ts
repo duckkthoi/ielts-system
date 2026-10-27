@@ -17,6 +17,7 @@ import { useRealtimeStore } from '@/stores/useRealtimeStore';
 type Handler = (payload: unknown) => void;
 
 const HEARTBEAT_MS = 10_000;
+const SYNC_TIMEOUT_MS = 10_000;
 /** Còn ít hơn chừng này thì coi token sắp hết hạn, refresh trước khi CONNECT. */
 const TOKEN_MIN_TTL_MS = 30_000;
 
@@ -107,6 +108,8 @@ export function connectRealtime(options: { onReconnected: () => Promise<void> })
     brokerURL: wsUrl(),
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,
+    // Proxy có thể mở socket nhưng treo trước STOMP CONNECTED; đóng để kích hoạt backoff.
+    connectionTimeout: 10_000,
     reconnectDelay: 1_000,
     reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
     maxReconnectDelay: 30_000,
@@ -130,9 +133,15 @@ export function connectRealtime(options: { onReconnected: () => Promise<void> })
         return;
       }
       setStatus('SYNCING');
-      void (onReconnected?.() ?? Promise.resolve()).finally(() => {
+      const syncTimeout = window.setTimeout(() => {
         if (useRealtimeStore.getState().status === 'SYNCING') setStatus('CONNECTED');
-      });
+      }, SYNC_TIMEOUT_MS);
+      void (onReconnected?.() ?? Promise.resolve())
+        .catch(() => undefined)
+        .finally(() => {
+          window.clearTimeout(syncTimeout);
+          if (useRealtimeStore.getState().status === 'SYNCING') setStatus('CONNECTED');
+        });
     },
 
     onWebSocketClose: () => {

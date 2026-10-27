@@ -5,10 +5,10 @@ import clsx from 'clsx';
 import { AlertTriangle, Check, Loader2, Pencil, Send } from 'lucide-react';
 
 import { BandBadge } from '@/components/BandBadge';
+import { ZERO_REASON_LABEL } from '@/lib/constants';
 import type { GradingScreen } from '@/lib/types/grading';
 import { formatDateTime, formatTime } from '@/lib/utils/date';
 
-import { ZERO_REASON_LABEL } from './const';
 import { CriterionCard } from './CriterionCard';
 import { capOf, useGradeForm } from './useGradeForm';
 
@@ -114,6 +114,7 @@ export function GradingPanel({
           <CriterionCard
             key={c.id}
             criterion={c}
+            taskType={screen.part.taskType}
             score={zero ? 0 : g.form.scores[c.id]}
             comment={g.form.comments[c.id] ?? ''}
             checked={g.form.checked}

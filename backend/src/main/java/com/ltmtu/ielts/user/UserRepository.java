@@ -50,4 +50,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 			       OR lower(coalesce(u.email, '')) LIKE :keyword ESCAPE '!')""")
 	Page<User> search(@Param("keyword") String keyword, @Param("role") Role role, @Param("active") Boolean active,
 			Pageable pageable);
+
+	/**
+	 * Số lớp của từng giáo viên (cột "Số lớp" ở màn quản trị): mỗi phần tử là {@code [teacherId, count]}, giáo viên
+	 * chưa có lớp không có mặt. Truy vấn chỉ-đọc bảng {@code classrooms} của module lớp học — module {@code user}
+	 * không được gọi ngược {@code ClassroomService} (hướng phụ thuộc một chiều).
+	 */
+	@Query(value = "SELECT teacher_id, count(*) FROM classrooms WHERE teacher_id IN (:teacherIds) GROUP BY teacher_id",
+			nativeQuery = true)
+	List<Object[]> countClassesByTeacherIds(@Param("teacherIds") Collection<Long> teacherIds);
 }
