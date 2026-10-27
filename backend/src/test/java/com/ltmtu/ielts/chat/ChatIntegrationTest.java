@@ -3,6 +3,7 @@ package com.ltmtu.ielts.chat;
 import static com.ltmtu.ielts.support.ApiStatus.apiStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -127,6 +128,41 @@ class ChatIntegrationTest extends IntegrationTest {
 		JsonNode reads = history(accessToken(s1), submissionChannel, null, null).get("reads");
 		assertThat(reads.get(0).get("userId").asLong()).isEqualTo(teacherUser.getId());
 		assertThat(reads.get(0).get("lastMessageId").asLong()).isEqualTo(messageId);
+	}
+
+	@Test
+	@DisplayName("FR-55: tin ở kênh bài nộp còn gửi riêng bên kia qua /user/queue/chat (chưa nghe topic vẫn biết có kênh mới); người gửi và kênh lớp thì không")
+	void submissionChatUserQueue() throws Exception {
+		Connection t = stomp.connect(teacher);
+		Connection s = stomp.connect(accessToken(s1));
+		BlockingQueue<JsonNode> teacherQueue = stomp.subscribe(t, "/user/queue/chat");
+		BlockingQueue<JsonNode> studentQueue = stomp.subscribe(s, "/user/queue/chat");
+
+		stomp.send(t, "/app/chat/" + submissionChannel + "/send", Map.of("content", "Em xem lại đoạn mở bài nhé"));
+		JsonNode got = studentQueue.poll(5, TimeUnit.SECONDS);
+		assertThat(got.get("type").asString()).isEqualTo("MESSAGE");
+		assertThat(got.get("channelId").asString()).isEqualTo(submissionChannel);
+		assertThat(got.get("content").asString()).isEqualTo("Em xem lại đoạn mở bài nhé");
+
+		stomp.send(t, "/app/chat/" + classChannel + "/send", Map.of("content", "Chào cả lớp"));
+		assertThat(studentQueue.poll(500, TimeUnit.MILLISECONDS)).as("kênh lớp luôn có trong danh sách").isNull();
+		assertThat(teacherQueue.poll(200, TimeUnit.MILLISECONDS)).as("người gửi không nhận").isNull();
+	}
+
+	@Test
+	@DisplayName("FR-55: giáo viên mở được kênh riêng với học sinh và học sinh khác trong lớp không được vào")
+	void directStudentChat() throws Exception {
+		JsonNode opened = data(call(post("/api/chat/direct/" + s2.getId()), teacher).andExpect(apiStatus(200)));
+		String channelId = opened.get("channelId").asText();
+		assertThat(channelId).startsWith("direct-");
+
+		Connection t = stomp.connect(teacher);
+		Connection s = stomp.connect(accessToken(s2));
+		BlockingQueue<JsonNode> toStudent = stomp.subscribe(s, "/topic/chat/" + channelId);
+		stomp.send(t, "/app/chat/" + channelId + "/send", Map.of("content", "Cô nhắn riêng cho em"));
+		assertThat(toStudent.poll(5, TimeUnit.SECONDS).get("content").asText()).isEqualTo("Cô nhắn riêng cho em");
+		assertThat(history(accessToken(s2), channelId, null, null).get("messages")).hasSize(1);
+		call(get("/api/chat/" + channelId + "/messages"), accessToken(s1)).andExpect(apiStatus(404));
 	}
 
 	@Test

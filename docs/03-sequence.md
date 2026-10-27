@@ -528,6 +528,9 @@ sequenceDiagram
         C->>WS: Sau commit: phát MESSAGE tới /topic/chat/{channelId}
         WS-->>FA: Tin nhắn (khớp clientMsgId → "đã gửi")
         WS-->>FB: Tin nhắn mới
+        opt Kênh bài nộp
+            C-->>FB: Sau commit: /user/queue/chat (chưa có kênh trong danh sách → tải lại danh sách)
+        end
     end
     FB->>WS: SEND /app/chat/{channelId}/read {lastMessageId}
     WS->>C: Upsert chat_read_markers (GREATEST)

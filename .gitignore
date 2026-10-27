@@ -9,6 +9,7 @@ tools/mailpit/
 
 # Dữ liệu chạy
 uploads/
+backup/
 *.log
 
 # Tài liệu tham khảo của dự án khác — KHÔNG commit

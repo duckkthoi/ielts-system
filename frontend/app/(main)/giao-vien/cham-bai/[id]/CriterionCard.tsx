@@ -3,18 +3,21 @@ import clsx from 'clsx';
 import { Lock } from 'lucide-react';
 
 import { BandBadge } from '@/components/BandBadge';
+import { DescriptorPanel } from '@/components/DescriptorPanel';
+import type { TaskType } from '@/lib/types/assignment';
 import type { GradingCriterion } from '@/lib/types/grading';
 
 import { ScorePicker } from './ScorePicker';
 
 // ─── Một tiêu chí trên màn chấm (docs/07 mục 7.2 CriterionCard, Prompt 6b ý 2) ─
 // Checklist "Đạt" (CHECK) và "Giới hạn điểm" (LIMIT, tick thì nền warning + khoá các mức cao hơn), ScorePicker,
-// ô nhận xét. Viền trái brand-600 khi đã chấm.
+// ô nhận xét. Viền trái brand-600 khi đã chấm. Tiêu chí IELTS có nút ⓘ mở bảng mô tả band (DescriptorPanel).
 
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 export function CriterionCard({
   criterion,
+  taskType,
   score,
   comment,
   checked,
@@ -25,6 +28,7 @@ export function CriterionCard({
   onToggle
 }: {
   criterion: GradingCriterion;
+  taskType: TaskType;
   score: number | null;
   comment: string;
   checked: Record<number, boolean>;
@@ -46,6 +50,9 @@ export function CriterionCard({
           <h3 className="font-semibold text-neutral-900">
             {criterion.code && <span className="mr-2 font-mono text-brand-600">{criterion.code}</span>}
             {criterion.name}
+            {criterion.code && (
+              <DescriptorPanel code={criterion.code} name={criterion.name} taskType={taskType} score={score} />
+            )}
           </h3>
           {criterion.description && <p className="text-small text-neutral-500">{criterion.description}</p>}
         </div>

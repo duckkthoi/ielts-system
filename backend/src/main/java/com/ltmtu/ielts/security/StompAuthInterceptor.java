@@ -35,9 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class StompAuthInterceptor implements ChannelInterceptor {
 
-	/** Kênh riêng mỗi người luôn được SUBSCRIBE: thông báo, FORCE_LOGOUT, lỗi của lệnh STOMP (chat). */
+	/** Kênh riêng mỗi người luôn được SUBSCRIBE: thông báo, FORCE_LOGOUT, lỗi của lệnh STOMP, tin mới ở kênh bài nộp. */
 	static final Set<String> USER_QUEUES = Set.of("/user/queue/notifications", "/user/queue/session",
-			"/user/queue/errors");
+			"/user/queue/errors", "/user/queue/chat");
 
 	private final AccessTokenVerifier verifier;
 	private final List<StompAccessRule> rules;

@@ -13,8 +13,10 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 /** Vai trò có được vào đường dẫn này không. */
 export function canAccessPath(user: AccountInfo, pathname: string): boolean {
-  if (SHARED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
-  return pathname.startsWith(ROLE_PATH_PREFIX[user.role]);
+  // returnUrl có thể kèm query (vd /chat?kenh=class-3) → chỉ so phần đường dẫn.
+  const path = pathname.split(/[?#]/)[0];
+  if (SHARED_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) return true;
+  return path.startsWith(ROLE_PATH_PREFIX[user.role]);
 }
 
 /**
@@ -33,7 +35,11 @@ export function useAuthGuard(): { ready: boolean; user: AccountInfo | null } {
 
   const redirectTo = useMemo(() => {
     if (!isInitialized) return null;
-    if (!isAuthenticated || !user) return `${ROUTES.login}?returnUrl=${encodeURIComponent(pathname)}`;
+    if (!isAuthenticated || !user) {
+      // Giữ cả query (vd ?phan=…&lan=…) để đăng nhập xong mở đúng chỗ; chỉ chạy ở client (isInitialized)
+      const search = typeof window === 'undefined' ? '' : window.location.search;
+      return `${ROUTES.login}?returnUrl=${encodeURIComponent(pathname + search)}`;
+    }
     if (user.mustChangePassword) return ROUTES.changePassword;
     if (!canAccessPath(user, pathname)) return ROLE_HOME[user.role];
     return null;

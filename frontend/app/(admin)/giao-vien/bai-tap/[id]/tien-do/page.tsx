@@ -1,7 +1,9 @@
-import { PagePlaceholder } from '@/components/PagePlaceholder';
+import type { Metadata } from 'next';
+
+import ProgressPage from './index';
+
+export const metadata: Metadata = { title: 'Tiến độ bài tập — IELTS Writing' };
 
 export default function Page() {
-  return (
-    <PagePlaceholder title="Tiến độ bài tập" description="Ma trận sinh viên × phần, cập nhật realtime, nhắc nhở." />
-  );
+  return <ProgressPage />;
 }
