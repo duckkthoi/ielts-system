@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { AlertTriangle, Check, Loader2, PenLine } from 'lucide-react';
+import { AlertTriangle, Check, CloudOff, Loader2, PenLine } from 'lucide-react';
 
 import { formatTime } from '@/lib/utils/date';
 
@@ -31,6 +31,12 @@ export function AutosaveIndicator({
       return (
         <span className={clsx(base, 'text-neutral-500')}>
           <PenLine size={12} /> Chưa lưu
+        </span>
+      );
+    case 'OFFLINE':
+      return (
+        <span className={clsx(base, 'text-warning')}>
+          <CloudOff size={12} /> Ngoại tuyến – đã lưu trên máy
         </span>
       );
     case 'ERROR':

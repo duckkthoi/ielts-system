@@ -59,3 +59,23 @@ export const studentAssignmentPath = (id: number) => `/sinh-vien/bai-tap/${id}`;
 /** Màn làm bài: mở sẵn phần `partId` (bỏ trống = phần đầu tiên). */
 export const writingPath = (assignmentId: number, partId?: number | null) =>
   `/sinh-vien/lam-bai/${assignmentId}${partId ? `?phan=${partId}` : ''}`;
+
+// ─── Đường dẫn chấm bài ───────────────────────────────────────────────────────
+// Bộ lọc hàng đợi đi theo URL sang màn chấm để nút "Trước / Sau" đi đúng thứ tự hàng đợi.
+
+const QUEUE_KEYS = ['status', 'assignmentId', 'partId', 'classId', 'keyword'] as const;
+type QueueFilter = Partial<Record<(typeof QUEUE_KEYS)[number], string | number>>;
+
+export function queueQueryString(filter: QueueFilter): string {
+  const qs = new URLSearchParams();
+  for (const key of QUEUE_KEYS) {
+    const value = filter[key];
+    if (value !== undefined && value !== '') qs.set(key, String(value));
+  }
+  return qs.toString();
+}
+
+export const gradingPath = (submissionId: number, filter: QueueFilter = {}) => {
+  const qs = queueQueryString(filter);
+  return `/giao-vien/cham-bai/${submissionId}${qs ? `?${qs}` : ''}`;
+};

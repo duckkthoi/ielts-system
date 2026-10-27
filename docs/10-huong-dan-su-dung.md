@@ -12,8 +12,9 @@
 | Đăng nhập, đổi mật khẩu, khung ứng dụng, thông báo realtime | ✅ Dùng được | |
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
-| Giáo viên: tiến độ, chấm bài, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
-| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài, nộp bài | ✅ Dùng được | Nháp khi mất mạng chưa có (bước tiếp theo) |
+| Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, đánh dấu trên bài kiểu Word, nhận xét mẫu, thống kê lỗi, trả bài, yêu cầu sửa, so sánh 2 lần nộp) | ✅ Dùng được | |
+| Giáo viên: tiến độ, thống kê, trao đổi | ⏳ Đang làm | Backend đã có đủ API; giao diện là khung trống |
+| Sinh viên: bài được giao, chi tiết bài, lịch sử nộp, làm bài (cả khi mất mạng), nộp bài | ✅ Dùng được | |
 | Sinh viên: xem kết quả chi tiết, kết quả học tập, trao đổi | ⏳ Đang làm | |
 
 Những phần "đang làm" vẫn gọi thử được qua Swagger UI (mục 2.2) hoặc file `backend/http/*.http`.
@@ -170,9 +171,29 @@ Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: t
   - Menu "…": **Sửa nội dung** (chỉ bài nháp), **Nhân bản** (tạo bản nháp mới, không chép người nhận và hạn), **Đóng bài** (sinh viên không nộp được nữa, vẫn chấm được) / **Mở lại**, **Xoá** (chỉ bài nháp).
 - Bài **đã phát hành không sửa được đề và rubric** (để không làm sai lệch bài đã nộp) — muốn đổi thì nhân bản rồi soạn bài mới.
 
-### 6.4. Đang làm
+### 6.4. Chấm bài
 
-Tiến độ realtime của lớp, chấm bài (checklist, band, nhận xét inline, trả bài / yêu cầu sửa), thống kê, xuất Excel và trao đổi (chat) đã có ở backend; giao diện sẽ có ở các bước tiếp theo.
+1. **Hàng đợi** (menu **Chấm bài**, hoặc nút "Chấm bài" ở danh sách / chi tiết bài tập): lọc theo bài tập, phần, lớp, mã SV / họ tên; tab **Chờ chấm / Đang chấm / Đã trả / Cần sửa**. Bài nộp trước xếp trước; nhãn `v2` = bài nộp lại sau khi yêu cầu sửa, nhãn "Nộp muộn" nếu nộp sau hạn. Bấm **Chấm**.
+2. **Màn chấm**: bài làm bên trái (cảnh báo khi bài ≤ 20 từ hoặc dưới số từ tối thiểu; bấm "Đề bài" để xem đề), bảng chấm bên phải. Màn hình nhỏ: chuyển giữa tab **Bài làm** / **Chấm điểm**.
+   - Mỗi tiêu chí: tick checklist, chọn điểm (bấm lại để bỏ chọn, hoặc dùng phím ← →), ghi nhận xét. Tick mục **"Giới hạn điểm"** (nhãn cam "Tối đa N") thì các mức cao hơn bị khoá kèm lý do, điểm đang chọn cao hơn sẽ tự hạ xuống. Bài ≤ 20 từ: mọi tiêu chí tối đa 1.
+   - **Band của phần** hiện ngay khi chấm đủ (trung bình các tiêu chí, làm tròn kiểu IELTS .25 / .75).
+   - **Chấm 0** (góc trên bảng chấm): chọn lý do Không làm bài / Không viết bằng tiếng Anh / Học thuộc hoàn toàn; bấm "Bỏ chấm 0" để chấm lại bình thường.
+   - Kết quả **tự lưu nháp** 2 giây sau mỗi thay đổi (hoặc bấm **Lưu nháp**); sinh viên chưa thấy gì cho tới khi trả bài.
+   - **Trả bài**: cần chấm đủ mọi tiêu chí. Sinh viên nhận thông báo và thấy band, nhận xét.
+   - **Yêu cầu sửa**: nhập lời nhắn và hạn sửa; chỉ khi còn lượt sửa (theo cài đặt bài tập) và bài chưa đóng. Sinh viên nộp lại sẽ thành lần nộp mới (`v2`).
+   - **Đánh dấu trên bài** (giống Word đã chấm): **bôi đen** chữ trong bài → thanh công cụ **Lỗi · Đánh dấu · Tốt · Nhận xét · Sửa thành… · Xoá · Thêm chữ**.
+     - *Lỗi*: chọn 1 trong 7 nhóm (Ngữ pháp, Chính tả, Từ vựng, Collocation, Liên kết, Dấu câu, Khác) hoặc mã IELTS chi tiết (VT, SV, ART…), tuỳ chọn tiêu chí, nhận xét, cách sửa → chữ được **gạch chân gợn sóng** màu theo nhóm lỗi.
+     - *Đánh dấu* → nền vàng; *Tốt* → nền xanh nhạt; *Nhận xét* → nền xám, nội dung hiện ở **lề phải** (bong bóng canh theo dòng).
+     - *Sửa thành…* → chữ cũ gạch ngang đỏ, chữ mới gạch chân đỏ ngay cạnh; *Xoá* → chữ gạch ngang đỏ; *Thêm chữ* → chữ đỏ gạch chân chèn sau đoạn đã chọn. **Bài gốc của sinh viên không bị đổi**, đây chỉ là lớp hiển thị.
+     - Nhiều kiểu được chồng lên cùng một đoạn. Lề trái có **thanh dọc** ở các dòng có đánh dấu. Hàng **Hiện:** bật / tắt từng lớp (Tô màu, Sửa, Lỗi, Nhận xét).
+     - Bấm vào đoạn đã đánh dấu (hoặc bong bóng ở lề) → thẻ chi tiết với **Sửa / Xoá**. Ô nhận xét có nút **Nhận xét mẫu** để chèn nhận xét hay dùng hoặc lưu nhận xét đang viết.
+     - Tab **Đánh dấu (N)** ở bảng bên phải: **thống kê số lỗi** theo nhóm và theo tiêu chí, danh sách mọi đánh dấu — bấm một mục để cuộn tới đoạn đó trên bài. Đánh dấu tự lưu cùng kết quả chấm.
+   - Trả bài / yêu cầu sửa xong, màn tự chuyển sang **bài kế tiếp** trong hàng đợi. Nút **Trước / Sau** và số "3/12" đi theo bộ lọc của hàng đợi; ô chọn **Lần nộp** để xem lại các lần nộp cũ (chỉ xem).
+   - **So sánh với lần trước** (hiện khi bài đã nộp lại): nút ở trên bài làm. Chọn lần cũ cần so; xem kiểu **Gộp** (chữ bị bỏ gạch ngang nền đỏ, chữ thêm nền xanh) hoặc **Song song** (bài cũ | bài mới). Bên dưới là **"Đã sửa X/Y lỗi của lần N"** theo nhóm lỗi và theo tiêu chí, rồi từng lỗi của lần cũ với kết quả **tự đoán** (Đã sửa / Đổi khác gợi ý / Chưa sửa). Bấm một lỗi → đoạn trích được viền trên bài cũ; đoán sai thì chọn lại, bấm **Về tự đoán** để bỏ. Đánh giá lưu ngay, làm được cả sau khi đã trả bài.
+
+### 6.5. Đang làm
+
+Tiến độ realtime của lớp, thống kê, xuất Excel và trao đổi (chat) đã có ở backend; giao diện sẽ có ở các bước tiếp theo.
 
 ---
 
@@ -207,13 +228,16 @@ Bấm **Làm bài / Viết tiếp / Sửa bài** để mở màn làm bài toàn
 
 - **Bên trái** là đề bài (trên điện thoại: bấm **Xem đề bài** để mở), **bên phải** là ô soạn. Số từ đếm ngay khi gõ (cùng cách đếm với máy chủ): màu cam khi chưa đủ tối thiểu, xanh khi đủ.
 - **Tự lưu nháp**: ngừng gõ 3 giây, chuyển sang tab khác hoặc đổi phần là bài được lưu; dòng trạng thái ghi "Chưa lưu" → "Đang lưu…" → "Đã lưu lúc hh:mm". Lưu lỗi thì bấm "Lỗi lưu – thử lại". Đóng trang khi còn thay đổi chưa lưu, trình duyệt sẽ hỏi lại.
+- **Mất mạng khi đang viết**: cứ viết tiếp, bài được giữ trên trình duyệt; dòng trạng thái ghi "Ngoại tuyến – đã lưu trên máy" và nút nộp tạm khoá ("Cần có mạng để nộp bài"). Có mạng lại, bài tự gửi lên máy chủ. Lỡ đóng trang khi chưa gửi được, mở lại màn làm bài trên **cùng trình duyệt** thì bài được khôi phục (nếu trong lúc đó bài đã được sửa ở nơi khác, hệ thống hỏi chọn bản).
 - **Mở cùng bài ở 2 tab / 2 máy**: khi một nơi lưu đè, nơi kia hiện hộp thoại cho xem cả hai bản (kèm số từ) để chọn **Dùng bản trên máy này** hoặc **Dùng bản trên máy chủ**.
 - **Nộp**: bấm **Nộp phần này** (đang "Cần sửa": **Nộp bản sửa**). Bài ít hơn số từ tối thiểu thì hệ thống hỏi lại ("Viết tiếp" / "Vẫn nộp"). Nộp xong ô soạn chuyển sang chỉ đọc kèm giờ nộp; nộp sau hạn (khi bài cho phép) được ghi là **nộp muộn**.
 - **Đồng hồ đếm ngược** theo giờ máy chủ (tự đồng bộ 5 phút một lần). Quá hạn mà bài không cho nộp muộn, hoặc bài đã đóng, thì ô soạn khoá lại và ghi lý do.
 
+- **Xem bài đã chấm**: phần đã được trả bài hiện bài viết **kèm đánh dấu của giáo viên** (cùng kiểu với màn chấm: gạch lỗi, chữ sửa, nền tô màu, nhận xét ở lề), chỉ đọc; bấm đoạn được đánh dấu để xem chi tiết, bật / tắt từng lớp ở hàng **Hiện:**. Khi bài đang **Cần sửa**, chữ sửa của giáo viên được ẩn — chỉ thấy loại lỗi và nhận xét để tự sửa.
+
 ### 7.4. Đang làm
 
-**Giữ nháp khi mất mạng**, **xem kết quả chi tiết** (nhận xét trên bài, mã lỗi, so sánh các lần nộp), **kết quả học tập** và **trao đổi** sẽ có ở các bước tiếp theo.
+**Xem kết quả chi tiết** (band từng tiêu chí, so sánh các lần nộp), **kết quả học tập** và **trao đổi** sẽ có ở các bước tiếp theo.
 
 ---
 

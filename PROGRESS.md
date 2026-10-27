@@ -3,30 +3,30 @@
 > Chỉ ghi **đã làm tới đâu · làm được gì · còn lại gì**. Chi tiết từng bước xem lịch sử git.
 > Kế hoạch: [PLAN.md](PLAN.md) · Tài liệu chuẩn: [docs/](docs/) · Hướng dẫn sử dụng + tài khoản: [docs/10](docs/10-huong-dan-su-dung.md)
 
-Cập nhật: 24/10/2026
+Cập nhật: 25/10/2026
 
 ---
 
 ## 1. Đang ở đâu
 
-**Backend xong Mức 1 + Mức 2. Frontend xong F1 → F3, F4a (bài được giao + chi tiết bài), F4b (màn làm bài); bước tiếp theo là F4c (nháp offline).**
+**Backend xong Mức 1 + Mức 2. Frontend xong F1 → F3, F4a (bài được giao + chi tiết bài), F4b + F4c (màn làm bài, nháp offline) — **F4 xong**; F5a (hàng đợi + màn chấm) xong; F5b (branch `feat/essay-annotations`) xong cả 3 phần — đánh dấu kiểu Word và so sánh 2 lần nộp; tiếp theo push branch + mở PR, rồi F6.**
 
 | Phần | Trạng thái |
 |---|---|
 | Tài liệu phân tích thiết kế (docs 01 → 10 + Word gộp), design system, prompt Figma, quy tắc cho AI | ✅ |
 | Backend Mức 1 — lõi nghiệp vụ (bước 1 → 8) | ✅ |
-| Backend Mức 2 — trọng tâm mạng (bước 9 → 14) | ✅ (phần frontend của bước 10 làm ở F4) |
+| Backend Mức 2 — trọng tâm mạng (bước 9 → 14) | ✅ (phần frontend của bước 10 đã làm ở F4) |
 | Bước 20 — README, dữ liệu demo, tài liệu báo cáo | ✅ (ảnh Wireshark người dùng tự chụp) |
 | Frontend F1 — đăng nhập, khung app, thông báo realtime | ✅ |
 | Frontend F2 — quản trị; lớp học + import sinh viên | ✅ |
 | Frontend F3 — bài tập: danh sách, chi tiết, giao bài, trình soạn | ✅ |
-| Frontend F4 — sinh viên: bài được giao, làm bài, nộp bài | 🟡 F4a ✅ (danh sách theo tab, chi tiết, lịch sử nộp) · F4b ✅ (làm bài, tự lưu, xung đột nháp, nộp) · F4c ⬜ **tiếp theo** (nháp offline) |
-| Frontend F5 — giáo viên chấm bài | ⬜ |
+| Frontend F4 — sinh viên: bài được giao, làm bài, nộp bài | ✅ F4a (danh sách theo tab, chi tiết, lịch sử nộp) · F4b (làm bài, tự lưu, xung đột nháp, nộp) · F4c (nháp offline) |
+| Frontend F5 — giáo viên chấm bài | ✅ F5a ✅ (hàng đợi, chấm theo tiêu chí, trả bài, yêu cầu sửa, chấm 0) · F5b-1 ✅ (backend V9) · F5b-2 ✅ (đánh dấu kiểu Word, V10) · F5b-3 ✅ (so sánh 2 lần nộp) |
 | Frontend F6 — kết quả, tiến độ, thống kê, trao đổi | ⬜ |
 | Mức 3 (bước 15 → 19) | ⬜ làm nếu còn thời gian |
 
-Kiểm tra gần nhất: backend `mvn test` 466 test case đều đạt · frontend `lint`, `tsc`, `build` sạch, `test:unit` 38 / 38.
-Commit gần nhất: F4b (màn làm bài); chưa push.
+Kiểm tra gần nhất: backend `mvn test` 477 test case đều đạt · frontend `lint`, `tsc`, `build` sạch, `test:unit` 74 / 74.
+Commit gần nhất trên `main`: `a72b50e` (F5a, đã push). Branch `feat/essay-annotations`: proxy tunnel + F5b-1 → F5b-3, chưa push (`main` đã bật bảo vệ → gộp qua PR).
 
 ---
 
@@ -48,7 +48,7 @@ Commit gần nhất: F4b (màn làm bài); chưa push.
 - [x] Nhật ký hệ thống — `/quan-tri/nhat-ky` (F2)
 - [x] Phiên đăng nhập — `/quan-tri/phien-dang-nhap` (F2; chỉ hiện số phiên, danh sách chi tiết thuộc Mức 3)
 
-**Giáo viên** — 5 / 13
+**Giáo viên** — 7 / 13
 - [ ] Tổng quan (dashboard) — `/giao-vien/tong-quan` (F6)
 - [x] Danh sách lớp — `/giao-vien/lop-hoc` (F2)
 - [x] Chi tiết lớp: thành viên, thêm sinh viên, import + file tài khoản — `/giao-vien/lop-hoc/[id]` (F2)
@@ -57,8 +57,8 @@ Commit gần nhất: F4b (màn làm bài); chưa push.
 - [x] Chi tiết bài: đề, rubric, cài đặt, giao bài / phát hành, đóng / nhân bản — `/giao-vien/bai-tap/[id]` (F3)
 - [ ] Tiến độ bài (ma trận realtime, online, nhắc nhở) — `/giao-vien/bai-tap/[id]/tien-do` (F6)
 - [ ] Thống kê một bài — `/giao-vien/bai-tap/[id]/thong-ke` (F6)
-- [ ] Hàng đợi chấm — `/giao-vien/cham-bai` (F5)
-- [ ] Màn chấm bài — `/giao-vien/cham-bai/[id]` (F5)
+- [x] Hàng đợi chấm — `/giao-vien/cham-bai` (F5a)
+- [x] Màn chấm bài — `/giao-vien/cham-bai/[id]` (F5a, F5b: đánh dấu kiểu Word, nhận xét mẫu, so sánh 2 lần nộp)
 - [ ] Thống kê lớp, xếp hạng, xuất Excel — `/giao-vien/thong-ke` (F6)
 - [ ] Trao đổi (chat) — `/chat` (F6)
 - [ ] Ngân hàng đề — `/giao-vien/ngan-hang-de` (Mức 3, bước 17)
@@ -66,11 +66,11 @@ Commit gần nhất: F4b (màn làm bài); chưa push.
 **Sinh viên** — 3 / 5
 - [x] Bài được giao (tab Cần làm / Sắp hết hạn / Quá hạn / Đã nộp / Cần sửa) — `/sinh-vien/tong-quan` (F4a)
 - [x] Chi tiết bài + lịch sử nộp — `/sinh-vien/bai-tap/[id]` (F4a)
-- [x] Màn làm bài: đếm từ, tự lưu nháp, xung đột nháp, đồng hồ, nộp — `/sinh-vien/lam-bai/[id]` (F4b; nháp offline ở F4c)
+- [x] Màn làm bài: đếm từ, tự lưu nháp, xung đột nháp, nháp offline, đồng hồ, nộp — `/sinh-vien/lam-bai/[id]` (F4b, F4c)
 - [ ] Kết quả học tập + kết quả từng bài (band, nhận xét, lỗi) — `/sinh-vien/ket-qua` (F6; kết quả từng bài hiện trong chi tiết bài)
 - [ ] Trao đổi (chat) — `/chat` (F6)
 
-**Tổng: 17 / 28 màn.**
+**Tổng: 19 / 28 màn.**
 
 ---
 
@@ -84,6 +84,10 @@ Commit gần nhất: F4b (màn làm bài); chưa push.
 - **Chấm bài:** checklist, band theo tiêu chí có giới hạn, mã lỗi, nhận xét inline, ngân hàng nhận xét, trả bài / yêu cầu sửa, band cả bài.
 - **Thông báo:** trong app + WebSocket STOMP + email, job nhắc hạn, giáo viên nhắc thủ công.
 - **Realtime Mức 2:** online, tiến độ live, chat theo bài nộp / lớp, heartbeat.
+- **Đánh dấu trên bài (F5b-1, V9):** `inline_comments.kind` (lỗi / lưu ý / dùng hay — chỉ lỗi tính vào thống kê), `resolution` + `PATCH …/inline-comments/{id}` để giáo viên đánh giá "đã sửa" lỗi của lần nộp cũ khi so sánh; mã nhóm `GR`, `OTHER` cho 7 nút chọn nhanh. Dùng lại `inline_comments` / `comment_bank` thay vì tạo bảng mới.
+- **Đánh dấu kiểu "Word đã chấm" (F5b-2, V10):** `EssayAnnotator` (giáo viên + sinh viên chỉ đọc): tách đoạn theo offset, không innerHTML, xử lý chồng lấn; lỗi gạch gợn sóng màu theo 7 nhóm; sửa thay / xoá / thêm chữ (track changes, chữ gốc không đổi — `inline_comments.edit`); lưu ý vàng, dùng hay xanh, nhận xét xám (`kind COMMENT`); bong bóng nhận xét ở lề phải tự dàn, thanh dọc lề trái; bật / tắt 4 lớp. Bôi đen → 7 nút; form 7 nhóm lỗi + mã IELTS, tiêu chí, nhận xét mẫu (chèn / lưu / xoá); tab "Đánh dấu (N)" có thống kê số lỗi theo nhóm + tiêu chí và danh sách ↔ cuộn tới đoạn. Sinh viên xem bản đã trả cùng giao diện ở màn làm bài.
+- **So sánh 2 lần nộp (F5b-3):** nút "So sánh với lần trước" trên màn chấm (khi đã nộp lại); `VersionDiff` Gộp / Song song, diff theo từ bằng LCS tự viết (`lib/utils/textDiff.ts`, không thêm thư viện); tự đoán từng lỗi lần cũ Đã sửa / Đổi khác gợi ý / Chưa sửa (đoạn trích + 3 từ mỗi bên, đối chiếu gợi ý); "Đã sửa X/Y" theo nhóm lỗi + tiêu chí; chỉnh tay / về tự đoán bằng `PATCH …/inline-comments/{id}`; bấm lỗi → viền đoạn trích trên bài cũ. Đã chạy thử với backend thật (chấm → yêu cầu sửa → sinh viên nộp lại → so sánh).
+- **Chạy qua tunnel:** proxy của Next (`/api`, `/uploads`, `/ws`), CORS nhận mẫu origin (`https://*.trycloudflare.com`), `allowedDevOrigins`.
 - **Thống kê:** ma trận tiến độ, thống kê bài / lớp / sinh viên, xếp hạng, xuất Excel.
 - **Bảo mật & triển khai:** nhật ký hệ thống, nginx HTTPS / WSS, Docker 5 container, kiểm thử tải k6 đạt NFR-01/02/03 (docs/09).
 - **Quy ước API:** mọi response **HTTP 200**, lỗi nằm trong body `{success: false, errorCode, errorMessage, status}` (docs/05 A.1).
@@ -97,6 +101,8 @@ Commit gần nhất: F4b (màn làm bài); chưa push.
 - **Sinh viên — bài được giao:** 5 tab có số đếm (tab giữ trên URL), thẻ bài với trạng thái từng phần, hạn gần nhất + đếm ngược, nút chính Sửa bài / Làm bài / Xem kết quả / Xem chi tiết (`lib/utils/studentAction.ts`, có test); chi tiết bài: khung yêu cầu sửa (hạn, lời nhắn), từng phần (đề, ảnh, tiêu chí + checklist), lịch sử nộp, band từng phần + band cả bài, trang 404 khi không được giao.
 - **Đồng hồ theo giờ server:** `lib/utils/serverClock.ts` (có test) lấy độ lệch từ `serverTime` của response; `CountdownTimer` đếm theo đó. Thêm component `BandBadge`.
 - **Sinh viên — làm bài:** đề bên trái / ô soạn bên phải (điện thoại: đề thu gọn, thanh nộp dính đáy), tab theo phần, đếm từ khi gõ, **tự lưu nháp** sau 3 giây ngừng gõ / khi rời tab / khi đổi phần (gửi `draftVersion`), **409 DRAFT_CONFLICT** → hộp thoại so 2 bản để chọn, nộp có xác nhận khi thiếu từ (gửi `expectedVersion`; lỗi trạng thái cũ thì tải lại), chế độ chỉ đọc khi đã nộp / quá hạn / bài đóng, đồng bộ giờ `GET /api/time` 3 mẫu lấy mẫu nhanh nhất, 5 phút một lần (SD-11). `ApiError` mang thêm `data` của lỗi.
+- **Nháp offline (F4c):** mỗi lần gõ ghi IndexedDB (`lib/offlineDraftStore.ts`, IndexedDB gốc, không thêm thư viện; khoá theo người dùng + phần), lỗi mạng / 502–504 → trạng thái OFFLINE, sự kiện `online` → gửi lại; nút nộp khoá khi mất mạng; mở lại màn mà trên máy còn bản chưa gửi → server chưa đổi thì gửi lên, đã đổi thì hỏi chọn bản (`lib/utils/offlineDraft.ts`, có test). Bản trên máy bị xoá khi đã lưu lên server hoặc đã nộp.
+- **Giáo viên — chấm bài (F5a):** hàng đợi lọc theo bài / phần / lớp / từ khoá + tab trạng thái (bộ lọc trên URL); màn chấm bài làm 58% / bảng chấm 42% (dưới 1024px thành 2 tab), cảnh báo số từ, `CriterionCard` (checklist Đạt / Giới hạn điểm) + `ScorePicker` khoá mức vượt giới hạn và tự hạ điểm (BR-17, BR-18), band xem trước (BR-12, `lib/utils/grading.ts` có test), chấm 0 có lý do (BR-19), tự lưu nháp 2 giây, trả bài, yêu cầu sửa (lời nhắn + hạn, còn lượt — BR-10), chọn lần nộp để xem lại, Trước / Sau theo hàng đợi, trả xong tự sang bài kế.
 
 ### Tài liệu
 - docs 01 → 10 (Markdown + Mermaid) và Word gộp `docx/00-tai-lieu-phan-tich-thiet-ke.docx`; docs/10 là hướng dẫn sử dụng + danh sách tài khoản.
@@ -107,16 +113,15 @@ Commit gần nhất: F4b (màn làm bài); chưa push.
 ## 3. Còn lại
 
 ### Việc chính (theo thứ tự)
-1. **F4c — Nháp offline** (docs/06 mục 7, SD-06): mỗi lần gõ lưu IndexedDB, lỗi mạng → trạng thái OFFLINE "Ngoại tuyến – đã lưu trên máy", có mạng (`online`) → gửi lại; khoá nút nộp khi mất mạng (tooltip "Cần có mạng để nộp bài"); mở lại trang khi bản trên máy mới hơn server → hỏi chọn bản. Thêm vào `useDraftAutosave`.
-2. **F5 — Chấm bài** (Prompt 6 + 6b): hàng đợi chấm, màn chấm (ScorePicker có khoá giới hạn, mã lỗi khi bôi đen, ngân hàng nhận xét, so sánh 2 version), trả bài / yêu cầu sửa.
-3. **F6 — Kết quả & thống kê** (Prompt 5, 7, 8): kết quả phía sinh viên, ma trận tiến độ realtime + nhắc nhở, thống kê bài / lớp / sinh viên, xuất Excel, dashboard, trao đổi (chat).
+1. **Push branch `feat/essay-annotations` + mở PR** vào `main` (chờ người dùng bảo).
+2. `DescriptorPanel` (bản diễn giải tiếng Việt + link ielts.org) — làm sau F5b nếu còn thời gian.
+3. **F6 — Kết quả & thống kê** (Prompt 5, 7, 8): kết quả phía sinh viên (kèm so sánh version + "đã sửa" — dùng lại `VersionDiff`, `textDiff.ts`), ma trận tiến độ realtime + nhắc nhở, thống kê bài / lớp / sinh viên, xuất Excel, dashboard, trao đổi (chat).
 4. Mức 3 (nếu còn thời gian): thi tính giờ, kiểm tra đạo văn, ngân hàng đề, gợi ý chấm AI, TCP qua TLS.
 
 ### Việc nhỏ / tồn đọng
-- [ ] Push lên GitHub (commit `58e64f9` trở đi chưa push).
 - [ ] Trang chi tiết bài của giáo viên (`/giao-vien/bai-tap/[id]`) bị tràn ngang trên điện thoại: lưới `lg:grid-cols-[1fr_340px]` cần `grid-cols-1` + `minmax(0,1fr)` như trang sinh viên.
-- [ ] Dữ liệu demo chưa có bài "Đã trả bài" / "Cần sửa" nên chưa chụp được khung kết quả và khung yêu cầu sửa của F4a — kiểm lại khi làm F5.
-- [ ] Mỗi bước F4 → F6 xong: cập nhật docs/10 (mục 1, 6.4, 7) + xuất lại Word.
+- [ ] Chưa chạy thử trên màn thật khung "Cần sửa" phía sinh viên (F4a / F4b) — thử khi làm F5b bằng nút "Yêu cầu sửa".
+- [ ] Mỗi bước F5 → F6 xong: cập nhật docs/10 (mục 1, 6.4 – 6.5, 7) + xuất lại Word.
 - [ ] Backend: `AdminUserService` (module `user`) gọi ngược `ClassroomService` để đếm số lớp — nên đổi sang truy vấn chỉ-đọc.
 - [ ] Backend: `grades.updated_at` lấy giờ hệ thống, không qua bean `Clock` (chưa ảnh hưởng nghiệp vụ).
 - [ ] Người dùng tự chụp ảnh Wireshark HTTP / HTTPS / TCP 9090 cho báo cáo (hướng dẫn trong README).

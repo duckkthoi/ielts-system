@@ -7,15 +7,18 @@ import { Send } from 'lucide-react';
 import Link from 'next/link';
 
 import { CountdownTimer } from '@/components/CountdownTimer';
+import { EssayAnnotator } from '@/components/EssayAnnotator';
 import { studentApi } from '@/lib/api/student';
 import { ApiError } from '@/lib/apiError';
 import { studentAssignmentPath } from '@/lib/constants';
-import type { StudentPartDetail } from '@/lib/types/student';
+import type { StudentInlineComment, StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
+import { useOnlineStatus } from '@/lib/utils/hooks';
 import { countWords } from '@/lib/utils/wordCount';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 import { AutosaveIndicator } from './AutosaveIndicator';
-import { isWritable } from './const';
+import { isWritable, studentAnnotationViews } from './const';
 import { DraftConflictModal } from './DraftConflictModal';
 import { EssayEditor } from './EssayEditor';
 import { PromptPanel } from './PromptPanel';
@@ -63,10 +66,14 @@ function Layout({
 
 function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: DraftInit; onChanged: () => void }) {
   const { modal, message } = App.useApp();
-  const draft = useDraftAutosave(part.partId, init, onChanged);
+  // Layout (main) chỉ render khi đã đăng nhập nên luôn có user; 0 chỉ để thoả kiểu.
+  const userId = useAuthStore((s) => s.user?.id ?? 0);
+  const online = useOnlineStatus();
+  const draft = useDraftAutosave(userId, part.partId, init, onChanged);
   const [submitting, setSubmitting] = useState(false);
   const words = useMemo(() => countWords(draft.content), [draft.content]);
   const blank = words === 0;
+  const canSend = online && draft.state !== 'OFFLINE';
   const short = part.minWords !== null && words < part.minWords;
 
   const doSubmit = async () => {
@@ -97,14 +104,24 @@ function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: Dr
     });
 
   const submitButton = (block: boolean) => (
-    <Tooltip title={blank ? 'Bài đang trống' : draft.conflict ? 'Chọn bản nháp trước khi nộp' : undefined}>
+    <Tooltip
+      title={
+        !canSend
+          ? 'Cần có mạng để nộp bài'
+          : blank
+            ? 'Bài đang trống'
+            : draft.conflict
+              ? 'Chọn bản nháp trước khi nộp'
+              : undefined
+      }
+    >
       <Button
         type="primary"
         size="large"
         block={block}
         icon={<Send size={16} />}
         loading={submitting}
-        disabled={blank || draft.conflict !== null}
+        disabled={!canSend || blank || draft.conflict !== null}
         onClick={confirmSubmit}
       >
         {part.status === 'REVISION_REQUESTED' ? 'Nộp bản sửa' : 'Nộp phần này'}
@@ -165,6 +182,19 @@ function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: Dr
 
 // ─── Chỉ đọc: đã nộp / quá hạn / bài đóng ─────────────────────────────────────
 
+/** Bản nộp đã trả bài: bài viết kèm đánh dấu của giáo viên, chỉ đọc (cùng giao diện với màn chấm). */
+function AnnotatedEssay({ content, inline }: { content: string; inline: StudentInlineComment[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const views = useMemo(() => studentAnnotationViews(inline), [inline]);
+  return (
+    <div className="mx-auto w-full max-w-240">
+      <EssayAnnotator content={content} annotations={views} readOnly selectedKey={selected} onSelect={setSelected} />
+    </div>
+  );
+}
+
+type Submitted = { content: string; submittedAt: string; late: boolean; inline: StudentInlineComment[] | null };
+
 function ViewMode({
   assignmentId,
   assignmentClosed,
@@ -174,7 +204,7 @@ function ViewMode({
   assignmentId: number;
   assignmentClosed: boolean;
   part: StudentPartDetail;
-  submitted: { content: string; submittedAt: string; late: boolean } | null;
+  submitted: Submitted | null;
 }) {
   const pending = part.status === 'NOT_STARTED' || part.status === 'DRAFT' || part.status === 'REVISION_REQUESTED';
   const toolbar = (
@@ -209,7 +239,9 @@ function ViewMode({
 
   return (
     <Layout part={part} toolbar={toolbar}>
-      {submitted ? (
+      {submitted?.inline ? (
+        <AnnotatedEssay content={submitted.content} inline={submitted.inline} />
+      ) : submitted ? (
         <EssayEditor
           value={submitted.content}
           readOnly
@@ -224,9 +256,7 @@ function ViewMode({
 
 // ─── Nạp dữ liệu theo chế độ ──────────────────────────────────────────────────
 
-type Loaded =
-  | { mode: 'edit'; init: DraftInit }
-  | { mode: 'view'; submitted: { content: string; submittedAt: string; late: boolean } | null };
+type Loaded = { mode: 'edit'; init: DraftInit } | { mode: 'view'; submitted: Submitted | null };
 
 export function WritingPanel({
   assignmentId,
@@ -251,7 +281,15 @@ export function WritingPanel({
       }
       if (part.currentVersion === 0) return { mode: 'view', submitted: null };
       const v = await studentApi.version(part.partId, part.currentVersion);
-      return { mode: 'view', submitted: { content: v.content, submittedAt: v.submittedAt, late: v.late } };
+      return {
+        mode: 'view',
+        submitted: {
+          content: v.content,
+          submittedAt: v.submittedAt,
+          late: v.late,
+          inline: v.result?.inlineComments ?? null
+        }
+      };
     };
     load()
       .then((data) => {
