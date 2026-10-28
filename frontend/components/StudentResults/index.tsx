@@ -8,13 +8,14 @@ import { Card, Empty, Table } from 'antd';
 import { Clock, FileCheck } from 'lucide-react';
 
 import { BandBadge } from '@/components/BandBadge';
+import { BandDistributionChart } from '@/components/BandDistributionChart';
 import { BandTrendChart } from '@/components/BandTrendChart';
 import { CriteriaBars } from '@/components/CriteriaBars';
 import { ErrorStatsTable } from '@/components/ErrorStatsTable';
 import { StatCard } from '@/components/StatCard';
 import { CRITERION_CODE_LABEL, TASK_TYPE_LABEL } from '@/lib/constants';
 import { formatBand, getBandLevel } from '@/lib/theme/status';
-import type { AssignmentBand, PartBand, StudentStats } from '@/lib/types/stats';
+import type { AssignmentBand, BandCount, PartBand, StudentStats } from '@/lib/types/stats';
 import { buildBandTrend } from '@/lib/utils/bandTrend';
 import { formatDate } from '@/lib/utils/date';
 
@@ -30,6 +31,15 @@ interface Props {
 
 export function StudentResults({ stats, assignmentHref, partHref }: Props) {
   const trend = useMemo(() => buildBandTrend(stats.assignments, stats.parts), [stats]);
+  const bandDistribution = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const assignment of stats.assignments) {
+      if (assignment.complete && assignment.band !== null) {
+        counts.set(assignment.band, (counts.get(assignment.band) ?? 0) + 1);
+      }
+    }
+    return [...counts].map(([band, count]): BandCount => ({ band, count })).sort((a, b) => a.band - b.band);
+  }, [stats.assignments]);
   const partsByAssignment = useMemo(() => {
     const map = new Map<number, PartBand[]>();
     for (const p of stats.parts) map.set(p.assignmentId, [...(map.get(p.assignmentId) ?? []), p]);
@@ -80,13 +90,25 @@ export function StudentResults({ stats, assignmentHref, partHref }: Props) {
       ) : (
         <>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <Card title="Band theo thời gian">
-              {trend.length > 0 ? (
-                <BandTrendChart series={trend} />
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có band để vẽ biểu đồ." />
-              )}
-            </Card>
+            <div className="flex flex-col gap-4">
+              <Card title="Band theo thời gian">
+                {trend.length > 0 ? (
+                  <BandTrendChart series={trend} />
+                ) : (
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có band để vẽ biểu đồ." />
+                )}
+              </Card>
+              <Card title="Phân bố band">
+                {bandDistribution.length > 0 ? (
+                  <BandDistributionChart distribution={bandDistribution} unit="bài" />
+                ) : (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="Cần có bài được chấm đủ mọi phần để xem phân bố band."
+                  />
+                )}
+              </Card>
+            </div>
             <Card title="Trung bình theo tiêu chí">
               {stats.criteria.length > 0 ? (
                 <CriteriaBars
