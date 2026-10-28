@@ -109,6 +109,18 @@ class ClassStatsIntegrationTest extends StatsTestSupport {
 		assertThat(rows.get(3).get("student").get("id").asLong()).isEqualTo(u.getId());
 		assertThat(rows.get(3).get("averageBand").isNull()).isTrue();
 		assertThat(rows.get(3).get("submittedParts").asInt()).isZero();
+
+		// Ma trận điểm từng học sinh × từng bài: chỉ có band khi mọi phần của bài đã được trả.
+		assertThat(rows.get(0).get("assignmentBands").get(String.valueOf(a1)).decimalValue())
+				.isEqualByComparingTo("6.67");
+		assertThat(rows.get(0).get("assignmentBands").get(String.valueOf(a2)).isNull()).isTrue();
+		assertThat(rows.get(1).get("assignmentBands").get(String.valueOf(a1)).decimalValue())
+				.isEqualByComparingTo("6.67");
+		assertThat(rows.get(1).get("assignmentBands").get(String.valueOf(a2)).decimalValue())
+				.isEqualByComparingTo("5.00");
+		assertThat(rows.get(2).get("assignmentBands").get(String.valueOf(a1)).isNull()).isTrue();
+		assertThat(rows.get(2).get("assignmentBands").get(String.valueOf(a2)).decimalValue())
+				.isEqualByComparingTo("4.00");
 	}
 
 	@Test

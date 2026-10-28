@@ -160,11 +160,13 @@ function CriterionEditor({ partIndex, index, onRemove }: { partIndex: number; in
 function PartCriteria({
   form,
   partIndex,
-  part
+  part,
+  onChanged
 }: {
   form: FormInstance<AssignmentForm>;
   partIndex: number;
   part: PartForm;
+  onChanged: () => void;
 }) {
   const { modal } = App.useApp();
   const [templates, setTemplates] = useState<RubricTemplateDto[] | null>(null);
@@ -183,7 +185,10 @@ function PartCriteria({
   };
 
   const applyTemplate = (t: RubricTemplateDto) => {
-    const apply = () => form.setFieldValue(['parts', partIndex, 'criteria'], t.criteria.map(criterionToForm));
+    const apply = () => {
+      form.setFieldValue(['parts', partIndex, 'criteria'], t.criteria.map(criterionToForm));
+      onChanged();
+    };
     if (!part.criteria?.length) {
       apply();
       return;
@@ -250,7 +255,7 @@ function PartCriteria({
   );
 }
 
-export function CriteriaStep({ form }: { form: FormInstance<AssignmentForm> }) {
+export function CriteriaStep({ form, onChanged }: { form: FormInstance<AssignmentForm>; onChanged: () => void }) {
   const parts = (Form.useWatch('parts', { form, preserve: true }) ?? []) as PartForm[];
   if (parts.length === 0) {
     return (
@@ -262,7 +267,7 @@ export function CriteriaStep({ form }: { form: FormInstance<AssignmentForm> }) {
   return (
     <div className="flex flex-col gap-4">
       {parts.map((part, index) => (
-        <PartCriteria key={index} form={form} partIndex={index} part={part} />
+        <PartCriteria key={index} form={form} partIndex={index} part={part} onChanged={onChanged} />
       ))}
     </div>
   );

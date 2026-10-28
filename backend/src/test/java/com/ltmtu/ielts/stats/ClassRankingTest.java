@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,8 @@ import com.ltmtu.ielts.stats.dto.ProgressDtos.StudentRef;
 class ClassRankingTest {
 
 	private static RankingRow row(String code, String band) {
-		return new RankingRow(null, new StudentRef(1L, code, code), band == null ? null : new BigDecimal(band), 0, 0, 0);
+		return new RankingRow(null, new StudentRef(1L, code, code), band == null ? null : new BigDecimal(band), 0, 0, 0,
+				Map.of());
 	}
 
 	@Test

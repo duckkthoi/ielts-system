@@ -3,6 +3,7 @@ package com.ltmtu.ielts.stats.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.stats.dto.ProgressDtos.StudentRef;
@@ -34,9 +35,10 @@ public final class ClassStatsDtos {
 
 	/**
 	 * Một hàng bảng xếp hạng. {@code averageBand}: trung bình band cả bài của các bài đã đủ phần
-	 * ({@code gradedAssignments}). Xếp hạng kiểu thi đấu (1, 1, 3); chưa có band → {@code rank = null}, xếp cuối.
+	 * ({@code gradedAssignments}). {@code assignmentBands}: band cả bài theo mã bài, null nếu chưa được trả đủ mọi
+	 * phần. Xếp hạng kiểu thi đấu (1, 1, 3); chưa có band → {@code rank = null}, xếp cuối.
 	 */
 	public record RankingRow(Integer rank, StudentRef student, BigDecimal averageBand, int gradedAssignments,
-			int submittedParts, int lateParts) {
+			int submittedParts, int lateParts, Map<Long, BigDecimal> assignmentBands) {
 	}
 }

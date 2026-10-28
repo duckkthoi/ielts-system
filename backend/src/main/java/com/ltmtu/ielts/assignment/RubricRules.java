@@ -12,6 +12,7 @@ import com.ltmtu.ielts.assignment.dto.AssignmentDtos.AssignmentRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.ChecklistItemRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.CriterionRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.PartRequest;
+import com.ltmtu.ielts.assignment.dto.QuestionBankDtos.QuestionBankRequest;
 import com.ltmtu.ielts.common.ApiException;
 
 /**
@@ -35,6 +36,10 @@ final class RubricRules {
 		}
 	}
 
+	static void validate(QuestionBankRequest req) {
+		validateRubric(req.imageUrl(), req.criteria(), "Ngân hàng đề");
+	}
+
 	static void requireOrder(Instant openAt, Instant dueAt) {
 		if (openAt != null && dueAt != null && !openAt.isBefore(dueAt)) {
 			throw invalid("Thời điểm mở phải trước hạn nộp");
@@ -42,11 +47,15 @@ final class RubricRules {
 	}
 
 	private static void validatePart(PartRequest part, String where) {
-		if (part.imageUrl() != null && !part.imageUrl().isBlank() && !isAllowedImageUrl(part.imageUrl())) {
+		validateRubric(part.imageUrl(), part.criteria(), where);
+	}
+
+	private static void validateRubric(String imageUrl, List<CriterionRequest> requestedCriteria, String where) {
+		if (imageUrl != null && !imageUrl.isBlank() && !isAllowedImageUrl(imageUrl)) {
 			throw invalid(where + ": đường dẫn ảnh không hợp lệ");
 		}
 		Set<CriterionCode> codes = EnumSet.noneOf(CriterionCode.class);
-		List<CriterionRequest> criteria = part.criteria() == null ? List.of() : part.criteria();
+		List<CriterionRequest> criteria = requestedCriteria == null ? List.of() : requestedCriteria;
 		for (int c = 0; c < criteria.size(); c++) {
 			CriterionRequest cr = criteria.get(c);
 			String at = where + " – tiêu chí " + (c + 1);

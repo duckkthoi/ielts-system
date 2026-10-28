@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { App, Button, Card, Empty, Input, Result, Skeleton, Table } from 'antd';
+import { App, Button, Card, Empty, Input, Result, Skeleton, Table, Tabs } from 'antd';
 import { ArrowLeft, Pencil, UploadCloud, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -14,6 +14,7 @@ import type { ClassroomSummary, ListParams, MemberDto } from '@/lib/types/classr
 import { useServerList } from '@/lib/utils/hooks';
 
 import { AddMembersModal } from './AddMembersModal';
+import { ClassGrades } from './ClassGrades';
 import { buildMemberColumns, MEMBER_PAGE_SIZE } from './const';
 import { ImportModal } from './ImportModal';
 
@@ -29,6 +30,7 @@ export default function ClassDetailPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'members' | 'grades'>('members');
 
   // Lớp của giáo viên khác / không tồn tại → server trả 404 → hiện trang "không tìm thấy".
   useEffect(() => {
@@ -132,44 +134,57 @@ export default function ClassDetailPage() {
       )}
       {classroom?.description && <p className="-mt-2 mb-5 max-w-3xl text-neutral-700">{classroom.description}</p>}
 
-      <Card styles={{ body: { padding: 0 } }}>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 p-4">
-          <h2 className="text-h3 font-semibold text-neutral-900">Thành viên ({total})</h2>
-          <Input.Search
-            allowClear
-            placeholder="Tìm theo mã SV, họ tên"
-            className="w-full sm:w-72"
-            onSearch={(keyword) => setQuery((q) => ({ ...q, keyword: keyword.trim() || undefined, page: 0 }))}
-          />
-        </div>
-        <Table<MemberDto>
-          rowKey="studentId"
-          columns={columns}
-          dataSource={data}
-          loading={loading}
-          scroll={{ x: 560 }}
-          locale={{
-            emptyText: query.keyword ? (
-              'Không có sinh viên nào khớp'
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Lớp chưa có sinh viên">
-                <Button type="primary" icon={<UploadCloud size={16} />} onClick={() => setImportOpen(true)}>
-                  Import danh sách sinh viên
-                </Button>
-              </Empty>
-            )
-          }}
-          pagination={
-            total > MEMBER_PAGE_SIZE && {
-              current: (query.page ?? 0) + 1,
-              pageSize: MEMBER_PAGE_SIZE,
-              total,
-              showSizeChanger: false,
-              onChange: (page) => setQuery((q) => ({ ...q, page: page - 1 }))
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as 'members' | 'grades')}
+        items={[
+          { key: 'members', label: `Thành viên (${total})` },
+          { key: 'grades', label: 'Bảng điểm' }
+        ]}
+      />
+
+      {activeTab === 'members' ? (
+        <Card styles={{ body: { padding: 0 } }}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 p-4">
+            <h2 className="text-h3 font-semibold text-neutral-900">Danh sách sinh viên</h2>
+            <Input.Search
+              allowClear
+              placeholder="Tìm theo mã SV, họ tên"
+              className="w-full sm:w-72"
+              onSearch={(keyword) => setQuery((q) => ({ ...q, keyword: keyword.trim() || undefined, page: 0 }))}
+            />
+          </div>
+          <Table<MemberDto>
+            rowKey="studentId"
+            columns={columns}
+            dataSource={data}
+            loading={loading}
+            scroll={{ x: 560 }}
+            locale={{
+              emptyText: query.keyword ? (
+                'Không có sinh viên nào khớp'
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Lớp chưa có sinh viên">
+                  <Button type="primary" icon={<UploadCloud size={16} />} onClick={() => setImportOpen(true)}>
+                    Import danh sách sinh viên
+                  </Button>
+                </Empty>
+              )
+            }}
+            pagination={
+              total > MEMBER_PAGE_SIZE && {
+                current: (query.page ?? 0) + 1,
+                pageSize: MEMBER_PAGE_SIZE,
+                total,
+                showSizeChanger: false,
+                onChange: (page) => setQuery((q) => ({ ...q, page: page - 1 }))
+              }
             }
-          }
-        />
-      </Card>
+          />
+        </Card>
+      ) : (
+        <ClassGrades classId={classId} />
+      )}
 
       <ImportModal classId={classId} open={importOpen} onClose={() => setImportOpen(false)} onImported={refresh} />
       <AddMembersModal classId={classId} open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} />

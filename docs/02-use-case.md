@@ -383,7 +383,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 | Mục | Nội dung |
 |---|---|
 | Tác nhân | Giáo viên |
-| Mô tả | Xem trạng thái làm bài của từng sinh viên theo từng phần, và nhắc những người chưa nộp. |
+| Mô tả | Xem trạng thái làm bài của từng sinh viên theo từng phần, theo dõi lịch sử vào/rời màn làm bài và chuyển tab, nhắc những người chưa nộp. |
 | Tiền điều kiện | Bài đã phát hành. |
 | Hậu điều kiện | Không đổi dữ liệu, trừ khi gửi nhắc nhở. |
 
@@ -391,8 +391,9 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 1. Giáo viên mở "Tiến độ" của một bài.
 2. Hệ thống hiển thị ma trận: mỗi hàng là một sinh viên, mỗi cột là một phần. Mỗi ô có màu theo trạng thái: chưa làm / nháp / đã nộp / nộp muộn / đã chấm / cần sửa; có dấu **quá hạn** khi chưa nộp mà đã qua hạn áp dụng (BR-07), và band của phần khi đã trả bài. Kèm phần trăm hoàn thành, số sinh viên nộp muộn, số sinh viên đang quá hạn.
 3. *(Mức 2, đã cài ở bước 9a)* Ma trận cập nhật **ngay lập tức** khi sinh viên bắt đầu làm (lưu nháp lần đầu), nộp bài, hoặc khi giáo viên trả bài / yêu cầu sửa. Có chấm xanh cho sinh viên đang online và cho biết đang mở phần nào (FR-54, FR-61).
-4. Giáo viên lọc theo lớp hoặc trạng thái, chọn những sinh viên chưa nộp, bấm "Nhắc nhở".
-5. Hệ thống gửi thông báo nhắc nhở tới những sinh viên đó.
+4. Khi sinh viên vào/rời màn làm bài hoặc chuyển tab ra/vào, hệ thống ghi sự kiện và cập nhật tức thì cho giáo viên. Giáo viên mở **Hoạt động làm bài** để xem 100 sự kiện gần nhất (lọc theo lớp, tải lại khi mở). Trình duyệt chỉ báo tab bị ẩn/hiện, không cung cấp địa chỉ trang khác.
+5. Giáo viên lọc theo lớp hoặc trạng thái, chọn những sinh viên chưa nộp, bấm "Nhắc nhở".
+6. Hệ thống gửi thông báo nhắc nhở tới những sinh viên đó.
 
 **Luồng thay thế**
 - A1. Giáo viên bấm vào một ô → mở bài nộp đó để chấm (UC-17).
@@ -459,6 +460,28 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 - E3. Bài tập đã đóng → không yêu cầu sửa được (sinh viên không nộp lại được vào bài đã đóng), chỉ trả bài. Muốn cho sửa thì mở lại bài tập trước.
 
 **Quy tắc:** BR-10, BR-13. Gợi ý sửa trong nhận xét inline mặc định ẩn với sinh viên khi bài đang "Cần sửa" (BR-21).
+
+---
+
+### UC-20 · Quản lý ngân hàng đề
+| Mục | Nội dung |
+|---|---|
+| Tác nhân | Giáo viên |
+| Mô tả | Lưu đề kèm rubric/checklist và tag để tìm, sửa, xoá và dùng lại khi soạn bài tập. |
+| Tiền điều kiện | Giáo viên đã đăng nhập. |
+| Hậu điều kiện | Đề và rubric riêng được lưu trong ngân hàng của đúng giáo viên. |
+
+**Luồng chính**
+1. Giáo viên mở Ngân hàng đề, tìm kiếm theo tên/nội dung hoặc lọc theo loại Task và tag.
+2. Giáo viên tạo đề, nhập loại Task, nội dung, ảnh, số từ, thời gian gợi ý, tag và rubric/checklist.
+3. Hệ thống lọc HTML, kiểm tra rubric rồi lưu đề cùng một rubric mẫu riêng của giáo viên.
+4. Giáo viên xem, thay toàn bộ hoặc xoá đề của mình.
+5. Khi soạn bài tập, giáo viên chọn một đề trong ngân hàng; hệ thống sao chép đề và rubric sang phần bài tập, thay đổi về sau không ảnh hưởng bản đã sao chép.
+
+**Ngoại lệ**
+- E1. Ảnh không thuộc `/uploads/` hoặc URL HTTP(S), rubric sai bước điểm/giới hạn → `400 VALIDATION_ERROR`.
+- E2. Đề thuộc giáo viên khác hoặc không tồn tại → `404 NOT_FOUND`.
+- E3. Nội dung rỗng sau khi lọc HTML → `400 VALIDATION_ERROR`.
 
 ---
 
