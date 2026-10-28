@@ -41,9 +41,6 @@ class PaperDocumentIntegrationTest extends PaperTestSupport {
 	private int port;
 
 	@Autowired
-	private PaperDocumentService documentService;
-
-	@Autowired
 	private PaperDocUpdateRepository updateRepository;
 
 	private StompTestClient stomp;
@@ -175,7 +172,9 @@ class PaperDocumentIntegrationTest extends PaperTestSupport {
 		assertThat(echo.poll(5, TimeUnit.SECONDS)).isNotNull();
 		call(delete("/api/student/assignments/" + assignmentId + "/groups/mine"), accessToken(b)).andExpect(apiStatus(409));
 
-		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("content", "Bản nộp", "expectedVersion", 0)), ta)
+		// B25a: nộp lấy snapshot của tài liệu, nên phải lưu snapshot tới thay đổi mới nhất trước.
+		snapshot(a, doc, docJson(sectionsOf("abstract", "Bản nộp")), "Abstract Bản nộp");
+		call(postJson("/api/student/parts/" + partId + "/submit", Map.of("expectedVersion", 0)), ta)
 				.andExpect(apiStatus(200));
 		assertThat(data(call(get(docUrl()), ta)).get("editable").asBoolean()).isFalse();
 		stomp.send(ca, sendUrl(doc), Map.of("update", b64(2)));

@@ -63,7 +63,7 @@ common, audit  ←  (mọi module đều dùng được)
 user ← classroom ← assignment ← submission ← grading ← notification
                                                   ↖ stats (chỉ đọc), tcpgateway, realtime, chat, exam, paper
 ```
-Module bên phải được dùng module bên trái; module bên trái KHÔNG import module bên phải. Cần báo ngược lại thì **phát sự kiện** (mục 10). `demo` nằm trên tất cả: chỉ gọi service "cửa" / service nghiệp vụ (tạo lớp, tạo bài, phát hành, nộp bài) để dữ liệu mẫu đi qua đúng các kiểm tra; tài khoản mẫu (mật khẩu biết trước, không bắt đổi) tạo qua `user/DemoAccountService`. KHÔNG module nào gọi vào `demo`.
+Module bên phải được dùng module bên trái; module bên trái KHÔNG import module bên phải. Cần báo ngược lại thì **phát sự kiện** (mục 10). Cần **lấy dữ liệu** từ module bên phải ngay trong transaction của mình (không phải báo) thì khai báo interface ở module bên trái, module bên phải cài đặt — như `security.StompAccessRule`, `submission.PaperContentSource` (nộp bài PAPER lấy snapshot tài liệu của module `paper`). `demo` nằm trên tất cả: chỉ gọi service "cửa" / service nghiệp vụ (tạo lớp, tạo bài, phát hành, nộp bài) để dữ liệu mẫu đi qua đúng các kiểm tra; tài khoản mẫu (mật khẩu biết trước, không bắt đổi) tạo qua `user/DemoAccountService`. KHÔNG module nào gọi vào `demo`.
 
 **Gọi sang module khác — chỉ qua service "cửa", KHÔNG gọi repository của module khác:**
 

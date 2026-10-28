@@ -80,7 +80,8 @@ public class NotificationEventListener {
 	@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
 	public void onReturned(GradingEvents.Returned e) {
 		notifications.notify(e.recipientIds(), new NewNotification(NotificationType.GRADE_RETURNED,
-				"Đã có kết quả: " + e.assignmentTitle() + " – " + e.partTitle(), "Band: " + band(e.band()),
+				"Đã có kết quả: " + e.assignmentTitle() + " – " + e.partTitle(),
+				e.paper() ? "Điểm: " + band(e.band()) + " / 10" : "Band: " + band(e.band()),
 				studentLink(e.assignmentId())));
 	}
 

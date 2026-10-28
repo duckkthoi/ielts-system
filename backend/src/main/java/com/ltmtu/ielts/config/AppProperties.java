@@ -124,8 +124,14 @@ public record AppProperties(
 	 * @param maxSnapshotBytes    kích thước tối đa snapshot Yjs gửi qua REST
 	 * @param maxTextChars        số ký tự tối đa của chữ thuần đi kèm snapshot
 	 * @param maxUpdatesPerMinute số update tối đa mỗi phút của một người trên một tài liệu
+	 * @param maxReferences       số tài liệu tham khảo tối đa trong thư viện của một nhóm (B24)
+	 * @param maxCslBytes         kích thước tối đa một bản ghi CSL-JSON sau khi lọc
+	 * @param doiBaseUrl          dịch vụ phân giải DOI trả CSL-JSON ({@code https://doi.org}; test trỏ về máy giả)
+	 * @param doiTimeout          thời gian chờ tối đa khi tra DOI
+	 * @param doiLookupsPerMinute số lần tra DOI tối đa mỗi phút của một người
 	 */
-	public record Paper(int maxUpdateBytes, int maxSnapshotBytes, int maxTextChars, int maxUpdatesPerMinute) {
+	public record Paper(int maxUpdateBytes, int maxSnapshotBytes, int maxTextChars, int maxUpdatesPerMinute,
+			int maxReferences, int maxCslBytes, String doiBaseUrl, Duration doiTimeout, int doiLookupsPerMinute) {
 	}
 
 	/** Giới hạn số mã lỗi riêng và số nhận xét trong ngân hàng của mỗi giáo viên (BR-22). */

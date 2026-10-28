@@ -27,11 +27,12 @@ public interface PaperGroupRepository extends JpaRepository<PaperGroup, Long> {
 	boolean existsByAssignmentIdAndName(Long assignmentId, String name);
 
 	/**
-	 * Nhóm đã có bài làm chưa: bài nộp (chỉ đọc bảng của module bài nộp) hoặc tài liệu đã có chỉnh sửa — có rồi thì không
-	 * xoá nhóm / không tự rời nhóm.
+	 * Nhóm đã có bài làm chưa: bài nộp (chỉ đọc bảng của module bài nộp), tài liệu đã có chỉnh sửa hoặc thư viện trích dẫn
+	 * đã có mục — có rồi thì không xoá nhóm / không tự rời nhóm (xoá nhóm sẽ xoá theo cả thư viện).
 	 */
 	@Query(nativeQuery = true, value = """
 			SELECT EXISTS (SELECT 1 FROM submissions WHERE group_id = :id)
-			    OR EXISTS (SELECT 1 FROM paper_documents WHERE group_id = :id AND last_seq > 0)""")
+			    OR EXISTS (SELECT 1 FROM paper_documents WHERE group_id = :id AND last_seq > 0)
+			    OR EXISTS (SELECT 1 FROM paper_references WHERE group_id = :id)""")
 	boolean hasWork(@Param("id") Long groupId);
 }

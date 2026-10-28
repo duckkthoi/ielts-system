@@ -5,10 +5,11 @@ import type { FormRule } from 'antd';
 import { Lock, Plus, Trash2 } from 'lucide-react';
 
 import { CRITERION_CODE_OPTIONS, MAX_CHECKLIST } from './const';
+import { LevelsEditor } from './LevelsEditor';
 
 // ─── Một tiêu chí chấm + checklist (bước 3 của trình soạn) ────────────────────
 // Checklist "Đạt" = đặc điểm cần có; "Giới hạn điểm" = đặc điểm tiêu cực, có band tối đa (BR-16, docs/08).
-// Bài Paper: thang 10, không có mã IELTS (BR-31).
+// Bài Paper: thang 10, không có mã IELTS, có mức đạt (LevelsEditor — BR-31).
 
 const KIND_OPTIONS = [
   { value: 'CHECK', label: 'Cần có' },
@@ -170,6 +171,7 @@ export function CriterionEditor({
           </div>
         )}
       </Form.List>
+      {paper && <LevelsEditor partIndex={partIndex} index={index} />}
     </div>
   );
 }
