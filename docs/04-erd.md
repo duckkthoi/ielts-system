@@ -31,9 +31,19 @@
 | `V6__audit_logs.sql` | Mức 2 / bước 12 | Bảng `audit_logs` (nhật ký hệ thống) | ✅ đã viết |
 | `V7__chat.sql` | Mức 2 / bước 9b | `chat_messages`, `chat_read_markers` | ✅ đã viết |
 | `V8__draft_version.sql` | Mức 2 / bước 10 | `submissions.draft_version` | ✅ đã viết |
-| `V9__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), ngân hàng đề, đạo văn, gợi ý AI | ⬜ |
+| `V9__inline_comment_kind.sql` | Mức 2 / F5b | `inline_comments.kind` (lỗi / lưu ý / dùng hay), `inline_comments.resolution` (đánh giá đã sửa khi so sánh 2 lần nộp); nới CK `chk_inline_has_content` cho lưu ý / dùng hay; thêm mã hệ thống `GR`, `OTHER` | ✅ đã viết |
+| `V10__inline_comment_edit.sql` | Mức 2 / F5b | `inline_comments.edit` (REPLACE / DELETE / INSERT — sửa kiểu track changes), `kind` thêm `COMMENT`; CK `chk_inline_has_content` tính cả `edit` | ✅ đã viết |
+| `V11__direct_student_chat.sql` | Mức 2 mở rộng | `direct_chat_channels`, thêm kênh `DIRECT` cho chat riêng giáo viên–học sinh | ✅ đã viết |
+| `V12__direct_chat_message_type.sql` | Mức 2 sửa lỗi | Nới CHECK của `chat_messages.channel_type` để lưu tin nhắn `DIRECT` | ✅ đã viết |
+| `V13__question_bank.sql` | Mức 3 / bước 17 | `question_bank_items`, `question_bank_tags`; mỗi đề tham chiếu một rubric riêng của giáo viên | ✅ đã viết |
+| `V14__exam_mode.sql` | Mức 3 / bước 15a | `assignment_parts.exam_mode`, `exam_duration_minutes` (CK: bật thi thì phải có thời lượng); `exam_sessions`, `exam_events` | ✅ đã viết |
+| `V15__exam_window_events.sql` | Mức 3 / bước 15e | `exam_events.type` thêm `WINDOW_BLUR`, `WINDOW_FOCUS`; cột `reported_late`; index `occurred_at DESC` cho bảng tin giám sát | ✅ đã viết |
+| `V16__paper_assignments.sql` | Mức 4 / bước 21a | `assignments.kind`, `citation_style`, `max_group_size`, `group_lock_at` (CK: chỉ PAPER mới có, PAPER bắt buộc kiểu trích dẫn + cỡ nhóm); `paper_sections`, `paper_groups`, `paper_group_members` | ✅ đã viết |
+| `V17__paper_group_submissions.sql` | Mức 4 / bước 21b | `submissions.group_id`; bỏ UK `(part_id, student_id)`, thay bằng 2 UK một phần: `(part_id, student_id)` khi `group_id IS NULL`, `(part_id, group_id)` khi có nhóm; view `submission_members`; `assignments.group_lock_notified_at` | ✅ đã viết |
+| `V18__paper_documents.sql` | Mức 4 / bước 22 | `paper_documents` (snapshot Yjs + JSON + chữ thuần, `last_seq`), `paper_doc_updates` (log update Yjs, `payload` NULL khi đã gộp) | ✅ đã viết |
+| `V19__…` trở đi | Mức 3 – 4 | Trích dẫn, rubric phân tích, đạo văn, gợi ý AI | ⬜ |
 
-> Lộ trình đã đánh số lại sau khi nghiên cứu nghiệp vụ chấm IELTS (tài liệu 08). Ở bước 12, migration Mức 2 (trước gộp trong V6) được tách theo từng bước — V6 audit, V7 chat, V8 bản nháp — để mỗi bước tự chứa bảng và entity của mình; Mức 3 dời sang V9 trở đi. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
+> V6–V8 phục vụ Mức 2; V9–V10 phục vụ đánh dấu bài; V11–V12 mở rộng và sửa kênh chat riêng. Mức 3 bắt đầu từ V13. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
 ---
 
@@ -239,6 +249,9 @@ erDiagram
         varchar error_code "bản chụp mã lỗi"
         bigint criterion_id FK
         text suggestion
+        varchar kind "V9"
+        varchar resolution "V9"
+        varchar edit "V10"
     }
     users |o--o{ error_codes : "mã riêng"
     users |o--o{ comment_bank : "nhận xét"
@@ -272,6 +285,7 @@ erDiagram
     users ||--o{ chat_messages : "gửi"
     submissions |o--o{ chat_messages : "kênh bài nộp"
     classrooms |o--o{ chat_messages : "kênh lớp"
+    direct_chat_channels |o--o{ chat_messages : "kênh riêng"
     users ||--o{ chat_read_markers : "đã đọc tới"
     users |o--o{ audit_logs : "thực hiện"
 
@@ -293,9 +307,10 @@ erDiagram
     }
     chat_messages {
         bigint id PK
-        varchar channel_type "SUBMISSION | CLASSROOM"
+        varchar channel_type "SUBMISSION | CLASSROOM | DIRECT"
         bigint submission_id FK
         bigint classroom_id FK
+        bigint direct_channel_id FK
         bigint sender_id FK
         text content
         varchar client_msg_id
@@ -306,6 +321,12 @@ erDiagram
         varchar channel_type PK
         bigint channel_ref_id PK
         bigint last_read_message_id
+    }
+    direct_chat_channels {
+        bigint id PK
+        bigint teacher_id FK
+        bigint student_id FK
+        timestamptz created_at
     }
     audit_logs {
         bigint id PK
@@ -339,15 +360,16 @@ erDiagram
         bigint student_id FK
         timestamptz started_at
         timestamptz ends_at
-        timestamptz finished_at
-        varchar finish_reason "SUBMITTED | TIMEOUT"
+        timestamptz finished_at "lần nộp đầu"
+        timestamptz overtime_notified_at
     }
     exam_events {
         bigint id PK
         bigint exam_session_id FK
-        varchar type "TAB_HIDDEN | TAB_VISIBLE | PASTE | DISCONNECT | RECONNECT"
+        varchar type "STARTED | TAB_HIDDEN | TAB_VISIBLE | WINDOW_BLUR | WINDOW_FOCUS | PASTE | DISCONNECT | RECONNECT | OVERTIME | SUBMITTED"
+        int paste_chars
         timestamptz occurred_at
-        varchar ip
+        boolean reported_late
     }
     similarity_reports {
         bigint id PK
@@ -359,7 +381,7 @@ erDiagram
     }
     question_bank_items {
         bigint id PK
-        bigint owner_id FK
+        bigint teacher_id FK
         varchar title
         varchar task_type
         text prompt
@@ -460,11 +482,16 @@ Một sinh viên có thể thuộc nhiều lớp. Xoá lớp không xoá tài kh
 | max_revisions | INT | NN, DF 2, CK ≥ 0 | Số lần tối đa được yêu cầu sửa (BR-10) |
 | published_at | TIMESTAMPTZ | | |
 | open_notified_at | TIMESTAMPTZ | (V4) | Đã gửi thông báo "bài mới" cho trường hợp `open_at` ở tương lai (SD-05) |
+| kind | VARCHAR(10) | (V16) NN, CK, DF `ESSAY` | `ESSAY` (bài luận IELTS) \| `PAPER` (paper theo nhóm). Thang điểm suy ra từ loại: band IELTS / thang 10 |
+| citation_style | VARCHAR(10) | (V16) CK | `IEEE` \| `APA`; chỉ PAPER, bắt buộc với PAPER (BR-30) |
+| max_group_size | INT | (V16) CK 1–10 | Cỡ nhóm tối đa; chỉ PAPER, bắt buộc với PAPER (BR-27) |
+| group_lock_at | TIMESTAMPTZ | (V16) | Hạn chốt nhóm; NULL = tới hạn nộp. Chỉ PAPER |
+| group_lock_notified_at | TIMESTAMPTZ | (V17) | Job đã báo giáo viên lúc tới hạn chốt nhóm (chống báo trùng, BR-27) |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
 Index: `teacher_id`, `(status, due_at)`.
 
-#### `assignment_parts` — các phần của bài (V1, V4, V9+)
+#### `assignment_parts` — các phần của bài (V1, V4, V14)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -477,8 +504,8 @@ Index: `teacher_id`, `(status, due_at)`.
 | min_words | INT | CK ≥ 0 | 150 / 250 theo IELTS |
 | suggested_minutes | INT | CK > 0 | 20 / 40 theo IELTS |
 | part_due_at | TIMESTAMPTZ | | NULL = dùng `assignments.due_at` (BR-07) |
-| exam_mode | BOOLEAN | (V9+, Mức 3) DF false | Bật chế độ thi |
-| exam_duration_minutes | INT | (V9+, Mức 3) | Thời gian làm bài của chế độ thi |
+| exam_mode | BOOLEAN | (V14) NN, DF false | Bật chế độ thi (BR-23) |
+| exam_duration_minutes | INT | (V14) CK 1–300; CK bắt buộc khi `exam_mode` | Thời gian làm bài của chế độ thi (phút). Không nhập thì lấy `suggested_minutes` |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
 #### `rubric_criteria` — tiêu chí chấm của một phần (V1)
@@ -585,7 +612,7 @@ PK `(grade_id, criterion_id)`; cột `score NUMERIC(3,1)`, `comment TEXT`. Ứng
 #### `grade_checklist_marks` — tick checklist (V1)
 PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
 
-#### `inline_comments` — nhận xét gắn vào đoạn văn (V1, V5)
+#### `inline_comments` — nhận xét gắn vào đoạn văn (V1, V5, V9, V10)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -596,10 +623,14 @@ PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
 | error_code | VARCHAR(20) | (V5) | Mã lỗi, lưu **dạng chữ** (bản chụp): giáo viên xoá mã riêng thì nhận xét cũ vẫn giữ |
 | criterion_id | BIGINT | (V5) FK → rubric_criteria (SET NULL) | Tiêu chí mà lỗi ảnh hưởng tới |
 | suggestion | TEXT | (V5) | Gợi ý sửa. Ẩn với sinh viên khi "Cần sửa" (BR-21) |
+| kind | VARCHAR(10) | (V9, V10) NN, DF `ERROR`, CK `ERROR` / `HIGHLIGHT` / `GOOD` / `COMMENT` | Kiểu đánh dấu: lỗi (gạch gợn sóng) / lưu ý (vàng) / dùng hay (xanh) / nhận xét (xám, V10). Chỉ `ERROR` được tính vào thống kê lỗi; kiểu khác không mang mã lỗi (trừ mã khen); `COMMENT` phải có `comment` |
+| edit | VARCHAR(10) | (V10) CK `REPLACE` / `DELETE` / `INSERT` | Sửa kiểu track changes, chỉ với `ERROR`: `REPLACE` / `INSERT` dùng `suggestion` làm chữ mới (bắt buộc), `DELETE` không có `suggestion`. Bản ghi cũ có `suggestion` được đặt `REPLACE`. Chữ gốc không đổi |
+| resolution | VARCHAR(10) | (V9) CK `FIXED` / `NOT_FIXED` / `CHANGED` | Giáo viên đánh giá lỗi của lần nộp **cũ** khi so sánh với lần sau: đã sửa / chưa sửa / đổi khác gợi ý. `NULL` = giao diện tự đoán bằng cách ghép đoạn trích |
 | created_at | TIMESTAMPTZ | NN | |
 
 - Offset tính trên version đã nộp. Version không bao giờ đổi, nên offset luôn đúng.
-- CK `chk_inline_has_content`: có ít nhất một trong `error_code`, `comment`, `suggestion` (BR-21).
+- CK `chk_inline_has_content` (V10): lỗi phải có ít nhất một trong `error_code`, `comment`, `suggestion`, `edit` (BR-21); `COMMENT` phải có `comment`; `REPLACE` / `INSERT` phải có `suggestion`; lưu ý / dùng hay được để trống (chỉ tô màu).
+- Không lưu prefix / suffix của đoạn trích: khi so sánh 2 lần nộp, giao diện lấy từ nội dung lần nộp cũ (bất biến) theo offset.
 
 #### `error_codes` — mã lỗi (V5)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -614,7 +645,7 @@ PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
 | order_no | INT | NN | Thứ tự hiển thị của mã hệ thống |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
-UK một phần: `upper(code)` duy nhất trong nhóm mã hệ thống, và `(owner_id, upper(code))` duy nhất trong mã của một giáo viên. Mã riêng trùng mã hệ thống do service chặn (`409 DUPLICATE`). Seed 22 mã theo [08](08-nghiep-vu-cham-ielts.md) mục 4.3.
+UK một phần: `upper(code)` duy nhất trong nhóm mã hệ thống, và `(owner_id, upper(code))` duy nhất trong mã của một giáo viên. Mã riêng trùng mã hệ thống do service chặn (`409 DUPLICATE`). Seed 22 mã theo [08](08-nghiep-vu-cham-ielts.md) mục 4.3 (V5), thêm `GR`, `OTHER` ở V9.
 
 #### `comment_bank` — ngân hàng nhận xét (V5)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -648,22 +679,23 @@ Index: `(user_id, created_at DESC)`, và `(user_id) WHERE read_at IS NULL` để
 #### `reminder_log` (V1)
 PK `(part_id, student_id, kind)`; `kind ∈ {H24, H2, REVISION_H24, REVISION_H2}`; `sent_at`. Chống nhắc trùng bằng `INSERT … ON CONFLICT DO NOTHING` (BR-14, SD-10). Khi giáo viên yêu cầu sửa lần mới, các dòng `REVISION_*` của (phần, sinh viên) bị xoá để vòng sửa mới được nhắc lại.
 
-#### `chat_messages` (V7, đã cài ở bước 9b)
+#### `chat_messages` (V7, mở rộng V11–V12)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
-| channel_type | VARCHAR(20) | NN, CK | `SUBMISSION` hoặc `CLASSROOM` |
+| channel_type | VARCHAR(20) | NN, CK | `SUBMISSION`, `CLASSROOM` hoặc `DIRECT` |
 | submission_id | BIGINT | FK (cascade) | Khác NULL khi `channel_type = SUBMISSION` |
 | classroom_id | BIGINT | FK (cascade) | Khác NULL khi `channel_type = CLASSROOM` |
+| direct_channel_id | BIGINT | FK → direct_chat_channels (cascade) | Khác NULL khi `channel_type = DIRECT` |
 | sender_id | BIGINT | FK → users (cascade), NN | |
 | content | TEXT | NN, CK độ dài ≤ 4000 | |
 | client_msg_id | VARCHAR(40) | UK cùng sender_id | Client tự sinh, để khớp "đã gửi" và chống gửi trùng khi gửi lại |
 | created_at | TIMESTAMPTZ | NN | |
 
-CK: `channel_type` phải khớp đúng một cột khoá ngoại (`chk_chat_channel`). UK `(sender_id, client_msg_id)` chống lưu trùng khi gửi lại. Index một phần: `(submission_id, id DESC) WHERE submission_id IS NOT NULL`, `(classroom_id, id DESC) WHERE classroom_id IS NOT NULL`. Entity `ChatMessage` giữ id dạng số (không quan hệ entity) để module chat không gắn chặt module khác.
+CK: `channel_type` cho ba loại kênh (`chat_messages_channel_type_check`, V12) và phải khớp đúng một cột khoá ngoại (`chk_chat_channel`, V11). UK `(sender_id, client_msg_id)` chống lưu trùng khi gửi lại. Index một phần theo từng cột kênh. Entity `ChatMessage` giữ id dạng số (không quan hệ entity) để module chat không gắn chặt module khác.
 
 #### `chat_read_markers` (V7, đã cài ở bước 9b)
-PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp hoặc id lớp; `last_read_message_id BIGINT NN`; `updated_at`. Dùng cho "đã xem" và đếm tin chưa đọc. Ghi bằng upsert `ON CONFLICT … DO UPDATE SET last_read_message_id = GREATEST(…)` — mốc chỉ tăng.
+PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp, lớp hoặc kênh riêng; `last_read_message_id BIGINT NN`; `updated_at`. Dùng cho "đã xem" và đếm tin chưa đọc. Ghi bằng upsert `ON CONFLICT … DO UPDATE SET last_read_message_id = GREATEST(…)` — mốc chỉ tăng.
 
 #### `audit_logs` (V6, đã cài ở bước 12)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -678,14 +710,22 @@ PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp h
 
 Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction với thao tác (rollback thì không có dòng "ma"); riêng đăng nhập sai / bị chặn và import TCP ghi transaction riêng để không mất khi request lỗi.
 
-### 4.7 Nhóm mở rộng (V9 trở đi, Mức 3)
+### 4.7 Nhóm mở rộng (V13 trở đi, Mức 3)
 | Bảng | Mô tả |
 |---|---|
-| `exam_sessions` | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần. `ends_at` cố định từ lúc bắt đầu. `finish_reason` là `SUBMITTED` hoặc `TIMEOUT`. |
-| `exam_events` | Các sự kiện trong phiên thi: chuyển tab, dán, mất kết nối, kết nối lại, kèm IP. |
+| `exam_sessions` (V14) | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần, tạo bằng `INSERT … ON CONFLICT DO NOTHING`. `ends_at` cố định từ lúc bắt đầu (CK `ends_at > started_at`). `finished_at` = lần nộp đầu tiên (nộp sau `ends_at` = quá thời gian, BR-24). `overtime_notified_at` = job đã báo quá giờ (chống báo trùng). Index một phần trên `ends_at` cho phiên chưa nộp, chưa báo. |
+| `exam_events` (V14, V15) | Sự kiện trong phiên thi (BR-25): `STARTED`, `TAB_HIDDEN`, `TAB_VISIBLE`, `WINDOW_BLUR` / `WINDOW_FOCUS` (rời / quay lại cửa sổ mà tab vẫn hiện), `PASTE` (kèm `paste_chars`, không lưu nội dung dán), `DISCONNECT`, `RECONNECT`, `OVERTIME`, `SUBMITTED`. `occurred_at` là giờ server lúc nhận; sự kiện gửi bù (`reported_late = true`) thì là giờ client báo, kẹp trong `[started_at, lúc nhận]`. Index `(exam_session_id, occurred_at)`, `(occurred_at DESC)`. |
 | `similarity_reports` | Cặp version cùng phần có độ giống cao, `score` từ 0 tới 1. Lưu `version_a_id < version_b_id` để không trùng cặp. |
-| `question_bank_items`, `question_bank_tags` | Ngân hàng đề của giáo viên. Rubric tham chiếu tới `rubric_templates` (mẫu riêng của giáo viên). |
+| `question_bank_items` (V13) | Ngân hàng đề riêng của giáo viên: loại Task, đề HTML đã lọc, ảnh, số từ, thời gian gợi ý; `rubric_template_id` NN, UK trỏ tới rubric riêng của cùng giáo viên. Index `(teacher_id, updated_at DESC)` và `(teacher_id, task_type)`. |
+| `question_bank_tags` (V13) | Tag đã chuẩn hoá chữ thường; PK `(item_id, tag)`, xoá theo đề. |
 | `ai_suggestions` | Kết quả gợi ý của AI cho một version, dạng JSONB, chỉ giáo viên xem được. |
+| `paper_sections` (V16) | Khung mục của một giai đoạn bài PAPER (BR-29): `part_id` (FK cascade), `section_key` (mã ổn định cho trình soạn, UK trong phần), `title`, `required`, `min_words`, `max_words` (CK min ≤ max), `order_no` (UK trong phần). Sống chết theo phần bài (aggregate). |
+| `paper_groups` (V16) | Nhóm trong một bài PAPER: `assignment_id` (FK cascade), `name` (UK trong bài), `created_by` (giáo viên hoặc sinh viên tự lập; SET NULL khi xoá tài khoản), `created_at`. UK `(id, assignment_id)` cho khoá ngoại kép. |
+| `submissions.group_id` (V17) | Bài làm của bài PAPER thuộc nhóm (BR-28): UK một phần `(part_id, group_id)`; bài luận giữ UK một phần `(part_id, student_id)` khi `group_id IS NULL`. FK không xoá theo (nhóm có bài làm không xoá được). `student_id` của bài nhóm = người tạo / người nộp gần nhất |
+| view `submission_members` (V17) | Bài làm thuộc về ai: bài luận → `student_id` của dòng; bài PAPER → mọi thành viên **hiện tại** của nhóm. Các truy vấn "bài của tôi", quyền kênh chat bài nộp, ma trận tiến độ, nhắc hạn, số người nộp đủ đều join qua view này |
+| `paper_documents` (V18) | Tài liệu của (giai đoạn, nhóm), UK `(part_id, group_id)`, tạo bằng `INSERT … ON CONFLICT`. `snapshot` (bytea, trạng thái Yjs đã gộp tới `snapshot_seq`), `last_seq` (số thứ tự update lớn nhất đã cấp — chỉ tăng khi đã khoá dòng; CK `snapshot_seq ≤ last_seq`), `content_json` (jsonb) + `content_text` do client gửi kèm snapshot để server đếm từ / nộp / xuất file. Server không đọc nội dung Yjs |
+| `paper_doc_updates` (V18) | Log update Yjs: PK `(document_id, seq)`, `payload` (bytea; **NULL = đã gộp vào snapshot**, dòng vẫn giữ), `author_id` (SET NULL), `chars_added` / `chars_removed` (client tính, cho thống kê đóng góp — BR-32), `created_at`. Chỉ INSERT |
+| `paper_group_members` (V16) | Thành viên nhóm: PK `(group_id, student_id)`; `assignment_id` lặp lại với FK kép `(group_id, assignment_id)` → `paper_groups` và **UK `(assignment_id, student_id)`** — DB chặn một sinh viên ở hai nhóm của cùng bài (BR-27). |
 
 ---
 
@@ -695,6 +735,7 @@ Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction
 |---|---|---|
 | Mật khẩu tạm sau khi import | Bộ nhớ backend, tự huỷ sau 15 phút hoặc sau lần tải đầu tiên | Không bao giờ lưu mật khẩu dạng rõ (SD-03) |
 | Ai đang online, đang mở bài nào | `ConcurrentHashMap` trong backend | Dữ liệu tạm, mất khi khởi động lại cũng không sao (monolith) |
+| Nội dung sinh viên đang gõ (xem trực tiếp, BR-26) | `ConcurrentHashMap` trong backend (`realtime/LiveDraftService`), xoá khi nộp | Cập nhật ~1 lần / giây, không đáng ghi DB; mất khi khởi động lại thì màn xem trực tiếp dùng bản nháp đã lưu |
 | Số lần đăng nhập sai theo IP / tài khoản | Bộ nhớ backend, cửa sổ 5 phút | Rate limit (NFR-09) |
 | Ảnh đề bài | Thư mục `uploads/` (volume Docker) | DB chỉ lưu đường dẫn |
 | Bản nháp khi mất mạng | IndexedDB của trình duyệt | Đồng bộ lên `submissions.draft_content` khi có mạng (SD-06) |

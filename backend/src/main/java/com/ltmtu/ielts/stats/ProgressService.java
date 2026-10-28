@@ -48,7 +48,10 @@ public class ProgressService {
 			FROM people r
 			JOIN users u ON u.id = r.student_id
 			JOIN assignment_parts p ON p.assignment_id = :assignmentId
-			LEFT JOIN submissions s ON s.part_id = p.id AND s.student_id = u.id
+			-- Bài làm của sinh viên: của chính mình hoặc của nhóm mình (bài PAPER — view submission_members, V17).
+			LEFT JOIN LATERAL (
+			    SELECT x.* FROM submissions x JOIN submission_members sm ON sm.submission_id = x.id
+			    WHERE x.part_id = p.id AND sm.student_id = u.id LIMIT 1) s ON true
 			LEFT JOIN submission_versions v ON v.submission_id = s.id AND v.version_no = s.current_version
 			LEFT JOIN grades g ON g.submission_version_id = v.id AND g.status = 'RETURNED'
 			ORDER BY u.student_code, u.id, p.order_no""";

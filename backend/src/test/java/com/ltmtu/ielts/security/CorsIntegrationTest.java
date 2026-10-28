@@ -12,7 +12,7 @@ import org.springframework.test.context.TestPropertySource;
 import com.ltmtu.ielts.support.IntegrationTest;
 
 /** CORS nhận cả mẫu origin (vd domain tunnel khi demo) — cùng cấu hình với endpoint WebSocket. */
-@TestPropertySource(properties = "app.cors.allowed-origins=http://localhost:3000,https://*.trycloudflare.com")
+@TestPropertySource(properties = "app.cors.allowed-origins=http://localhost:3000,http://192.168.*:[*],https://*.trycloudflare.com")
 class CorsIntegrationTest extends IntegrationTest {
 
 	private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder preflight(String origin) {
@@ -32,6 +32,13 @@ class CorsIntegrationTest extends IntegrationTest {
 	void exactOriginAllowed() throws Exception {
 		mvc.perform(preflight("http://localhost:3000")).andExpect(status().isOk())
 				.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:3000"));
+	}
+
+	@Test
+	@DisplayName("Origin IP trong mạng nội bộ → được nhận")
+	void privateNetworkOriginAllowed() throws Exception {
+		mvc.perform(preflight("http://192.168.1.25:3000")).andExpect(status().isOk())
+				.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://192.168.1.25:3000"));
 	}
 
 	@Test

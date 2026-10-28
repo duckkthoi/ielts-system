@@ -5,8 +5,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
+import com.ltmtu.ielts.assignment.AssignmentEnums.CitationStyle;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
 
@@ -37,7 +39,12 @@ public final class AssignmentDtos {
 			@Min(value = 0, message = "Số lần sửa không được âm") @Max(value = 10, message = "Tối đa 10 lần sửa")
 			Integer maxRevisions,
 			Boolean showSuggestionsOnRevision,
-			@Size(max = 10, message = "Tối đa 10 phần mỗi bài") List<@Valid PartRequest> parts) {
+			@Size(max = 10, message = "Tối đa 10 phần mỗi bài") List<@Valid PartRequest> parts,
+			AssignmentKind kind,
+			CitationStyle citationStyle,
+			@Min(value = 1, message = "Nhóm có từ 1 tới 10 thành viên")
+			@Max(value = 10, message = "Nhóm có từ 1 tới 10 thành viên") Integer maxGroupSize,
+			Instant groupLockAt) {
 	}
 
 	public record PartRequest(
@@ -51,14 +58,27 @@ public final class AssignmentDtos {
 			@DecimalMin(value = "0.1", message = "Trọng số phải lớn hơn 0")
 			@DecimalMax(value = "10", message = "Trọng số tối đa 10")
 			BigDecimal weight,
-			@Size(max = 10, message = "Tối đa 10 tiêu chí mỗi phần") List<@Valid CriterionRequest> criteria) {
+			@Size(max = 10, message = "Tối đa 10 tiêu chí mỗi phần") List<@Valid CriterionRequest> criteria,
+			Boolean examMode,
+			@Min(value = 1, message = "Thời gian thi từ 1 tới 300 phút")
+			@Max(value = 300, message = "Thời gian thi từ 1 tới 300 phút") Integer examDurationMinutes,
+			@Size(max = 20, message = "Tối đa 20 mục mỗi phần") List<@Valid SectionRequest> sections) {
+	}
+
+	/** Một mục trong khung của giai đoạn bài PAPER. {@code sectionKey} bỏ trống → sinh từ tiêu đề. */
+	public record SectionRequest(
+			@Size(max = 40) String sectionKey,
+			@NotBlank(message = "Vui lòng nhập tên mục") @Size(max = 200) String title,
+			Boolean required,
+			@Min(value = 0, message = "Số từ tối thiểu không được âm") Integer minWords,
+			@Min(value = 1, message = "Số từ tối đa phải lớn hơn 0") Integer maxWords) {
 	}
 
 	public record CriterionRequest(
 			CriterionCode code,
 			@NotBlank(message = "Vui lòng nhập tên tiêu chí") @Size(max = 150) String name,
 			@Size(max = 2000) String description,
-			@DecimalMin(value = "1", message = "Điểm tối đa từ 1 tới 9") @DecimalMax(value = "9", message = "Điểm tối đa từ 1 tới 9")
+			@DecimalMin(value = "1", message = "Điểm tối đa từ 1 tới 10") @DecimalMax(value = "10", message = "Điểm tối đa từ 1 tới 10")
 			BigDecimal maxScore,
 			BigDecimal step,
 			@DecimalMin(value = "0.1", message = "Trọng số phải lớn hơn 0") @DecimalMax("10") BigDecimal weight,
@@ -82,7 +102,10 @@ public final class AssignmentDtos {
 			Boolean allowLate,
 			@Min(0) @Max(10) Integer maxRevisions,
 			Boolean showSuggestionsOnRevision,
-			Map<Long, Instant> partDueAts) {
+			Map<Long, Instant> partDueAts,
+			Instant groupLockAt,
+			@Min(value = 1, message = "Nhóm có từ 1 tới 10 thành viên")
+			@Max(value = 10, message = "Nhóm có từ 1 tới 10 thành viên") Integer maxGroupSize) {
 	}
 
 	// ─── Response ─────────────────────────────────────────────────────────────
@@ -103,12 +126,17 @@ public final class AssignmentDtos {
 
 	public record AssignmentDetail(Long id, String title, String description, AssignmentStatus status,
 			Instant openAt, Instant dueAt, boolean allowLate, int maxRevisions, boolean showSuggestionsOnRevision,
-			Instant publishedAt, Instant createdAt, Instant updatedAt, List<PartDto> parts) {
+			Instant publishedAt, Instant createdAt, Instant updatedAt, List<PartDto> parts, AssignmentKind kind,
+			CitationStyle citationStyle, Integer maxGroupSize, Instant groupLockAt) {
 	}
 
 	public record PartDto(Long id, int orderNo, String title, TaskType taskType, String prompt, String imageUrl,
 			Integer minWords, Integer suggestedMinutes, Instant partDueAt, BigDecimal weight,
-			List<CriterionDto> criteria) {
+			List<CriterionDto> criteria, boolean examMode, Integer examDurationMinutes, List<SectionDto> sections) {
+	}
+
+	public record SectionDto(Long id, String sectionKey, String title, boolean required, Integer minWords,
+			Integer maxWords, int orderNo) {
 	}
 
 	public record CriterionDto(Long id, CriterionCode code, String name, String description, BigDecimal maxScore,

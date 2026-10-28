@@ -289,7 +289,7 @@ class PublishIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Upload ảnh đề: PNG thật → URL /uploads/yyyy/MM/…; xem công khai; file giả mạo đuôi → 400; sinh viên → 403")
+	@DisplayName("Upload ảnh: PNG thật → URL /uploads/yyyy/MM/…; xem công khai; file giả mạo đuôi → 400; sinh viên cũng upload được (hình trong paper)")
 	void uploadImage() throws Exception {
 		byte[] png = { (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D, 'I', 'H', 'D', 'R' };
 		String url = data(mvc.perform(multipart("/api/files")
@@ -308,6 +308,6 @@ class PublishIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.errorCode").value("BAD_FILE"));
 		mvc.perform(multipart("/api/files").file(new MockMultipartFile("file", "a.png", "image/png", png))
 				.header(HttpHeaders.AUTHORIZATION, bearer(accessToken(newUser(Role.STUDENT)))))
-				.andExpect(apiStatus(403));
+				.andExpect(apiStatus(200));
 	}
 }

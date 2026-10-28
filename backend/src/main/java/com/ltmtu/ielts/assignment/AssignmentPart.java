@@ -66,9 +66,27 @@ public class AssignmentPart extends BaseEntity {
 	@Column(nullable = false, precision = 4, scale = 2)
 	private BigDecimal weight = BigDecimal.ONE;
 
+	/** Chế độ thi tính giờ (Mức 3, UC-27): phải bấm "Bắt đầu" mới soạn được, đồng hồ cố định từ lúc bắt đầu. */
+	@Column(name = "exam_mode", nullable = false)
+	private boolean examMode;
+
+	/** Thời lượng thi (phút); bắt buộc khi {@code examMode}. */
+	@Column(name = "exam_duration_minutes")
+	private Integer examDurationMinutes;
+
 	@OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("orderNo")
 	private List<RubricCriterion> criteria = new ArrayList<>();
+
+	/** Chỉ bài PAPER: khung mục của giai đoạn này (BR-29). */
+	@OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("orderNo")
+	private List<PaperSection> sections = new ArrayList<>();
+
+	public void addSection(PaperSection section) {
+		section.setPart(this);
+		sections.add(section);
+	}
 
 	public void addCriterion(RubricCriterion criterion) {
 		criterion.setPart(this);

@@ -25,9 +25,12 @@ import com.ltmtu.ielts.audit.AuditService;
 import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.grading.GradingEnums.GradeStatus;
+import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
+import com.ltmtu.ielts.grading.GradingEnums.Resolution;
 import com.ltmtu.ielts.grading.dto.GradingDtos.AssignmentInfo;
 import com.ltmtu.ielts.grading.dto.GradingDtos.GradeDto;
 import com.ltmtu.ielts.grading.dto.GradingDtos.GradingScreen;
+import com.ltmtu.ielts.grading.dto.GradingDtos.InlineCommentDto;
 import com.ltmtu.ielts.grading.dto.GradingDtos.PartInfo;
 import com.ltmtu.ielts.grading.dto.GradingDtos.QueueRow;
 import com.ltmtu.ielts.grading.dto.GradingDtos.RevisionRequest;
@@ -56,6 +59,7 @@ public class GradingService {
 
 	private final TeacherSubmissionAccess submissions;
 	private final GradeRepository gradeRepository;
+	private final InlineCommentRepository inlineCommentRepository;
 	private final ErrorCodeRepository errorCodeRepository;
 	private final ClassroomService classroomService;
 	private final UserQueryService userQueryService;
@@ -124,6 +128,26 @@ public class GradingService {
 		return GradeMapper.toDto(g, criteria, v.getWordCount());
 	}
 
+	/**
+	 * So sánh 2 lần nộp (F5b): giáo viên đánh giá lại một lỗi của lần nộp CŨ — đã sửa / chưa sửa / đổi khác gợi ý,
+	 * hoặc {@code null} để giao diện tự đoán. Chỉ lỗi (ERROR) của lần nộp đã có lần nộp sau. Không đổi kết quả chấm
+	 * nên làm được cả khi đã trả bài.
+	 */
+	@Transactional
+	public InlineCommentDto setResolution(Long teacherId, Long submissionId, Long commentId, Resolution resolution) {
+		Submission s = submissions.requireOwned(submissionId, teacherId);
+		InlineComment ic = inlineCommentRepository.findInSubmission(commentId, s.getId())
+				.orElseThrow(() -> ApiException.notFound("Không tìm thấy nhận xét"));
+		if (ic.getKind() != InlineKind.ERROR) {
+			throw ApiException.badRequest("VALIDATION_ERROR", "Chỉ đánh giá được đánh dấu lỗi");
+		}
+		if (ic.getGrade().getVersion().getVersionNo() >= s.getCurrentVersion()) {
+			throw ApiException.conflict("INVALID_STATE", "Lần nộp này chưa có bản nộp sau để so sánh");
+		}
+		ic.setResolution(resolution);
+		return GradeMapper.toInlineDto(ic);
+	}
+
 	/** UC-18: trả bài. Cần đã chấm đủ mọi tiêu chí. Từ lúc này sinh viên mới thấy điểm (BR-13). */
 	@Transactional
 	public GradingScreen returnGrade(Long teacherId, Long submissionId) {
@@ -133,7 +157,8 @@ public class GradingService {
 		publish(g);
 		events.publishEvent(new GradingEvents.Returned(s.getId(), s.getPart().getAssignment().getId(),
 				s.getPart().getId(), s.getStudent().getId(), s.getCurrentVersion(),
-				BandCalculator.display(g.getOverallScore()), s.getPart().getAssignment().getTitle(), s.getPart().getTitle()));
+				BandCalculator.display(g.getOverallScore()), s.getPart().getAssignment().getTitle(), s.getPart().getTitle(),
+				submissions.memberIds(s)));
 		audit.record(teacherId, AuditAction.RETURN_GRADE, "SUBMISSION", s.getId(), Map.of("versionNo", s.getCurrentVersion()));
 		log.info("Giáo viên {} trả bài nộp {} version {}", teacherId, s.getId(), s.getCurrentVersion());
 		return buildScreen(s, g.getVersion());
@@ -165,7 +190,7 @@ public class GradingService {
 		publish(g);
 		events.publishEvent(new GradingEvents.RevisionRequested(s.getId(), a.getId(), s.getPart().getId(),
 				s.getStudent().getId(), s.getCurrentVersion(), BandCalculator.display(g.getOverallScore()), note,
-				req.dueAt(), a.getTitle(), s.getPart().getTitle()));
+				req.dueAt(), a.getTitle(), s.getPart().getTitle(), submissions.memberIds(s)));
 		audit.record(teacherId, AuditAction.REQUEST_REVISION, "SUBMISSION", s.getId(),
 				Map.of("versionNo", s.getCurrentVersion(), "revision", used + 1));
 		log.info("Giáo viên {} yêu cầu sửa bài nộp {} (lần {}/{})", teacherId, s.getId(), used + 1, a.getMaxRevisions());

@@ -20,6 +20,7 @@ import com.ltmtu.ielts.assignment.Assignment;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentPart;
 import com.ltmtu.ielts.assignment.StudentAssignmentAccess;
+import com.ltmtu.ielts.assignment.dto.AssignmentDtos.SectionDto;
 import com.ltmtu.ielts.submission.dto.StudentAssignmentDtos.AssignmentDetail;
 import com.ltmtu.ielts.submission.dto.StudentAssignmentDtos.AssignmentItem;
 import com.ltmtu.ielts.submission.dto.StudentAssignmentDtos.AssignmentList;
@@ -81,11 +82,15 @@ public class StudentAssignmentService {
 							c.getMaxScore(), c.getStep(), c.getChecklist().stream()
 									.map(i -> new ChecklistItemView(i.getContent(), i.getKind(), i.getMaxBand()))
 									.toList()))
-							.toList());
+							.toList(),
+					p.isExamMode(), p.getExamDurationMinutes(),
+					p.getSections().stream().map(sec -> new SectionDto(sec.getId(), sec.getSectionKey(), sec.getTitle(),
+							sec.isRequired(), sec.getMinWords(), sec.getMaxWords(), sec.getOrderNo())).toList());
 		}).toList();
 		return new AssignmentDetail(a.getId(), a.getTitle(), a.getDescription(), a.getTeacher().getFullName(),
 				a.getStatus(), a.getOpenAt(), a.getDueAt(), a.isAllowLate(), a.getMaxRevisions(),
-				tabs(a, statuses, now), parts, now);
+				tabs(a, statuses, now), parts, now, a.getKind(), a.getCitationStyle(), a.getMaxGroupSize(),
+				a.getGroupLockAt());
 	}
 
 	// ─── Tính trạng thái ─────────────────────────────────────────────────────
@@ -99,7 +104,7 @@ public class StudentAssignmentService {
 			return new Progress(Map.of(), Map.of());
 		}
 		Map<Long, Submission> byPart = submissionRepository
-				.findByStudentIdAndPartIdIn(studentId, parts.stream().map(AssignmentPart::getId).toList()).stream()
+				.findMineInParts(studentId, parts.stream().map(AssignmentPart::getId).toList()).stream()
 				.collect(Collectors.toMap(s -> s.getPart().getId(), Function.identity()));
 		List<Long> submitted = byPart.values().stream().filter(s -> s.getCurrentVersion() > 0).map(Submission::getId)
 				.toList();

@@ -17,6 +17,7 @@ export function PartView({ part }: { part: PartDto }) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap gap-2 text-small">
         <Tag color="blue">{TASK_TYPE_LABEL[part.taskType]}</Tag>
+        {part.examMode && <Tag color="red">Chế độ thi · {part.examDurationMinutes} phút</Tag>}
         {part.minWords ? (
           <span className="inline-flex items-center gap-1 text-neutral-500">
             <FileText size={14} /> Tối thiểu {part.minWords} từ

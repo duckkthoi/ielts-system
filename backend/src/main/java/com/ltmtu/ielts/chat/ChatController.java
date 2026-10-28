@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,6 +28,11 @@ public class ChatController {
 	@GetMapping("/channels")
 	public ApiResponse<List<ChannelSummary>> channels(@AuthenticationPrincipal AuthPrincipal me) {
 		return ApiResponse.ok(chatService.channels(me.id()));
+	}
+
+	@PostMapping("/direct/{studentId}")
+	public ApiResponse<ChannelSummary> openDirect(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long studentId) {
+		return ApiResponse.ok(chatService.openDirect(me.id(), studentId));
 	}
 
 	@GetMapping("/{channelId}/messages")

@@ -2,6 +2,7 @@ package com.ltmtu.ielts.user;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ltmtu.ielts.audit.AuditAction;
 import com.ltmtu.ielts.audit.AuditService;
-import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.common.Pageables;
 import com.ltmtu.ielts.security.AuthPrincipal;
@@ -41,7 +41,6 @@ public class AdminUserService {
 
 	private final UserRepository userRepository;
 	private final UserSessionRepository sessionRepository;
-	private final ClassroomService classroomService;
 	private final PasswordEncoder passwordEncoder;
 	private final Clock clock;
 	private final AuditService audit;
@@ -53,10 +52,21 @@ public class AdminUserService {
 				Pageables.sanitize(pageable, SORTABLE, DEFAULT_SORT));
 		List<Long> teacherIds = page.getContent().stream().filter(u -> u.getRole() == Role.TEACHER).map(User::getId)
 				.toList();
-		Map<Long, Long> classCounts = classroomService.countByTeacherIds(teacherIds);
+		Map<Long, Long> classCounts = countClasses(teacherIds);
 		return page.map(u -> u.getRole() == Role.TEACHER
 				? UserSummary.from(u).withClassCount(classCounts.getOrDefault(u.getId(), 0L))
 				: UserSummary.from(u));
+	}
+
+	private Map<Long, Long> countClasses(List<Long> teacherIds) {
+		Map<Long, Long> result = new HashMap<>();
+		if (teacherIds.isEmpty()) {
+			return result;
+		}
+		for (Object[] row : userRepository.countClassesByTeacherIds(teacherIds)) {
+			result.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
+		}
+		return result;
 	}
 
 	@Transactional(readOnly = true)

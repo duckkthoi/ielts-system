@@ -3,7 +3,6 @@ package com.ltmtu.ielts.classroom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -138,19 +137,6 @@ public class ClassroomService {
 		return userQueryService.searchStudents(keyword, STUDENT_SEARCH_LIMIT).stream()
 				.map(u -> new StudentOption(u.getId(), u.getStudentCode(), u.getFullName()))
 				.toList();
-	}
-
-	/** Số lớp của từng giáo viên (cột "Số lớp" trong màn quản trị). Giáo viên chưa có lớp không có trong map. */
-	@Transactional(readOnly = true)
-	public Map<Long, Long> countByTeacherIds(Collection<Long> teacherIds) {
-		Map<Long, Long> result = new HashMap<>();
-		if (teacherIds.isEmpty()) {
-			return result;
-		}
-		for (Object[] row : classroomRepository.countByTeacherIds(teacherIds)) {
-			result.put((Long) row[0], (Long) row[1]);
-		}
-		return result;
 	}
 
 	/**

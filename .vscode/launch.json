@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Backend — Spring Boot",
+      "request": "launch",
+      "mainClass": "com.ltmtu.ielts.IeltsApplication",
+      "projectName": "ielts",
+      "cwd": "${workspaceFolder}/backend",
+      "console": "integratedTerminal",
+      "presentation": {
+        "hidden": true
+      },
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "dev",
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_NAME": "Ielts",
+        "DB_USER": "postgres",
+        "SERVER_PORT": "8080",
+        "APP_TCP_PORT": "9090"
+      }
+    },
+    {
+      "type": "node-terminal",
+      "name": "Frontend — Next.js",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/frontend",
+      "presentation": {
+        "hidden": true
+      },
+      "env": {
+        "BACKEND_URL": "http://localhost:8080",
+        "NEXT_PUBLIC_API_BASE_URL": "",
+        "NEXT_PUBLIC_WS_URL": ""
+      },
+      "serverReadyAction": {
+        "pattern": "- Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s/dang-nhap",
+        "action": "openExternally"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Chạy toàn bộ — Backend + Frontend",
+      "configurations": ["Backend — Spring Boot", "Frontend — Next.js"],
+      "stopAll": true
+    }
+  ]
+}

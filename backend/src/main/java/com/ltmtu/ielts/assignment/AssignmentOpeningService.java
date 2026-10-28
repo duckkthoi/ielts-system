@@ -42,4 +42,22 @@ public class AssignmentOpeningService {
 		}
 		return announced;
 	}
+
+	/**
+	 * BR-27: bài PAPER vừa tới hạn chốt nhóm → phát {@link AssignmentEvents.GroupLockReached} (module paper báo giáo
+	 * viên nếu còn người chưa có nhóm). Giành từng bài bằng UPDATE có điều kiện như {@link #announceOpened}.
+	 */
+	@Transactional
+	public int announceGroupLocks(Instant now) {
+		int announced = 0;
+		for (Assignment a : assignmentRepository.findGroupLockDue(now)) {
+			if (assignmentRepository.claimGroupLockNotification(a.getId(), now) == 0) {
+				continue;
+			}
+			events.publishEvent(new AssignmentEvents.GroupLockReached(a.getId(), a.getTeacher().getId(), a.getTitle(),
+					Set.copyOf(targetRepository.findRecipientIds(a.getId()))));
+			announced++;
+		}
+		return announced;
+	}
 }

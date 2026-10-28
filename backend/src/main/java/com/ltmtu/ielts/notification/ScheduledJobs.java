@@ -29,6 +29,12 @@ class ScheduledJobs {
 		openingService.announceOpened(clock.instant());
 	}
 
+	/** BR-27: bài paper tới hạn chốt nhóm → báo giáo viên nếu còn người chưa có nhóm. */
+	@Scheduled(fixedDelayString = "${app.reminders.interval:PT15M}", initialDelayString = "PT50S")
+	void announceGroupLocks() {
+		openingService.announceGroupLocks(clock.instant());
+	}
+
 	/** SD-10: nhắc hạn nộp / hạn sửa. */
 	@Scheduled(fixedDelayString = "${app.reminders.interval:PT15M}", initialDelayString = "PT45S")
 	void remindDeadlines() {

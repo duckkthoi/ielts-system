@@ -1,3 +1,4 @@
+import type { AssignmentKind, CitationStyle, SectionDto } from '@/lib/types/assignment';
 import type { AssignmentStatus, SubmissionStatus } from '@/lib/theme/status';
 import type { ChecklistKind, CriterionCode, TaskType } from '@/lib/types/assignment';
 
@@ -63,6 +64,11 @@ export interface StudentPartDetail extends StudentPartStatus {
   revisionNote: string | null;
   revisionDueAt: string | null;
   criteria: StudentCriterion[];
+  /** Chế độ thi (Mức 3): phải bấm "Bắt đầu" mới soạn được, đồng hồ cố định từ lúc đó (BR-23). */
+  examMode: boolean;
+  examDurationMinutes: number | null;
+  /** Chỉ bài PAPER: khung mục của giai đoạn. */
+  sections: SectionDto[];
 }
 
 export interface StudentAssignmentDetail {
@@ -78,6 +84,10 @@ export interface StudentAssignmentDetail {
   tabs: StudentTab[];
   parts: StudentPartDetail[];
   serverTime: string;
+  kind: AssignmentKind;
+  citationStyle: CitationStyle | null;
+  maxGroupSize: number | null;
+  groupLockAt: string | null;
 }
 
 /** Một lần nộp; `band`, `returnedAt` chỉ có khi version đó đã được trả bài. */
@@ -126,12 +136,15 @@ export interface DraftResponse {
   currentVersion: number;
   /** Gửi lại ở lần lưu sau để phát hiện tab / máy khác đã lưu (khoá lạc quan). */
   draftVersion: number;
+  /** Kênh chat `submission-{id}` để nhận bình luận trực tiếp của giáo viên (BR-26); chưa lưu lần nào → null. */
+  submissionId: number | null;
 }
 
 export interface SaveDraftResponse {
   savedAt: string;
   wordCount: number;
   draftVersion: number;
+  submissionId: number;
 }
 
 /** `data` của lỗi 409 DRAFT_CONFLICT. */
@@ -180,6 +193,11 @@ export interface StudentInlineComment {
   criterionName: string | null;
   /** null khi bị ẩn (BR-21) hoặc giáo viên không ghi. */
   suggestion: string | null;
+  kind: 'ERROR' | 'HIGHLIGHT' | 'GOOD' | 'COMMENT';
+  /** null khi không sửa, hoặc bị ẩn vì bài đang "Cần sửa" (BR-21). */
+  edit: 'REPLACE' | 'DELETE' | 'INSERT' | null;
+  /** Giáo viên đánh giá lỗi này đã sửa ở lần nộp sau chưa (null = chưa đánh giá). */
+  resolution: 'FIXED' | 'NOT_FIXED' | 'CHANGED' | null;
 }
 
 export interface ErrorCount {

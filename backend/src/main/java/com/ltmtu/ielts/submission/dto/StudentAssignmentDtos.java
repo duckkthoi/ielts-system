@@ -6,10 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
+import com.ltmtu.ielts.assignment.AssignmentEnums.CitationStyle;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
+import com.ltmtu.ielts.assignment.dto.AssignmentDtos.SectionDto;
 import com.ltmtu.ielts.submission.SubmissionStatus;
 
 /** Danh sách / chi tiết bài được giao phía sinh viên — docs/05-api.md mục A.8 (UC-22). */
@@ -54,11 +57,12 @@ public final class StudentAssignmentDtos {
 	public record PartDetail(Long partId, int orderNo, String title, TaskType taskType, String prompt, String imageUrl,
 			Integer minWords, Integer suggestedMinutes, Instant effectiveDueAt, SubmissionStatus status,
 			int currentVersion, boolean late, boolean canSubmit, String revisionNote, Instant revisionDueAt,
-			List<CriterionView> criteria) {
+			List<CriterionView> criteria, boolean examMode, Integer examDurationMinutes, List<SectionDto> sections) {
 	}
 
 	public record AssignmentDetail(Long id, String title, String description, String teacherName,
 			AssignmentStatus status, Instant openAt, Instant dueAt, boolean allowLate, int maxRevisions,
-			Set<Tab> tabs, List<PartDetail> parts, Instant serverTime) {
+			Set<Tab> tabs, List<PartDetail> parts, Instant serverTime, AssignmentKind kind, CitationStyle citationStyle,
+			Integer maxGroupSize, Instant groupLockAt) {
 	}
 }

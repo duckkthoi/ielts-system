@@ -59,7 +59,7 @@ docker compose up --build -d      # lần đầu mất vài phút
 | http://localhost:8025 | Mailpit — xem email hệ thống gửi |
 | `localhost:9090` | Server TCP cho `admin-cli` |
 
-Lần đầu đăng nhập bằng `admin` / `ADMIN_PASSWORD`, hệ thống bắt đổi mật khẩu ngay. Thao tác khác (dừng, xoá dữ liệu, xem log, vào psql): [deploy/README.md](deploy/README.md).
+Lần đầu đăng nhập bằng `admin` / `ADMIN_PASSWORD`, hệ thống bắt đổi mật khẩu ngay. Thao tác khác (dừng, xoá dữ liệu, xem log, vào psql): [deploy/README.md](deploy/README.md). Clone từ đầu hoặc đưa lên máy chủ có tên miền: [docs/11](docs/11-huong-dan-trien-khai.md).
 
 ### Dữ liệu mẫu (profile `demo`)
 
@@ -129,6 +129,7 @@ Bộ ảnh này cho thấy vì sao phải dùng HTTPS: qua HTTP, mật khẩu hi
 | [07 Design system](docs/07-design-system.md) · [08 Nghiệp vụ chấm IELTS](docs/08-nghiep-vu-cham-ielts.md) | Giao diện; cách chấm và tính band |
 | [09 Kiểm thử tải](docs/09-kiem-thu-tai.md) | Môi trường, kịch bản và kết quả k6 |
 | [10 Hướng dẫn sử dụng](docs/10-huong-dan-su-dung.md) | Cách mở hệ thống, **danh sách tài khoản**, thao tác theo vai trò, kịch bản demo, sự cố thường gặp |
+| [11 Clone và triển khai](docs/11-huong-dan-trien-khai.md) | Clone mã nguồn, chạy bằng Docker trên máy / LAN, đưa lên máy chủ Linux có tên miền (Let's Encrypt, đóng cổng, SMTP thật), cập nhật, sao lưu |
 
 Bản Word: `python tools/docs-export/export_docx.py --merge` (chạy bằng PowerShell) → `docx/00-tai-lieu-phan-tich-thiet-ke.docx`.
 

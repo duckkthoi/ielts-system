@@ -29,7 +29,7 @@ const LIST_PATH = '/giao-vien/bai-tap';
 
 /** Trường cần kiểm khi bấm "Tiếp tục" ở từng bước (bước 2, 3 kiểm đệ quy cả mảng parts đang hiện). */
 const STEP_FIELDS: (string | (string | number)[])[][] = [
-  ['title', 'description', 'openAt', 'dueAt', 'maxRevisions'],
+  ['title', 'description', 'openAt', 'dueAt', 'maxRevisions', 'maxGroupSize', 'groupLockAt'],
   [['parts']],
   [['parts']],
   []
@@ -195,9 +195,9 @@ export default function AssignmentEditorPage() {
           onValuesChange={() => setDirty(true)}
           scrollToFirstError
         >
-          {step === 0 && <GeneralStep />}
-          {step === 1 && <PartsStep form={form} />}
-          {step === 2 && <CriteriaStep form={form} />}
+          {step === 0 && <GeneralStep form={form} onChanged={() => setDirty(true)} />}
+          {step === 1 && <PartsStep form={form} onChanged={() => setDirty(true)} />}
+          {step === 2 && <CriteriaStep form={form} onChanged={() => setDirty(true)} />}
           {step === 3 && <PublishStep form={form} saving={saving} onPublish={handlePublish} />}
         </Form>
       )}
