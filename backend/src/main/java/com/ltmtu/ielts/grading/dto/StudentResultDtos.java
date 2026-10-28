@@ -12,6 +12,8 @@ import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
 import com.ltmtu.ielts.grading.GradingEnums.Resolution;
 import com.ltmtu.ielts.grading.GradingEnums.ZeroReason;
 
+import tools.jackson.databind.JsonNode;
+
 /**
  * Kết quả chấm phía sinh viên — docs/05-api.md mục A.8 (BR-13, docs/08 mục 4.5). Chỉ có dữ liệu khi kết quả đã được
  * trả ({@code RETURNED}); kết quả đang chấm nháp không bao giờ lộ ra.
@@ -26,9 +28,13 @@ public final class StudentResultDtos {
 			BigDecimal band, Instant returnedAt) {
 	}
 
-	/** {@code result}: null khi version chưa được trả bài (đang chờ chấm / đang chấm). */
+	/**
+	 * {@code result}: null khi version chưa được trả bài (đang chờ chấm / đang chấm). Bài PAPER (B25a) có thêm
+	 * {@code contentJson} (JSON trình soạn) và {@code references} ({@code [{id, csl}]} — tài liệu được trích lúc nộp);
+	 * bài luận để null.
+	 */
 	public record VersionDetail(int versionNo, Instant submittedAt, int wordCount, boolean late, String content,
-			Result result) {
+			JsonNode contentJson, JsonNode references, Result result) {
 	}
 
 	public record ChecklistMark(String content, ChecklistKind kind, BigDecimal maxBand, boolean checked) {

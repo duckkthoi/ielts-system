@@ -234,6 +234,15 @@ public class PublishService {
 					ni.setMaxBand(i.getMaxBand());
 					nc.addItem(ni);
 				}
+				for (RubricLevel l : c.getLevels()) {
+					RubricLevel nl = new RubricLevel();
+					nl.setOrderNo(l.getOrderNo());
+					nl.setLabel(l.getLabel());
+					nl.setMinScore(l.getMinScore());
+					nl.setMaxScore(l.getMaxScore());
+					nl.setDescriptor(l.getDescriptor());
+					nc.addLevel(nl);
+				}
 				np.addCriterion(nc);
 			}
 			copy.addPart(np);

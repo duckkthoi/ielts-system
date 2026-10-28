@@ -53,8 +53,8 @@ public class RubricCriterion {
 	@Column(name = "max_score", nullable = false, precision = 4, scale = 1)
 	private BigDecimal maxScore = BigDecimal.valueOf(9);
 
-	/** BR-11: mặc định 1 (nguyên band); giáo viên có thể chọn 0.5. */
-	@Column(nullable = false, precision = 3, scale = 1)
+	/** BR-11: mặc định 1 (nguyên band); giáo viên có thể chọn 0.5. Bài PAPER thêm 0.25 (BR-31). */
+	@Column(nullable = false, precision = 4, scale = 2)
 	private BigDecimal step = BigDecimal.ONE;
 
 	@Column(nullable = false, precision = 5, scale = 2)
@@ -66,6 +66,16 @@ public class RubricCriterion {
 	@OneToMany(mappedBy = "criterion", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("orderNo")
 	private List<ChecklistItem> checklist = new ArrayList<>();
+
+	/** Mức đạt (rubric phân tích, chỉ bài PAPER — BR-31). */
+	@OneToMany(mappedBy = "criterion", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("orderNo")
+	private List<RubricLevel> levels = new ArrayList<>();
+
+	public void addLevel(RubricLevel level) {
+		level.setCriterion(this);
+		levels.add(level);
+	}
 
 	public void addItem(ChecklistItem item) {
 		item.setCriterion(this);

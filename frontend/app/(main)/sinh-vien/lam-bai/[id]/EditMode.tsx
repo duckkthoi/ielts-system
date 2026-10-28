@@ -16,6 +16,7 @@ import { countWords } from '@/lib/utils/wordCount';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 import { AutosaveIndicator } from './AutosaveIndicator';
+import { RELOAD_CODES } from './const';
 import { DraftConflictModal } from './DraftConflictModal';
 import { EssayEditor } from './EssayEditor';
 import { ExamClock } from './ExamClock';
@@ -28,9 +29,6 @@ import { WordCounter } from './WordCounter';
 
 // ─── Đang soạn: tự lưu + nộp; gửi bản đang gõ cho giáo viên xem trực tiếp (BR-26) ─
 // Chế độ thi: đồng hồ tới `endsAt` (hết giờ vẫn soạn / nộp được — BR-24) và báo rời trang / dán (BR-25).
-
-/** Lỗi nộp nghĩa là trạng thái trên trang đã cũ → tải lại. */
-const RELOAD_CODES = new Set(['VERSION_CONFLICT', 'ALREADY_SUBMITTED', 'DEADLINE_PASSED', 'INVALID_STATE']);
 
 export function EditMode({
   part,

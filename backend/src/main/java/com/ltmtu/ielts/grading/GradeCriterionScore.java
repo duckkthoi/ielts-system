@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 import com.ltmtu.ielts.assignment.RubricCriterion;
+import com.ltmtu.ielts.assignment.RubricLevel;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -41,8 +42,13 @@ public class GradeCriterionScore {
 	private RubricCriterion criterion;
 
 	/** NULL = chưa chấm tiêu chí này (lưu nháp dở). */
-	@Column(precision = 3, scale = 1)
+	@Column(precision = 4, scale = 2)
 	private BigDecimal score;
+
+	/** Bài PAPER: mức đạt giáo viên chọn (BR-31); NULL = chấm điểm trực tiếp. */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "level_id")
+	private RubricLevel level;
 
 	@Column(columnDefinition = "text")
 	private String comment;

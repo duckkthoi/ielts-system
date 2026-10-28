@@ -1,6 +1,7 @@
 import type { AssignmentKind, CitationStyle, SectionDto } from '@/lib/types/assignment';
 import type { AssignmentStatus, SubmissionStatus } from '@/lib/theme/status';
 import type { ChecklistKind, CriterionCode, TaskType } from '@/lib/types/assignment';
+import type { CslItem } from '@/lib/types/paper';
 
 // ─── Sinh viên: bài được giao, lịch sử nộp, kết quả (docs/05 mục A.8) ─────────
 // `status` phía sinh viên: server đã đổi GRADED → SUBMITTED (BR-13).
@@ -226,6 +227,10 @@ export interface VersionDetail {
   wordCount: number;
   late: boolean;
   content: string;
+  /** Bài PAPER (B25a): JSON trình soạn lúc nộp; bài luận → null. */
+  contentJson: Record<string, unknown> | null;
+  /** Bài PAPER: tài liệu được trích lúc nộp (theo thứ tự xuất hiện); bài luận → null. */
+  references: { id: number; csl: CslItem }[] | null;
   /** null khi chưa được trả bài. */
   result: VersionResult | null;
 }

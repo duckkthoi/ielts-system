@@ -46,6 +46,25 @@ export interface CriterionDto {
   weight: number;
   orderNo: number;
   checklist: ChecklistItemDto[];
+  /** Mức đạt (chỉ bài PAPER — BR-31); bài luận rỗng. */
+  levels: LevelDto[];
+}
+
+/** Một mức đạt của tiêu chí bài PAPER: khoảng điểm [minScore, maxScore] + mô tả (B25b). */
+export interface LevelDto {
+  id: number;
+  label: string;
+  minScore: number;
+  maxScore: number;
+  descriptor: string | null;
+  orderNo: number;
+}
+
+export interface LevelRequest {
+  label: string;
+  minScore: number;
+  maxScore: number;
+  descriptor?: string | null;
 }
 
 export interface PartDto {
@@ -160,6 +179,7 @@ export interface CriterionRequest {
   step: number;
   weight: number;
   checklist: ChecklistItemRequest[];
+  levels?: LevelRequest[];
 }
 
 export interface PartRequest {

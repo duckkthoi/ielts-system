@@ -6,12 +6,10 @@ import { Result, Skeleton, Tabs } from 'antd';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { activityApi } from '@/lib/api/activity';
 import { studentApi } from '@/lib/api/student';
 import { timeApi } from '@/lib/api/time';
 import { studentAssignmentPath } from '@/lib/constants';
 import { publishRealtime } from '@/lib/realtime';
-import type { StudentActivityType } from '@/lib/types/activity';
 import type { StudentAssignmentDetail } from '@/lib/types/student';
 import { nextStudentAction } from '@/lib/utils/studentAction';
 import { useRealtimeStore } from '@/stores/useRealtimeStore';
@@ -35,7 +33,6 @@ export default function WritingPage() {
   const [detail, setDetail] = useState<StudentAssignmentDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [version, setVersion] = useState(0);
-  const activityEnabled = detail !== null;
 
   const realtimeStatus = useRealtimeStore((s) => s.status);
 
@@ -61,43 +58,6 @@ export default function WritingPage() {
     const timer = setInterval(() => void timeApi.syncClock(), CLOCK_SYNC_MS);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (!activityEnabled) return;
-
-    let pageLeft = false;
-    let hidden = document.visibilityState === 'hidden';
-    const record = (type: StudentActivityType) => {
-      void activityApi.recordStudentActivity(id, type).catch(() => undefined);
-    };
-    const leavePage = () => {
-      if (pageLeft) return;
-      pageLeft = true;
-      record('PAGE_LEFT');
-    };
-    const updateHidden = (nextHidden: boolean) => {
-      if (nextHidden === hidden) return;
-      hidden = nextHidden;
-      record(nextHidden ? 'TAB_HIDDEN' : 'TAB_VISIBLE');
-    };
-    const onVisibilityChange = () => updateHidden(document.visibilityState === 'hidden');
-    const onBlur = () => updateHidden(true);
-    const onFocus = () => updateHidden(document.visibilityState === 'hidden');
-
-    record('PAGE_ENTERED');
-    if (hidden) record('TAB_HIDDEN');
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('blur', onBlur);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('pagehide', leavePage);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('blur', onBlur);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('pagehide', leavePage);
-      leavePage();
-    };
-  }, [id, activityEnabled]);
 
   const part = detail
     ? (detail.parts.find((p) => p.partId === partParam) ??
@@ -158,6 +118,8 @@ export default function WritingPage() {
           key={`${part.partId}-${part.status}-${part.currentVersion}-${part.canSubmit}`}
           assignmentId={detail.id}
           assignmentClosed={detail.status === 'CLOSED'}
+          paper={detail.kind === 'PAPER'}
+          citationStyle={detail.citationStyle}
           part={part}
           onChanged={reload}
         />

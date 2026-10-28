@@ -78,3 +78,61 @@ export interface UpdatePush {
   authorId: number;
   clientId: string | null;
 }
+
+// ─── Thư viện trích dẫn của nhóm (docs/05 A.10, B24) ──────────────────────────
+// Tài liệu tham khảo là bản ghi CSL-JSON (server đã lọc trường); định dạng IEEE / APA làm ở client.
+
+export interface CslName {
+  given?: string;
+  family?: string;
+  literal?: string;
+}
+
+export interface CslDate {
+  'date-parts'?: (number | string)[][];
+  literal?: string;
+  raw?: string;
+}
+
+export interface CslItem {
+  type?: string;
+  title?: string;
+  author?: CslName[];
+  editor?: CslName[];
+  issued?: CslDate;
+  'container-title'?: string;
+  volume?: string | number;
+  issue?: string | number;
+  page?: string;
+  publisher?: string;
+  URL?: string;
+  DOI?: string;
+  [field: string]: unknown;
+}
+
+/** Trường bắt buộc còn thiếu (BR-30) — chỉ cảnh báo. */
+export type MissingField = 'AUTHOR' | 'YEAR' | 'SOURCE';
+
+export interface ReferenceDto {
+  id: number;
+  csl: CslItem;
+  doi: string | null;
+  missing: MissingField[];
+  createdById: number | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `skipped`: số mục bỏ qua vì DOI đã có trong thư viện hoặc lặp lại trong lần nhập. */
+export interface BatchResult {
+  added: ReferenceDto[];
+  skipped: number;
+}
+
+/** Kết quả tra DOI — chưa lưu. */
+export interface DoiLookup {
+  doi: string;
+  csl: CslItem;
+  missing: MissingField[];
+}

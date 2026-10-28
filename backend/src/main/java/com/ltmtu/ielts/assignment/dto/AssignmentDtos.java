@@ -82,7 +82,16 @@ public final class AssignmentDtos {
 			BigDecimal maxScore,
 			BigDecimal step,
 			@DecimalMin(value = "0.1", message = "Trọng số phải lớn hơn 0") @DecimalMax("10") BigDecimal weight,
-			@Size(max = 30, message = "Tối đa 30 mục checklist mỗi tiêu chí") List<@Valid ChecklistItemRequest> checklist) {
+			@Size(max = 30, message = "Tối đa 30 mục checklist mỗi tiêu chí") List<@Valid ChecklistItemRequest> checklist,
+			@Size(max = 6, message = "Tối đa 6 mức đạt mỗi tiêu chí") List<@Valid LevelRequest> levels) {
+	}
+
+	/** Mức đạt của tiêu chí bài PAPER (BR-31): nhãn, khoảng điểm [min, max], mô tả. */
+	public record LevelRequest(
+			@NotBlank(message = "Vui lòng nhập tên mức đạt") @Size(max = 50, message = "Tên mức đạt tối đa 50 ký tự") String label,
+			@NotNull(message = "Thiếu điểm thấp nhất của mức") BigDecimal minScore,
+			@NotNull(message = "Thiếu điểm cao nhất của mức") BigDecimal maxScore,
+			@Size(max = 2000, message = "Mô tả mức đạt tối đa 2000 ký tự") String descriptor) {
 	}
 
 	public record ChecklistItemRequest(
@@ -139,8 +148,13 @@ public final class AssignmentDtos {
 			Integer maxWords, int orderNo) {
 	}
 
+	/** {@code levels}: mức đạt (chỉ bài PAPER, theo thứ tự giáo viên đặt); bài luận → rỗng. */
 	public record CriterionDto(Long id, CriterionCode code, String name, String description, BigDecimal maxScore,
-			BigDecimal step, BigDecimal weight, int orderNo, List<ChecklistItemDto> checklist) {
+			BigDecimal step, BigDecimal weight, int orderNo, List<ChecklistItemDto> checklist, List<LevelDto> levels) {
+	}
+
+	public record LevelDto(Long id, String label, BigDecimal minScore, BigDecimal maxScore, String descriptor,
+			int orderNo) {
 	}
 
 	public record ChecklistItemDto(Long id, String content, ChecklistKind kind, BigDecimal maxBand, int orderNo) {

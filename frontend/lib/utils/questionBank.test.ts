@@ -26,7 +26,8 @@ test('questionBankToPart: sao chép đề/rubric và bỏ id server', () => {
         step: 1,
         weight: 1,
         orderNo: 1,
-        checklist: [{ id: 12, content: 'Đủ hai quan điểm', kind: 'CHECK', maxBand: null, orderNo: 1 }]
+        checklist: [{ id: 12, content: 'Đủ hai quan điểm', kind: 'CHECK', maxBand: null, orderNo: 1 }],
+        levels: []
       }
     ]
   });
@@ -65,7 +66,8 @@ test('questionBankToAssignment: tạo bài một phần để giao trực tiếp
           step: 1,
           weight: 1,
           orderNo: 0,
-          checklist: []
+          checklist: [],
+          levels: []
         }
       ],
       createdAt: '2026-10-28T00:00:00Z',
