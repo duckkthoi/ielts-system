@@ -130,8 +130,30 @@ public class AssignmentService {
 					.orElseThrow(() -> ApiException.badRequest("VALIDATION_ERROR", "Phần " + partId + " không thuộc bài tập này"))
 					.setPartDueAt(dueAt));
 		}
+		if (req.groupLockAt() != null || req.maxGroupSize() != null) {
+			applyGroupSettings(a, req);
+		}
 		assignmentRepository.flush();
 		return AssignmentMapper.toDetail(a);
+	}
+
+	/** Bài PAPER: hạn chốt nhóm, cỡ nhóm (BR-27). Không giảm cỡ nhóm xuống dưới nhóm đông nhất đang có. */
+	private void applyGroupSettings(Assignment a, AssignmentSettingsRequest req) {
+		if (!a.isPaper()) {
+			throw ApiException.badRequest("VALIDATION_ERROR", "Chỉ bài paper mới có nhóm");
+		}
+		if (req.groupLockAt() != null) {
+			PaperRules.requireLockBeforeDue(req.groupLockAt(), a.getDueAt());
+			a.setGroupLockAt(req.groupLockAt());
+		}
+		if (req.maxGroupSize() != null) {
+			int largest = assignmentRepository.largestGroupSize(a.getId());
+			if (req.maxGroupSize() < largest) {
+				throw ApiException.badRequest("VALIDATION_ERROR",
+						"Đang có nhóm " + largest + " người — cỡ nhóm không được nhỏ hơn " + largest);
+			}
+			a.setMaxGroupSize(req.maxGroupSize());
+		}
 	}
 
 	/** Chỉ xoá được bài nháp; bài đã phát hành thì đóng bài (B4b). */

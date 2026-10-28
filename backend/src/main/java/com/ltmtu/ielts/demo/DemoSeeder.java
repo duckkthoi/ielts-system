@@ -111,7 +111,7 @@ public class DemoSeeder implements ApplicationRunner {
 				now.plus(Duration.ofDays(7)), true, 2, false,
 				List.of(part(teacherId, "Task 1 — Biểu đồ đường", TaskType.WRITING_TASK1, DemoTexts.TASK1_PROMPT, 150,
 						20), part(teacherId, "Task 2 — Thảo luận hai quan điểm", TaskType.WRITING_TASK2,
-								DemoTexts.TASK2_PROMPT, 250, 40))));
+								DemoTexts.TASK2_PROMPT, 250, 40)), null, null, null, null));
 		publishing.publish(teacherId, week1.id(), new TargetsRequest(Set.of(classAId, classBId), Set.of()));
 
 		Long task1 = week1.parts().get(0).id();
@@ -126,7 +126,7 @@ public class DemoSeeder implements ApplicationRunner {
 		// Bài nháp: giáo viên chỉnh hạn rồi phát hành ngay trong buổi demo (học sinh online nhận thông báo realtime).
 		assignments.create(teacherId, new AssignmentRequest("Tuần 2 — Bài luận Task 2", "Bài luyện thêm.", null,
 				now.plus(Duration.ofDays(10)), true, 2, false, List.of(part(teacherId, "Task 2 — Lợi và hại",
-						TaskType.WRITING_TASK2, DemoTexts.TASK2_PROMPT_WEEK2, 250, 40))));
+						TaskType.WRITING_TASK2, DemoTexts.TASK2_PROMPT_WEEK2, 250, 40)), null, null, null, null));
 		log.info("Dữ liệu mẫu: giáo viên {}, lớp {} và {}, {} + {} sinh viên", teacherId, classAId, classBId,
 				classA.size(), classB.size());
 
@@ -180,7 +180,7 @@ public class DemoSeeder implements ApplicationRunner {
 		RubricTemplateDto template = assignments.templates(teacherId, type).stream().filter(RubricTemplateDto::system)
 				.findFirst().orElseThrow(() -> new IllegalStateException("Thiếu rubric mẫu " + type));
 		List<CriterionRequest> criteria = template.criteria().stream().map(DemoSeeder::criterion).toList();
-		return new PartRequest(title, type, prompt, null, minWords, minutes, null, null, criteria);
+		return new PartRequest(title, type, prompt, null, minWords, minutes, null, null, criteria, null, null, null);
 	}
 
 	private static CriterionRequest criterion(CriterionDto c) {

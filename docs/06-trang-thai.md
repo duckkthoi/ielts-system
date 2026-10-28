@@ -187,33 +187,23 @@ Chữ hiển thị cạnh ô soạn: `SAVED` "Đã lưu lúc hh:mm" · `SAVING` 
 
 ```mermaid
 stateDiagram-v2
-    [*] --> NOT_STARTED
-    NOT_STARTED --> IN_PROGRESS: Bắt đầu
-    IN_PROGRESS --> FINISHED: Nộp
-    IN_PROGRESS --> FINISHED: Hết giờ
+    [*] --> IN_PROGRESS: Bắt đầu
+    IN_PROGRESS --> FINISHED: Nộp trước ends_at
+    IN_PROGRESS --> OVERTIME: Tới ends_at (job báo GV + SV một lần)
+    OVERTIME --> FINISHED_OVERTIME: Nộp
     FINISHED --> [*]
+    FINISHED_OVERTIME --> [*]
 ```
 
-- **Bắt đầu**: `ends_at = now + thời lượng`. Các sự kiện chuyển tab, dán, mất kết nối được ghi lại, trạng thái không đổi.
-- **Nộp**: `finish_reason = SUBMITTED`. **Hết giờ**: job tự nộp bản nháp mới nhất, `finish_reason = TIMEOUT`.
+- Trạng thái **không lưu DB**, tính từ `ends_at`, `finished_at` và giờ server (`exam/ExamRules`). Chưa có dòng `exam_sessions` = chưa bắt đầu.
+- **Bắt đầu**: `ends_at = now + thời lượng`, cố định (BR-23). Chuyển tab, dán, mất kết nối được ghi thành sự kiện, trạng thái không đổi.
+- **Hết giờ** (BR-24): **không tự nộp**. Job ghi sự kiện `OVERTIME`, đặt `overtime_notified_at` và báo giáo viên + sinh viên; sinh viên vẫn soạn và nộp được.
+- **Nộp**: lần nộp đầu tiên đặt `finished_at`. Nộp đúng `ends_at` vẫn là trong giờ; sau đó là `FINISHED_OVERTIME`. Nộp lại bản sửa (yêu cầu sửa) không đổi phiên.
 
-Phiên thi tách riêng với trạng thái bài nộp. Phiên kết thúc thì bài nộp chuyển sang `SUBMITTED` như luồng thường.
+Phiên thi tách riêng với trạng thái bài nộp: bài nộp vẫn đi theo mục 2 (`DRAFT` → `SUBMITTED` …).
 
 ---
 
 ## 9. Phiên kết nối TCP
 
 Xem máy trạng thái ở [05-api.md – mục C.5](05-api.md#c5-máy-trạng-thái-của-một-phiên).
-
-## 10. Sự kiện hoạt động khi làm bài (FR-54)
-
-Các sự kiện được lưu thành lịch sử theo bài, không phải trạng thái thay thế cho `online` / `viewingPartId`:
-
-| Sự kiện | Ý nghĩa |
-|---|---|
-| `PAGE_ENTERED` | Mở màn làm bài |
-| `PAGE_LEFT` | Rời màn làm bài, tải lại hoặc đóng trang |
-| `TAB_HIDDEN` | Tab IELTS bị ẩn hoặc cửa sổ mất focus |
-| `TAB_VISIBLE` | Quay lại tab IELTS |
-
-Ứng dụng nhận trạng thái ẩn/hiện do trình duyệt cung cấp. Không nhận URL hay nội dung trang bên ngoài.

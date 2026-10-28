@@ -1,0 +1,48 @@
+### Chế độ thi (UC-27, UC-21) — cần bài đã phát hành có phần bật "examMode"
+### Sự kiện chuyển tab / dán gửi qua STOMP /app/exam/{sessionId}/event (docs/05 B.2), không gọi được ở đây.
+
+@baseUrl = http://localhost:8080
+@partId = 1
+@assignmentId = 1
+
+# @name student
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "DEMO001", "password": "Demo@2026" }
+
+### Phiên thi của tôi (chưa bắt đầu → data: null)
+GET {{baseUrl}}/api/student/parts/{{partId}}/exam
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+### Bắt đầu tính giờ (gọi lại → trả đúng phiên cũ)
+# @name started
+POST {{baseUrl}}/api/student/parts/{{partId}}/exam/start
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+### Chưa bắt đầu mà lưu nháp → 409 EXAM_NOT_STARTED
+PUT {{baseUrl}}/api/student/parts/{{partId}}/draft
+Content-Type: application/json
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+{ "content": "Some people believe..." }
+
+###
+# @name teacher
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.demo", "password": "Demo@2026" }
+
+### Màn giám sát (lọc lớp: thêm ?classId=)
+GET {{baseUrl}}/api/teacher/assignments/{{assignmentId}}/exam-monitor
+Authorization: Bearer {{teacher.response.body.data.accessToken}}
+
+### Dòng thời gian một phiên
+GET {{baseUrl}}/api/teacher/exam-sessions/{{started.response.body.data.sessionId}}/events
+Authorization: Bearer {{teacher.response.body.data.accessToken}}
+
+### Xem trực tiếp bài đang gõ (BR-26) — nội dung gõ gửi qua STOMP /app/live/{partId}/content
+### Bình luận trực tiếp: chat kênh submission-{submissionId} trong kết quả
+GET {{baseUrl}}/api/teacher/parts/{{partId}}/students/{{student.response.body.data.user.id}}/live
+Authorization: Bearer {{teacher.response.body.data.accessToken}}

@@ -157,7 +157,8 @@ public class GradingService {
 		publish(g);
 		events.publishEvent(new GradingEvents.Returned(s.getId(), s.getPart().getAssignment().getId(),
 				s.getPart().getId(), s.getStudent().getId(), s.getCurrentVersion(),
-				BandCalculator.display(g.getOverallScore()), s.getPart().getAssignment().getTitle(), s.getPart().getTitle()));
+				BandCalculator.display(g.getOverallScore()), s.getPart().getAssignment().getTitle(), s.getPart().getTitle(),
+				submissions.memberIds(s)));
 		audit.record(teacherId, AuditAction.RETURN_GRADE, "SUBMISSION", s.getId(), Map.of("versionNo", s.getCurrentVersion()));
 		log.info("Giáo viên {} trả bài nộp {} version {}", teacherId, s.getId(), s.getCurrentVersion());
 		return buildScreen(s, g.getVersion());
@@ -189,7 +190,7 @@ public class GradingService {
 		publish(g);
 		events.publishEvent(new GradingEvents.RevisionRequested(s.getId(), a.getId(), s.getPart().getId(),
 				s.getStudent().getId(), s.getCurrentVersion(), BandCalculator.display(g.getOverallScore()), note,
-				req.dueAt(), a.getTitle(), s.getPart().getTitle()));
+				req.dueAt(), a.getTitle(), s.getPart().getTitle(), submissions.memberIds(s)));
 		audit.record(teacherId, AuditAction.REQUEST_REVISION, "SUBMISSION", s.getId(),
 				Map.of("versionNo", s.getCurrentVersion(), "revision", used + 1));
 		log.info("Giáo viên {} yêu cầu sửa bài nộp {} (lần {}/{})", teacherId, s.getId(), used + 1, a.getMaxRevisions());

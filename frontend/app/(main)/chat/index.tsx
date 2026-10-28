@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { MessageSquare } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+import { ChatPanel, parseChannelId } from '@/components/ChatPanel';
 import { chatApi } from '@/lib/api/chat';
 import { ROLE } from '@/lib/constants';
 import { subscribeRealtime } from '@/lib/realtime';
@@ -15,8 +16,6 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useRealtimeStore } from '@/stores/useRealtimeStore';
 
 import { ChannelList } from './ChannelList';
-import { ChatPanel } from './ChatPanel';
-import { parseChannelId } from './const';
 
 // ─── Trao đổi (UC-29, FR-55, Prompt 8) ────────────────────────────────────────
 // Kênh đang mở nằm trên URL (?kenh=submission-12): màn chấm mở thẳng kênh của bài nộp, kể cả khi
@@ -32,9 +31,7 @@ export default function ChatPage() {
   const realtimeStatus = useRealtimeStore((s) => s.status);
 
   const [channels, setChannels] = useState<ChannelSummary[] | null>(null);
-  const [studentOptions, setStudentOptions] = useState<
-    { value: string; studentId: number; label: string }[]
-  >([]);
+  const [studentOptions, setStudentOptions] = useState<{ value: string; studentId: number; label: string }[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion((v) => v + 1), []);

@@ -6,7 +6,10 @@ export type NotificationType =
   | 'GRADE_RETURNED'
   | 'REVISION_REQUESTED'
   | 'DEADLINE_REMINDER'
-  | 'MANUAL_REMINDER';
+  | 'MANUAL_REMINDER'
+  | 'EXAM_ALERT'
+  | 'EXAM_OVERTIME'
+  | 'PAPER_GROUP_LOCK';
 
 /** Cùng một kiểu cho REST và WebSocket (`/user/queue/notifications`). */
 export interface NotificationDto {

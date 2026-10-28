@@ -124,7 +124,7 @@ Bộ ảnh này cho thấy vì sao phải dùng HTTPS: qua HTTP, mật khẩu hi
 | Tài liệu | Nội dung |
 |---|---|
 | [01 Tổng quan](docs/01-tong-quan.md) | Yêu cầu chức năng (FR), phi chức năng (NFR), quy tắc nghiệp vụ BR-01 → BR-22, kiến trúc |
-| [02 Use case](docs/02-use-case.md) · [03 Sequence](docs/03-sequence.md) | 32 use case, sơ đồ tuần tự SD-01 → SD-14 |
+| [02 Use case](docs/02-use-case.md) · [03 Sequence](docs/03-sequence.md) | 32 use case, sơ đồ tuần tự SD-01 → SD-13 |
 | [04 ERD](docs/04-erd.md) · [05 API](docs/05-api.md) · [06 Trạng thái](docs/06-trang-thai.md) | Bảng và migration; REST, WebSocket, giao thức TCP, mã lỗi; vòng đời đối tượng |
 | [07 Design system](docs/07-design-system.md) · [08 Nghiệp vụ chấm IELTS](docs/08-nghiep-vu-cham-ielts.md) | Giao diện; cách chấm và tính band |
 | [09 Kiểm thử tải](docs/09-kiem-thu-tai.md) | Môi trường, kịch bản và kết quả k6 |

@@ -1,4 +1,14 @@
-import { Bell, BookOpen, ClipboardCheck, Clock, Inbox, PencilLine } from 'lucide-react';
+import {
+  Bell,
+  BookOpen,
+  ClipboardCheck,
+  Clock,
+  Inbox,
+  PencilLine,
+  ShieldAlert,
+  TimerOff,
+  UsersRound
+} from 'lucide-react';
 
 import { NOTIFICATION_TYPE_META } from '@/lib/theme/status';
 import type { NotificationType } from '@/lib/types/notification';
@@ -11,7 +21,10 @@ const ICONS: Record<NotificationType, typeof Bell> = {
   GRADE_RETURNED: ClipboardCheck,
   REVISION_REQUESTED: PencilLine,
   DEADLINE_REMINDER: Clock,
-  MANUAL_REMINDER: Bell
+  MANUAL_REMINDER: Bell,
+  EXAM_ALERT: ShieldAlert,
+  EXAM_OVERTIME: TimerOff,
+  PAPER_GROUP_LOCK: UsersRound
 };
 
 export function NotificationIcon({ type, size = 36 }: { type: NotificationType; size?: number }) {

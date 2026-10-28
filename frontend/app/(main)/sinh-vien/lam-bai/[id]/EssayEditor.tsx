@@ -8,18 +8,22 @@ export function EssayEditor({
   value,
   onChange,
   readOnly = false,
-  footer
+  footer,
+  onPaste
 }: {
   value: string;
   onChange?: (text: string) => void;
   readOnly?: boolean;
   footer?: React.ReactNode;
+  /** Chế độ thi: báo số ký tự vừa dán (BR-25). */
+  onPaste?: (chars: number) => void;
 }) {
   return (
     <div className="mx-auto flex w-full max-w-180 flex-col rounded-lg border border-neutral-100 bg-neutral-0 shadow-sm">
       <Input.TextArea
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
+        onPaste={onPaste ? (e) => onPaste(e.clipboardData.getData('text').length) : undefined}
         readOnly={readOnly}
         variant="borderless"
         autoSize={{ minRows: 14 }}
