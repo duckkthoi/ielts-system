@@ -31,8 +31,7 @@
 | SD-10 | Job nhắc hạn nộp | UC-30 | 1 |
 | SD-11 | Đồng bộ giờ với server | UC-23 | 2 |
 | SD-12 | Chat realtime | UC-29 | 2 |
-| SD-13 | Chế độ thi và tự nộp khi hết giờ | UC-27, UC-31 | 3 |
-| SD-14 | Ghi nhận học sinh vào/rời màn làm bài và chuyển tab | UC-16 | 2 |
+| SD-13 | Chế độ thi và báo quá giờ | UC-27, UC-31 | 3 |
 
 ---
 
@@ -540,7 +539,7 @@ sequenceDiagram
 
 ---
 
-## SD-13 · Chế độ thi và tự nộp khi hết giờ (Mức 3)
+## SD-13 · Chế độ thi và báo quá giờ (Mức 3)
 
 ```mermaid
 sequenceDiagram
@@ -554,53 +553,21 @@ sequenceDiagram
 
     SV->>FE: Bấm "Bắt đầu"
     FE->>E: POST /api/student/parts/{partId}/exam/start
-    E->>DB: INSERT exam_sessions (started_at = now, ends_at = now + 40 phút)
-    E-->>FE: {endsAt}
+    E->>DB: INSERT exam_sessions … ON CONFLICT DO NOTHING (ends_at = now + 40 phút)
+    E-->>FE: {sessionId, endsAt, status}
+    E-->>WS: (sau commit) /topic/assignments/{id}/exam STARTED → giáo viên
     loop Trong lúc làm bài
-        FE->>WS: SEND /app/exam/{sessionId}/event {TAB_HIDDEN | TAB_VISIBLE | PASTE}
-        WS->>E: Ghi exam_events (kèm IP)
+        FE->>WS: SEND /app/exam/{sessionId}/event {TAB_HIDDEN | TAB_VISIBLE | PASTE, pasteChars}
+        WS->>E: Kiểm tra phiên của mình, chưa nộp, không gửi quá dày
+        E->>DB: INSERT exam_events (+ thông báo EXAM_ALERT cho GV, tối đa 1 lần / 2 phút)
+        E-->>WS: (sau commit) /topic/assignments/{id}/exam → màn giám sát của giáo viên
     end
-    Note over WS,E: Mất kết nối WebSocket → server tự ghi DISCONNECT,<br/>kết nối lại → RECONNECT
-    alt SV nộp trước giờ
-        FE->>E: Nộp như SD-07
-    else Hết giờ
-        SCH->>E: Mỗi phút: tìm phiên quá ends_at mà chưa finished
-        E->>DB: Nộp bản nháp mới nhất thành version mới, finished_at = now
-        E->>WS: /user/queue/notifications "Đã hết giờ, bài đã được nộp"
+    Note over WS,E: Mất kết nối WebSocket cuối cùng → server tự ghi DISCONNECT,<br/>kết nối lại → RECONNECT
+    opt Hết giờ mà chưa nộp
+        SCH->>E: Mỗi 15 giây: phiên quá ends_at, chưa nộp, chưa báo
+        E->>DB: UPDATE … SET overtime_notified_at WHERE … IS NULL (nhận việc)
+        E->>DB: INSERT exam_events OVERTIME + thông báo EXAM_OVERTIME cho GV và SV
+        Note over SV,FE: Không tự nộp — SV vẫn viết tiếp được (BR-24)
     end
-```
-
-## SD-14 · Hoạt động khi sinh viên làm bài (Mức 2)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor SV as Sinh viên
-    participant FE as Màn làm bài
-    participant API as StudentActivityController / Service
-    participant DB as PostgreSQL
-    participant WS as STOMP broker
-    participant GV as Màn tiến độ giáo viên
-
-    GV->>WS: SUBSCRIBE /topic/assignments/{id}/activity
-    GV->>API: GET /api/teacher/assignments/{id}/activity?limit=100
-    API->>DB: Đọc lịch sử mới nhất (chỉ bài giáo viên sở hữu)
-    API-->>GV: Danh sách hoạt động
-    SV->>FE: Mở màn làm bài
-    FE->>API: POST /api/student/assignments/{id}/activity — PAGE_ENTERED
-    API->>DB: Kiểm tra bài được giao, ghi student_activity_events
-    API-->>WS: Sau commit, StudentActivityPushListener phát sự kiện
-    WS-->>GV: /topic/assignments/{id}/activity {id, studentId, type, occurredAt}
-    loop Khi tab chuyển nền / quay lại
-        FE->>API: POST activity TAB_HIDDEN hoặc TAB_VISIBLE
-        API->>DB: INSERT sự kiện
-        API-->>WS: Sau commit, phát sự kiện
-        WS-->>GV: Cập nhật danh sách hoạt động
-    end
-    opt Rời màn hoặc tải lại trang
-        FE->>API: POST activity PAGE_LEFT
-        API->>DB: INSERT sự kiện
-        API-->>WS: Sau commit, phát sự kiện
-    end
-    Note over FE,GV: Browser reports tab visibility only
+    FE->>E: Nộp như SD-07 (trong transaction nộp: finished_at = now, sự kiện SUBMITTED)
 ```

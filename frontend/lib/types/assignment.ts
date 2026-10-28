@@ -4,6 +4,9 @@ import type { AssignmentStatus } from '@/lib/theme/status';
 // Điểm / trọng số là số thập phân (BigDecimal phía server) → `number`.
 
 export type TaskType = 'WRITING_TASK1' | 'WRITING_TASK2' | 'CUSTOM';
+/** ESSAY = bài luận IELTS (cá nhân, band); PAPER = paper học thuật theo nhóm, thang 10 (Mức 4, docs/12). */
+export type AssignmentKind = 'ESSAY' | 'PAPER';
+export type CitationStyle = 'IEEE' | 'APA';
 export type CriterionCode = 'TA' | 'TR' | 'CC' | 'LR' | 'GRA';
 /** CHECK = đặc điểm cần có; LIMIT = đặc điểm tiêu cực giới hạn band (BR-16). */
 export type ChecklistKind = 'CHECK' | 'LIMIT';
@@ -58,6 +61,29 @@ export interface PartDto {
   partDueAt: string | null;
   weight: number | null;
   criteria: CriterionDto[];
+  /** Chế độ thi tính giờ (Mức 3, BR-23). */
+  examMode: boolean;
+  examDurationMinutes: number | null;
+  /** Chỉ bài PAPER: khung mục của giai đoạn (BR-29). */
+  sections: SectionDto[];
+}
+
+export interface SectionDto {
+  id: number;
+  sectionKey: string;
+  title: string;
+  required: boolean;
+  minWords: number | null;
+  maxWords: number | null;
+  orderNo: number;
+}
+
+export interface SectionRequest {
+  sectionKey?: string | null;
+  title: string;
+  required?: boolean;
+  minWords?: number | null;
+  maxWords?: number | null;
 }
 
 export interface AssignmentDetail {
@@ -74,6 +100,10 @@ export interface AssignmentDetail {
   createdAt: string;
   updatedAt: string;
   parts: PartDto[];
+  kind: AssignmentKind;
+  citationStyle: CitationStyle | null;
+  maxGroupSize: number | null;
+  groupLockAt: string | null;
 }
 
 export interface AssignmentListParams {
@@ -92,6 +122,9 @@ export interface AssignmentSettingsRequest {
   maxRevisions?: number;
   showSuggestionsOnRevision?: boolean;
   partDueAts?: Record<number, string | null>;
+  /** Chỉ bài PAPER (BR-27). */
+  groupLockAt?: string;
+  maxGroupSize?: number;
 }
 
 export interface TargetsRequest {
@@ -139,6 +172,10 @@ export interface PartRequest {
   partDueAt?: string | null;
   weight?: number | null;
   criteria: CriterionRequest[];
+  examMode?: boolean;
+  /** Bắt buộc khi `examMode`; bỏ trống → server lấy `suggestedMinutes`. */
+  examDurationMinutes?: number | null;
+  sections?: SectionRequest[];
 }
 
 export interface AssignmentRequest {
@@ -150,6 +187,10 @@ export interface AssignmentRequest {
   maxRevisions?: number;
   showSuggestionsOnRevision?: boolean;
   parts: PartRequest[];
+  kind?: AssignmentKind;
+  citationStyle?: CitationStyle | null;
+  maxGroupSize?: number | null;
+  groupLockAt?: string | null;
 }
 
 export interface RubricTemplateDto {

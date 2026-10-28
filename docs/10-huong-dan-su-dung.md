@@ -1,7 +1,7 @@
 # 10. Hướng dẫn sử dụng
 
 > Dành cho người chạy thử, người demo và người chấm đồ án: mở hệ thống ở đâu, đăng nhập bằng tài khoản nào, từng vai trò làm được gì.
-> Cập nhật: 29/10/2026, theo trạng thái giao diện F1 → F6 và Ngân hàng đề B17 (xem mục 1).
+> Cập nhật: 28/10/2026, theo trạng thái giao diện F1 → F6 và Ngân hàng đề B17 (xem mục 1).
 
 ---
 
@@ -13,7 +13,9 @@
 | Quản trị viên: tổng quan, giáo viên, người dùng, nhật ký | ✅ Dùng được | Trang "Phiên đăng nhập" chỉ hiện số phiên (danh sách chi tiết thuộc Mức 3) |
 | Giáo viên: lớp học, import sinh viên, bài tập (soạn, giao, phát hành) | ✅ Dùng được | |
 | Giáo viên: chấm bài (hàng đợi, chấm theo tiêu chí, đánh dấu trên bài kiểu Word, nhận xét mẫu, thống kê lỗi, trả bài, yêu cầu sửa, so sánh 2 lần nộp) | ✅ Dùng được | |
-| Giáo viên: tiến độ realtime (ma trận, online, hoạt động vào/rời màn và chuyển tab, nhắc nhở, xuất Excel) | ✅ Dùng được | |
+| Giáo viên: tiến độ realtime (ma trận, online, nhắc nhở, xuất Excel) | ✅ Dùng được | |
+| Paper theo nhóm: soạn bài loại Paper (giai đoạn, khung mục, rubric thang 10), chia nhóm, sinh viên tự lập / vào nhóm | 🟡 Đang làm | Mức 4: đã có soạn bài + nhóm (B23a); trình soạn viết paper cùng nhóm ở B23b |
+| Giáo viên: chế độ thi + giám sát làm bài (xem trực tiếp bài đang viết, góp ý ngay, cảnh báo rời trang / dán, quá thời gian) | ✅ Dùng được | Mức 3, bước 15 |
 | Giáo viên: thống kê một bài, thống kê lớp + xếp hạng, kết quả học tập từng sinh viên | ✅ Dùng được | |
 | Giáo viên: tổng quan (dashboard) | ✅ Dùng được | |
 | Giáo viên: ngân hàng đề | ✅ Dùng được | Danh sách, tìm/lọc, xem rubric, thêm từ rubric mẫu, sửa, xoá, giao trực tiếp và lưu/nạp trong trình soạn |
@@ -166,7 +168,7 @@ Import bằng dòng lệnh (qua TCP, cho người quen terminal): `java -jar adm
 | Bước | Nội dung |
 |---|---|
 | 1. Thông tin chung | Tên bài, mô tả / lời dặn, **thời điểm mở** (trống = mở ngay khi phát hành), **hạn nộp**, cho phép nộp muộn, số lần yêu cầu sửa tối đa, hiện / ẩn gợi ý sửa khi yêu cầu sửa |
-| 2. Các phần | Mặc định Task 1 + Task 2; thêm Task 1 / Task 2 / phần tự do, đổi thứ tự (↑ ↓), xoá. Mỗi phần: tiêu đề, loại, **đề bài** (để một dòng trống giữa các đoạn), **ảnh đề** (biểu đồ Task 1 — PNG/JPG/WEBP ≤ 5 MB), số từ tối thiểu, thời gian gợi ý, trọng số, hạn riêng |
+| 2. Các phần | Mặc định Task 1 + Task 2; thêm Task 1 / Task 2 / phần tự do, đổi thứ tự (↑ ↓), xoá. Mỗi phần: tiêu đề, loại, **đề bài** (để một dòng trống giữa các đoạn), **ảnh đề** (biểu đồ Task 1 — PNG/JPG/WEBP ≤ 5 MB), số từ tối thiểu, thời gian gợi ý, trọng số, hạn riêng, **Chế độ thi** + thời gian thi (để trống = theo thời gian gợi ý) |
 | 3. Tiêu chí & checklist | Bấm **Nạp rubric mẫu** để lấy 4 tiêu chí IELTS (TA/TR, CC, LR, GRA) kèm checklist. Mục **Cần có** = đặc điểm bài nên có; mục **Giới hạn điểm** = lỗi nặng, kèm **band tối đa** (vd "Không có overview → tối đa 5"). Sửa, thêm, xoá tự do |
 | 4. Giao bài | Tóm tắt và danh sách việc còn thiếu (chưa đặt hạn, phần chưa có đề / tiêu chí…). Đủ điều kiện → **Lưu & giao bài** → chọn lớp và / hoặc từng sinh viên (gõ mã / tên để tìm) → **Phát hành** |
 
@@ -184,8 +186,11 @@ Menu **Ngân hàng đề** mở trang quản lý các đề riêng của giáo v
 
 Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: tới giờ mở mới gửi).
 
+**Bài loại Paper (viết theo nhóm, Mức 4):** ở bước 1 chọn **Loại bài → Paper theo nhóm** (hệ thống hỏi lại rồi thay các phần bằng 2 giai đoạn mẫu *Đề cương*, *Bản cuối*). Chọn **kiểu trích dẫn** (IEEE cho ngành IT, hoặc APA), **số người tối đa mỗi nhóm** và **hạn chốt nhóm** (để trống = lúc hạn nộp). Ở bước 2 mỗi giai đoạn có **khung mục** (Abstract, Introduction, Method…): đặt tên mục, *Bắt buộc / Tuỳ chọn*, số từ tối thiểu / tối đa, đổi thứ tự, thêm / xoá. Bài Paper không có Task 1/2, thời gian gợi ý hay chế độ thi. Ở bước 3 bấm **Nạp rubric mẫu paper IT** để có 6 tiêu chí thang 10 (bước 0,25) kèm trọng số; sửa tự do.
+
 ### 6.3. Quản lý bài tập
 
+- **Nhóm (bài Paper)**: sau khi phát hành, nút **Nhóm** ở chi tiết bài (hoặc tab **Nhóm** trong hàng Chi tiết · Nhóm · Tiến độ · …). Bên trái là người **chưa có nhóm**, bên phải các nhóm (số người / tối đa, nhãn *SV tự lập*). **Chia ngẫu nhiên** chia người chưa có nhóm (cả bài hoặc theo lớp đã chọn) thành các nhóm đều nhau; **Tạo nhóm** / **Sửa** (bút chì) đặt tên và chọn thành viên — chọn người đang ở nhóm khác thì người đó được chuyển sang; **Xoá** trả thành viên về chưa có nhóm (nhóm đã có bài làm thì không xoá được). Giáo viên đổi nhóm được cả sau hạn chốt. Tới hạn chốt mà còn người chưa có nhóm, bạn nhận thông báo **Chốt nhóm**.
 - **Danh sách bài tập**: lọc Nháp / Đang mở / Đã đóng, hạn nộp kèm đồng hồ đếm ngược, số sinh viên đã nộp đủ, số bài chờ chấm.
 - **Trang chi tiết bài**: đề và rubric từng phần, thời gian và tuỳ chọn, danh sách đã giao.
   - **Cài đặt** (mọi trạng thái): đổi tên, mô tả, hạn nộp, hạn riêng từng phần, nộp muộn, số lần sửa, gợi ý sửa.
@@ -216,15 +221,25 @@ Khi phát hành, sinh viên nhận thông báo + email ngay (bài hẹn giờ: t
 
 ### 6.5. Tiến độ theo thời gian thực
 
-Mở từ nút **Tiến độ** ở chi tiết bài / danh sách bài tập (bài đã phát hành). Hàng nút **Chi tiết · Tiến độ · Thống kê** ở góc phải để chuyển giữa các trang của một bài.
+Mở từ nút **Tiến độ** ở chi tiết bài / danh sách bài tập (bài đã phát hành). Hàng nút **Chi tiết · Tiến độ · Giám sát · Thống kê** ở góc phải để chuyển giữa các trang của một bài.
 
 - **Bốn thẻ đầu trang**: tỉ lệ hoàn thành (sinh viên đã nộp đủ mọi phần), số sinh viên nộp muộn, số sinh viên quá hạn mà chưa nộp, số người **đang trực tuyến** và số người đang mở bài này.
 - **Ma trận**: mỗi hàng một sinh viên, mỗi cột một phần (tiêu đề cột ghi số đã nộp, vd "Task 1 · 16/20"). Ô tô màu theo trạng thái (Chưa làm, Đang làm, Đã nộp, Nộp muộn, Đang chấm, Đã trả bài, Cần sửa); đã trả thì ô ghi band; đồng hồ = nộp muộn, chấm than đỏ = quá hạn chưa nộp, `v2` = lần nộp thứ 2. Rê chuột vào ô để xem chi tiết; **bấm ô đã nộp để mở màn chấm**.
 - **Realtime**: sinh viên lưu nháp lần đầu, nộp bài, hoặc bạn trả bài / yêu cầu sửa → ô đổi ngay và nháy viền. Chấm xanh ở avatar = sinh viên đang trực tuyến; dòng "đang mở Task 2" và viền xanh quanh ô = sinh viên đang mở màn làm phần đó. Nhãn **Cập nhật trực tiếp** ở góc phải chuyển sang "Đang kết nối lại…" khi mất kết nối; có lại kết nối thì ma trận tự tải lại.
-- **Hoạt động làm bài**: bấm nút **Hoạt động làm bài** để xem 100 sự kiện gần nhất (lọc theo lớp): vào/rời màn làm bài, tab/cửa sổ IELTS mất focus và quay lại. Sự kiện mới hiện trực tiếp. Trình duyệt không cho ứng dụng biết địa chỉ trang bên ngoài hoặc nội dung mà học sinh xem.
 - **Lọc**: theo lớp, theo trạng thái (hàng có ít nhất một ô ở trạng thái đó), tìm theo mã SV / họ tên.
 - **Nhắc nhở**: tick chọn sinh viên rồi bấm **Nhắc N người đã chọn**; không chọn ai thì nhắc mọi người còn phần chưa nộp / cần sửa (chọn "Nhắc về phần" để chỉ nhắc một phần). Sinh viên nhận thông báo + email. Mỗi bài nhắc tối đa 3 lần trong 10 phút; bài đã đóng không nhắc được.
 - **Xuất Excel**: tải bảng điểm `.xlsx` theo lớp đang lọc (điểm từng tiêu chí, band từng phần, trạng thái, band cả bài).
+
+### 6.5b. Giám sát làm bài và chế độ thi
+
+**Bật chế độ thi**: ở bước **Các phần** của trình soạn, bật **Chế độ thi** cho phần cần thi và nhập **thời gian thi** (để trống = lấy thời gian gợi ý). Trang chi tiết bài ghi "Chế độ thi · N phút". Sinh viên phải bấm **Bắt đầu làm bài** mới viết được; hết giờ **không tự nộp** — sinh viên vẫn nộp được nhưng bị đánh dấu **quá thời gian**, bạn và sinh viên nhận thông báo "Quá thời gian thi".
+
+Mở trang **Giám sát** (hàng nút **Chi tiết · Tiến độ · Giám sát · Thống kê**):
+
+- **Bốn thẻ**: số người đang trực tuyến, đang thi (kèm số đã nộp), quá thời gian, có cảnh báo (đã rời trang hoặc dán văn bản).
+- **Bảng**: mỗi hàng một sinh viên, mỗi cột một phần (cột ở chế độ thi ghi "· thi"). Ô ghi trạng thái bài; phần thi có thêm trạng thái thi (Đang thi / Quá thời gian / Đã nộp / Nộp quá giờ), **đồng hồ còn lại** (quá giờ hiện "+mm:ss" màu đỏ) và số lần **rời trang / dán / mất kết nối** (rê chuột để xem; "rời trang" gồm cả chuyển sang cửa sổ / ứng dụng khác). Mặc định chỉ hiện người **đang làm bài**; chọn **Tất cả** để xem mọi người nhận bài. Lọc theo **lớp** và tìm theo mã SV / họ tên.
+- **Sự kiện mới** (cột phải): mở trang là có sẵn 50 sự kiện gần nhất; rời trang, rời cửa sổ, dán văn bản (kèm số ký tự), mất / có lại kết nối, bắt đầu, nộp, hết giờ — hiện ngay khi xảy ra, dòng tô vàng là cảnh báo. Dòng ghi **gửi bù** = xảy ra lúc máy sinh viên mất mạng, giờ hiển thị là lúc xảy ra. Rời trang và dán còn tạo thông báo ở chuông (tối đa một lần / 2 phút cho mỗi sinh viên).
+- **Xem trực tiếp**: bấm **Xem** ở ô còn đang làm (hoặc bấm một sự kiện) → khung bên phải hiện **bài sinh viên đang viết**, cập nhật mỗi giây khi sinh viên gõ, kèm số từ và giờ cập nhật. Bên dưới là khung **Góp ý trực tiếp**: tin bạn gửi hiện ngay dưới ô soạn của sinh viên, sinh viên trả lời được (cũng là kênh "Theo bài nộp" ở trang Trao đổi). Phần thi có thêm tab **Dòng thời gian thi** liệt kê mọi sự kiện của phiên. Sinh viên nộp xong thì khung báo đã nộp — xem bài ở màn chấm.
 
 ### 6.6. Thống kê một bài
 
@@ -279,6 +294,7 @@ Bấm tên bài (hoặc bấm vào thông báo) để mở. Trang có:
 - **Lịch sử nộp** của từng phần: mỗi lần nộp, giờ nộp, số từ, nộp muộn, band nếu đã được trả bài (đang chấm thì ghi "Chờ kết quả");
 - khung **Kết quả**: band từng phần và band cả bài (chỉ có khi mọi phần đã được trả; Task 2 tính gấp đôi Task 1);
 - khung **Thời gian & quy định**: hạn nộp, có cho nộp muộn không, số lần yêu cầu sửa tối đa.
+- **Bài Paper (theo nhóm)**: khung **Nhóm của tôi** ở cột phải. Chưa có nhóm thì gõ tên rồi bấm **Lập** để lập nhóm mới, hoặc bấm **Vào nhóm** ở một nhóm còn chỗ (nhóm đủ người ghi *Đủ người*). Có nhóm rồi thì thấy tên các thành viên và nút **Rời nhóm** (nhóm đã bắt đầu viết thì không tự rời được). Sau hạn chốt nhóm chỉ xem được; chưa có nhóm thì liên hệ giáo viên. Cả nhóm dùng chung một bài cho mỗi giai đoạn.
 
 ### 7.3. Làm bài và nộp bài
 
@@ -290,6 +306,8 @@ Bấm **Làm bài / Viết tiếp / Sửa bài** để mở màn làm bài toàn
 - **Mở cùng bài ở 2 tab / 2 máy**: khi một nơi lưu đè, nơi kia hiện hộp thoại cho xem cả hai bản (kèm số từ) để chọn **Dùng bản trên máy này** hoặc **Dùng bản trên máy chủ**.
 - **Nộp**: bấm **Nộp phần này** (đang "Cần sửa": **Nộp bản sửa**). Bài ít hơn số từ tối thiểu thì hệ thống hỏi lại ("Viết tiếp" / "Vẫn nộp"). Nộp xong ô soạn chuyển sang chỉ đọc kèm giờ nộp; nộp sau hạn (khi bài cho phép) được ghi là **nộp muộn**.
 - **Đồng hồ đếm ngược** theo giờ máy chủ (tự đồng bộ 5 phút một lần). Quá hạn mà bài không cho nộp muộn, hoặc bài đã đóng, thì ô soạn khoá lại và ghi lý do.
+- **Giáo viên xem trực tiếp**: trên ô soạn có dòng "Giáo viên có thể xem trực tiếp bài bạn đang viết". Bên dưới ô soạn là khung **Trao đổi với giáo viên**: góp ý của giáo viên hiện ngay ở đây và bạn trả lời được (cùng cuộc trò chuyện với kênh bài nộp ở trang Trao đổi). Khung có sẵn sau lần tự lưu đầu tiên.
+- **Chế độ thi** (phần có ghi "Chế độ thi"): thay cho ô soạn là thẻ ghi thời gian thi và luật thi; bấm **Bắt đầu làm bài** → xác nhận thì đồng hồ thi bắt đầu chạy và **không dừng** khi tải lại trang hay mở tab khác. Đồng hồ "Còn mm:ss" chuyển cam khi còn dưới 5 phút; hết giờ chuyển đỏ "Quá thời gian +mm:ss" — bạn **vẫn viết và nộp được**, nhưng bài bị đánh dấu quá thời gian và bạn nhận thông báo. Rời khỏi trang làm bài (chuyển tab, thu nhỏ), chuyển sang cửa sổ / ứng dụng khác, dán văn bản, mất kết nối đều được ghi lại và báo cho giáo viên — kể cả khi đang mất mạng (máy báo lại khi có mạng).
 
 - **Xem bài đã chấm**: phần đã được trả bài hiện bài viết **kèm đánh dấu của giáo viên** (cùng kiểu với màn chấm: gạch lỗi, chữ sửa, nền tô màu, nhận xét ở lề), chỉ đọc; bấm đoạn được đánh dấu để xem chi tiết, bật / tắt từng lớp ở hàng **Hiện:**. Khi bài đang **Cần sửa**, chữ sửa của giáo viên được ẩn — chỉ thấy loại lỗi và nhận xét để tự sửa.
 

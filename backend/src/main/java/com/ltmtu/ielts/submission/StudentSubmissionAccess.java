@@ -27,11 +27,11 @@ public class StudentSubmissionAccess {
 	private final SubmissionVersionRepository versionRepository;
 	private final Clock clock;
 
-	/** Bài làm của tôi cho một phần; chưa lưu nháp / nộp lần nào → rỗng. */
+	/** Bài làm của tôi (bài PAPER: của nhóm tôi — BR-28) cho một phần; chưa lưu nháp / nộp lần nào → rỗng. */
 	@Transactional(readOnly = true)
 	public Optional<Submission> mine(Long studentId, Long partId) {
 		access.requireVisiblePart(partId, studentId, clock.instant());
-		return submissionRepository.findByPartIdAndStudentId(partId, studentId);
+		return submissionRepository.findMine(studentId, partId);
 	}
 
 	/** Bài tập được thấy (kèm các phần) và mọi bài làm của tôi trong bài đó. */
@@ -40,7 +40,7 @@ public class StudentSubmissionAccess {
 		Assignment a = access.requireVisibleAssignment(assignmentId, studentId, clock.instant());
 		List<Long> partIds = a.getParts().stream().map(AssignmentPart::getId).toList();
 		return new MyAssignment(a, partIds.isEmpty() ? List.of()
-				: submissionRepository.findByStudentIdAndPartIdIn(studentId, partIds));
+				: submissionRepository.findMineInParts(studentId, partIds));
 	}
 
 	public record MyAssignment(Assignment assignment, List<Submission> submissions) {

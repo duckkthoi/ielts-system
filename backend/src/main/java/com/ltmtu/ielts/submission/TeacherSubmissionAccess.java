@@ -2,6 +2,7 @@ package com.ltmtu.ielts.submission;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -58,6 +59,23 @@ public class TeacherSubmissionAccess {
 	public Submission requireOwnedForUpdate(Long submissionId, Long teacherId) {
 		submissionRepository.findByIdForUpdate(submissionId);
 		return requireOwned(submissionId, teacherId);
+	}
+
+	/**
+	 * Bài làm của một sinh viên (bài PAPER: của nhóm sinh viên đó) cho một phần, <b>kể cả bản nháp chưa nộp</b> — chỉ
+	 * dùng cho màn xem trực tiếp (BR-26, ngoại lệ của quy tắc "giáo viên chỉ đọc bài đã nộp"). Phần không thuộc bài của
+	 * giáo viên → rỗng.
+	 */
+	@Transactional(readOnly = true)
+	public Optional<Submission> workInProgress(Long teacherId, Long partId, Long studentId) {
+		return submissionRepository.findMine(studentId, partId)
+				.filter(s -> s.getPart().getAssignment().getTeacher().getId().equals(teacherId));
+	}
+
+	/** Những sinh viên nhận kết quả của bài làm: bài luận → 1 người; bài PAPER → mọi thành viên nhóm (BR-28). */
+	@Transactional(readOnly = true)
+	public List<Long> memberIds(Submission s) {
+		return submissionRepository.memberIds(s.getId());
 	}
 
 	/** Một version của bài nộp; {@code versionNo = null} → version mới nhất. */

@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.AssignmentRequest;
@@ -17,27 +18,33 @@ import com.ltmtu.ielts.common.ApiException;
 
 /**
  * Quy tắc nghiệp vụ của bài tập và rubric mà annotation validate không diễn đạt được
- * (BR-11, BR-16, docs/08-nghiep-vu-cham-ielts.md mục 3.1, 4.2).
+ * (BR-11, BR-16, BR-31, docs/08-nghiep-vu-cham-ielts.md mục 3.1, 4.2).
  */
 final class RubricRules {
 
 	static final BigDecimal WHOLE = BigDecimal.ONE;
 	static final BigDecimal HALF = new BigDecimal("0.5");
+	static final BigDecimal QUARTER = new BigDecimal("0.25");
+	/** Band IELTS tối đa (bài ESSAY). */
 	static final BigDecimal DEFAULT_MAX = BigDecimal.valueOf(9);
+	/** Thang 10 của bài PAPER (BR-31). */
+	static final BigDecimal PAPER_MAX = BigDecimal.TEN;
 
 	private RubricRules() {
 	}
 
 	static void validate(AssignmentRequest req) {
 		requireOrder(req.openAt(), req.dueAt());
+		PaperRules.validate(req);
+		AssignmentKind kind = PaperRules.kindOf(req);
 		List<PartRequest> parts = req.parts() == null ? List.of() : req.parts();
 		for (int p = 0; p < parts.size(); p++) {
-			validatePart(parts.get(p), "Phần " + (p + 1));
+			validateRubric(parts.get(p).imageUrl(), parts.get(p).criteria(), "Phần " + (p + 1), kind);
 		}
 	}
 
 	static void validate(QuestionBankRequest req) {
-		validateRubric(req.imageUrl(), req.criteria(), "Ngân hàng đề");
+		validateRubric(req.imageUrl(), req.criteria(), "Ngân hàng đề", AssignmentKind.ESSAY);
 	}
 
 	static void requireOrder(Instant openAt, Instant dueAt) {
@@ -46,11 +53,8 @@ final class RubricRules {
 		}
 	}
 
-	private static void validatePart(PartRequest part, String where) {
-		validateRubric(part.imageUrl(), part.criteria(), where);
-	}
-
-	private static void validateRubric(String imageUrl, List<CriterionRequest> requestedCriteria, String where) {
+	private static void validateRubric(String imageUrl, List<CriterionRequest> requestedCriteria, String where,
+			AssignmentKind kind) {
 		if (imageUrl != null && !imageUrl.isBlank() && !isAllowedImageUrl(imageUrl)) {
 			throw invalid(where + ": đường dẫn ảnh không hợp lệ");
 		}
@@ -62,10 +66,20 @@ final class RubricRules {
 			if (cr.code() != null && !codes.add(cr.code())) {
 				throw invalid(at + ": mã tiêu chí " + cr.code() + " bị lặp trong cùng một phần");
 			}
-			BigDecimal step = stepOf(cr);
-			BigDecimal max = maxOf(cr);
-			if (step.compareTo(WHOLE) != 0 && step.compareTo(HALF) != 0) {
-				throw invalid(at + ": bước điểm chỉ được là 1 (nguyên band) hoặc 0.5");
+			BigDecimal step = stepOf(cr, kind);
+			BigDecimal max = maxOf(cr, kind);
+			if (kind == AssignmentKind.PAPER) {
+				// BR-31: thang 10, bước 1 / 0,5 / 0,25.
+				if (step.compareTo(WHOLE) != 0 && step.compareTo(HALF) != 0 && step.compareTo(QUARTER) != 0) {
+					throw invalid(at + ": bước điểm chỉ được là 1, 0.5 hoặc 0.25");
+				}
+			} else {
+				if (step.compareTo(WHOLE) != 0 && step.compareTo(HALF) != 0) {
+					throw invalid(at + ": bước điểm chỉ được là 1 (nguyên band) hoặc 0.5");
+				}
+				if (max.compareTo(DEFAULT_MAX) > 0) {
+					throw invalid(at + ": điểm tối đa của bài IELTS từ 1 tới 9");
+				}
 			}
 			if (!isMultiple(max, step)) {
 				throw invalid(at + ": điểm tối đa phải là bội số của bước điểm");
@@ -96,11 +110,21 @@ final class RubricRules {
 	}
 
 	static BigDecimal stepOf(CriterionRequest cr) {
-		return cr.step() == null ? WHOLE : cr.step();
+		return stepOf(cr, AssignmentKind.ESSAY);
 	}
 
 	static BigDecimal maxOf(CriterionRequest cr) {
-		return cr.maxScore() == null ? DEFAULT_MAX : cr.maxScore();
+		return maxOf(cr, AssignmentKind.ESSAY);
+	}
+
+	/** Không nhập bước điểm: band nguyên (ESSAY), 0,25 (PAPER). */
+	static BigDecimal stepOf(CriterionRequest cr, AssignmentKind kind) {
+		return cr.step() != null ? cr.step() : kind == AssignmentKind.PAPER ? QUARTER : WHOLE;
+	}
+
+	/** Không nhập điểm tối đa: 9 (ESSAY), 10 (PAPER). */
+	static BigDecimal maxOf(CriterionRequest cr, AssignmentKind kind) {
+		return cr.maxScore() != null ? cr.maxScore() : kind == AssignmentKind.PAPER ? PAPER_MAX : DEFAULT_MAX;
 	}
 
 	static ChecklistKind kindOf(ChecklistItemRequest item) {

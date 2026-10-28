@@ -39,23 +39,24 @@ public class StudentSubmissionService {
 	@Transactional(readOnly = true)
 	public DraftResponse draft(Long studentId, Long partId) {
 		access.requireVisiblePart(partId, studentId, clock.instant());
-		Submission s = submissionRepository.findByPartIdAndStudentId(partId, studentId).orElse(null);
+		// Bài PAPER: bản nháp chung của nhóm (BR-28). Chưa có nhóm thì chưa có gì để nạp — ghi mới bị chặn ở saveDraft.
+		Submission s = submissionRepository.findMine(studentId, partId).orElse(null);
 		if (s == null) {
-			return new DraftResponse("", DraftSource.EMPTY, null, 0, SubmissionStatus.NOT_STARTED, 0, 0);
+			return new DraftResponse("", DraftSource.EMPTY, null, 0, SubmissionStatus.NOT_STARTED, 0, 0, null);
 		}
 		if (s.getDraftContent() != null) {
 			return new DraftResponse(s.getDraftContent(), DraftSource.DRAFT, s.getDraftSavedAt(),
 					WordCounter.count(s.getDraftContent()), s.getStatus().forStudent(), s.getCurrentVersion(),
-					s.getDraftVersion());
+					s.getDraftVersion(), s.getId());
 		}
 		if (s.getStatus() == SubmissionStatus.REVISION_REQUESTED && s.getCurrentVersion() > 0) {
 			String last = versionRepository.findBySubmissionIdAndVersionNo(s.getId(), s.getCurrentVersion())
 					.map(SubmissionVersion::getContent).orElse("");
 			return new DraftResponse(last, DraftSource.LAST_VERSION, null, WordCounter.count(last), s.getStatus(),
-					s.getCurrentVersion(), s.getDraftVersion());
+					s.getCurrentVersion(), s.getDraftVersion(), s.getId());
 		}
 		return new DraftResponse("", DraftSource.EMPTY, null, 0, s.getStatus().forStudent(), s.getCurrentVersion(),
-				s.getDraftVersion());
+				s.getDraftVersion(), s.getId());
 	}
 
 	/**
@@ -67,8 +68,10 @@ public class StudentSubmissionService {
 	public SaveDraftResponse saveDraft(Long studentId, Long partId, String content, Integer expectedDraftVersion) {
 		Instant now = clock.instant();
 		AssignmentPart part = access.requireVisiblePart(partId, studentId, now);
-		Submission s = submissionRepository.findForUpdate(partId, studentId).orElse(null);
+		Long groupId = requireGroup(part, studentId);
+		Submission s = lockMine(part, studentId, groupId);
 		requireWritable(part, s, now);
+		requireExamStarted(part, studentId);
 		int current = s == null ? 0 : s.getDraftVersion();
 		if (expectedDraftVersion != null && expectedDraftVersion != current) {
 			throw new ApiException(HttpStatus.CONFLICT, "DRAFT_CONFLICT",
@@ -77,6 +80,7 @@ public class StudentSubmissionService {
 		}
 		if (s == null) {
 			s = Submission.start(part, userQueryService.requireUser(studentId));
+			s.setGroupId(groupId);
 		}
 		boolean started = s.getStatus() == SubmissionStatus.NOT_STARTED;
 		if (started) {
@@ -90,7 +94,7 @@ public class StudentSubmissionService {
 			events.publishEvent(new SubmissionEvents.DraftStarted(s.getId(), part.getAssignment().getId(), partId,
 					studentId));
 		}
-		return new SaveDraftResponse(now, WordCounter.count(content), s.getDraftVersion());
+		return new SaveDraftResponse(now, WordCounter.count(content), s.getDraftVersion(), s.getId());
 	}
 
 	/**
@@ -101,17 +105,23 @@ public class StudentSubmissionService {
 	public SubmitResponse submit(Long studentId, Long partId, String content, int expectedVersion) {
 		Instant now = clock.instant();
 		AssignmentPart part = access.requireVisiblePart(partId, studentId, now);
-		Submission s = submissionRepository.findForUpdate(partId, studentId).orElse(null);
+		Long groupId = requireGroup(part, studentId);
+		Submission s = lockMine(part, studentId, groupId);
 		int current = s == null ? 0 : s.getCurrentVersion();
 		if (expectedVersion != current) {
 			throw ApiException.conflict("VERSION_CONFLICT",
 					"Phần này vừa được nộp ở tab hoặc thiết bị khác (version " + current + "). Hãy tải lại trang");
 		}
 		requireWritable(part, s, now);
+		requireExamStarted(part, studentId);
 		boolean late = DeadlineRules.isPastDue(DeadlineRules.effectiveDue(part, s), now);
 
 		if (s == null) {
 			s = Submission.start(part, userQueryService.requireUser(studentId));
+			s.setGroupId(groupId);
+		} else if (groupId != null) {
+			// Bài nhóm: ghi người nộp gần nhất (BR-28).
+			s.setStudent(userQueryService.requireUser(studentId));
 		}
 		int versionNo = current + 1;
 		s.setCurrentVersion(versionNo);
@@ -139,6 +149,28 @@ public class StudentSubmissionService {
 		if (!DeadlineRules.canStillSubmit(part, s, now)) {
 			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "DEADLINE_PASSED",
 					"Đã quá hạn nộp. Liên hệ giáo viên nếu cần gia hạn");
+		}
+	}
+
+	/** BR-28: bài PAPER → nhóm của sinh viên (chưa có nhóm → 409 NO_GROUP); bài luận → {@code null}. */
+	private Long requireGroup(AssignmentPart part, Long studentId) {
+		if (!part.getAssignment().isPaper()) {
+			return null;
+		}
+		return submissionRepository.groupOf(part.getAssignment().getId(), studentId)
+				.orElseThrow(() -> ApiException.conflict("NO_GROUP", "Bạn chưa có nhóm. Hãy vào hoặc lập nhóm trước khi viết"));
+	}
+
+	/** Khoá trước rồi mới đọc (SD-07): bài làm của nhóm nếu là bài PAPER, của chính mình nếu là bài luận. */
+	private Submission lockMine(AssignmentPart part, Long studentId, Long groupId) {
+		return (groupId == null ? submissionRepository.findForUpdate(part.getId(), studentId)
+				: submissionRepository.findForUpdateByGroup(part.getId(), groupId)).orElse(null);
+	}
+
+	/** BR-23: phần ở chế độ thi chỉ soạn / nộp được sau khi bấm "Bắt đầu" (để đồng hồ thi tính từ lúc đó). */
+	private void requireExamStarted(AssignmentPart part, Long studentId) {
+		if (part.isExamMode() && !submissionRepository.examStarted(part.getId(), studentId)) {
+			throw ApiException.conflict("EXAM_NOT_STARTED", "Bấm \"Bắt đầu làm bài\" để bắt đầu tính giờ trước khi viết");
 		}
 	}
 

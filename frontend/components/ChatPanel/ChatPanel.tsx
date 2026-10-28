@@ -36,6 +36,7 @@ export function ChatPanel({
   myId,
   myName,
   isTeacher,
+  subtitle: subtitleOverride,
   onRead,
   onBack
 }: {
@@ -44,8 +45,11 @@ export function ChatPanel({
   myId: number;
   myName: string;
   isTeacher: boolean;
-  onRead: (channelId: string) => void;
-  onBack: () => void;
+  /** Dòng phụ dưới tiêu đề (mặc định theo loại kênh). */
+  subtitle?: string;
+  onRead?: (channelId: string) => void;
+  /** Nút quay lại danh sách kênh (chỉ hiện trên điện thoại); không truyền thì không có nút. */
+  onBack?: () => void;
 }) {
   const { message } = App.useApp();
   const parsed = parseChannelId(channelId);
@@ -170,7 +174,7 @@ export function ChatPanel({
       if (document.visibilityState !== 'visible' || lastId <= lastReadSent.current) return;
       if (publishRealtime(`/app/chat/${channelId}/read`, { lastMessageId: lastId })) {
         lastReadSent.current = lastId;
-        onRead(channelId);
+        onRead?.(channelId);
       }
     };
     markRead();
@@ -234,18 +238,21 @@ export function ChatPanel({
     publishRealtime(`/app/chat/${channelId}/typing`, {});
   };
 
-  const subtitle = parsed?.type === 'CLASSROOM' ? 'Kênh chung của lớp' : 'Trao đổi về một bài nộp';
+  const subtitle =
+    subtitleOverride ?? (parsed?.type === 'CLASSROOM' ? 'Kênh chung của lớp' : 'Trao đổi về một bài nộp');
 
   return (
     <div className="flex h-full min-w-0 flex-col">
       <header className="flex items-center gap-2 border-b border-neutral-100 px-4 py-3">
-        <Button
-          type="text"
-          className="md:hidden!"
-          icon={<ArrowLeft size={16} />}
-          onClick={onBack}
-          aria-label="Danh sách"
-        />
+        {onBack && (
+          <Button
+            type="text"
+            className="md:hidden!"
+            icon={<ArrowLeft size={16} />}
+            onClick={onBack}
+            aria-label="Danh sách"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-neutral-900">{title ?? 'Cuộc trò chuyện mới'}</p>
           <p className="truncate text-small text-neutral-500">

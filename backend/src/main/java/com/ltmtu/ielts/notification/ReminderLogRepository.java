@@ -55,12 +55,16 @@ public interface ReminderLogRepository extends JpaRepository<ReminderLog, Remind
 			    SELECT d.part_id, r.student_id, d.assignment_id, d.assignment_title, d.part_title, d.due_at,
 			           CASE WHEN d.due_at <= :urgentEnd THEN 'H2' ELSE 'H24' END AS kind
 			    FROM due_parts d JOIN recipients r ON r.assignment_id = d.assignment_id
-			    LEFT JOIN submissions s ON s.part_id = d.part_id AND s.student_id = r.student_id
+			    -- Bài làm của sinh viên: của chính mình (bài luận) hoặc của nhóm mình (bài PAPER) — view V17.
+			    LEFT JOIN LATERAL (
+			        SELECT s.id, s.status FROM submissions s JOIN submission_members sm ON sm.submission_id = s.id
+			        WHERE s.part_id = d.part_id AND sm.student_id = r.student_id LIMIT 1) s ON true
 			    WHERE s.id IS NULL OR s.status IN ('NOT_STARTED', 'DRAFT')
 			    UNION ALL
-			    SELECT s.part_id, s.student_id, a.id, a.title, p.title, s.revision_due_at,
+			    SELECT s.part_id, sm.student_id, a.id, a.title, p.title, s.revision_due_at,
 			           CASE WHEN s.revision_due_at <= :urgentEnd THEN 'REVISION_H2' ELSE 'REVISION_H24' END
-			    FROM submissions s JOIN assignment_parts p ON p.id = s.part_id JOIN assignments a ON a.id = p.assignment_id
+			    FROM submissions s JOIN submission_members sm ON sm.submission_id = s.id
+			    JOIN assignment_parts p ON p.id = s.part_id JOIN assignments a ON a.id = p.assignment_id
 			    WHERE s.status = 'REVISION_REQUESTED' AND a.status = 'PUBLISHED'
 			      AND s.revision_due_at > :now AND s.revision_due_at <= :soonEnd
 			)

@@ -100,7 +100,7 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | FR-23 | **Giao bài** cho một hoặc nhiều lớp và/hoặc từng sinh viên | Giáo viên | 1 |
 | FR-24 | Phát hành (publish), đóng bài, nhân bản bài | Giáo viên | 1 |
 | FR-25 | Ngân hàng đề: lưu đề và rubric để dùng lại, gắn tag dạng đề | Giáo viên | 3 |
-| FR-26 | Chế độ thi tính giờ: hết giờ server tự nộp; ghi nhận chuyển tab, dán văn bản, mất kết nối | Giáo viên / Hệ thống | 3 |
+| FR-26 | Chế độ thi tính giờ: hết giờ thì gắn **quá thời gian** và báo giáo viên + sinh viên (không tự nộp); ghi nhận chuyển tab, dán văn bản, mất kết nối, hiện ngay trên màn giám sát và báo giáo viên | Giáo viên / Hệ thống | 3 |
 
 ### 4.4 Làm bài và nộp bài
 | Mã | Chức năng | Tác nhân | Mức |
@@ -134,7 +134,7 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | FR-51 | Email thông báo: giao bài mới, đã trả bài, yêu cầu sửa, nhắc hạn | Hệ thống | 1 |
 | FR-52 | Nhắc hạn nộp tự động khi còn 24 giờ và còn 2 giờ, áp dụng cả hạn sửa bài; không gửi trùng | Bộ lập lịch | 1 |
 | FR-53 | Giáo viên nhận thông báo realtime khi sinh viên nộp bài | Giáo viên | 1 |
-| FR-54 | Trạng thái online và hoạt động khi làm bài: giáo viên xem sinh viên nào đang online, đang mở phần nào, khi nào vào/rời màn làm bài hoặc chuyển tab ra/vào | Giáo viên | 2 |
+| FR-54 | Trạng thái online: giáo viên thấy sinh viên nào đang online, đang làm bài nào | Giáo viên | 2 |
 | FR-55 | Chat theo bài nộp (giữa giáo viên và sinh viên) và theo lớp, có "đang gõ…" và "đã xem" | GV / SV | 2 |
 | FR-56 | Đồng hồ đếm ngược hạn nộp chạy theo giờ server | Sinh viên | 2 |
 
@@ -149,6 +149,13 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | FR-65 | Thống kê lớp, bảng xếp hạng | Giáo viên | 1 |
 | FR-66 | Xuất bảng điểm ra Excel | Giáo viên | 1 |
 | FR-67 | Thống kê toàn hệ thống | Admin | 1 |
+
+### 4.8 Paper học thuật theo nhóm (Mức 4 — thiết kế đầy đủ ở [12](12-viet-paper.md))
+| Mã | Yêu cầu | Tác nhân | Mức |
+|---|---|---|---|
+| FR-70 | Tạo bài loại PAPER: các giai đoạn, khung mục mỗi giai đoạn (tiêu đề, bắt buộc, giới hạn từ), kiểu trích dẫn IEEE / APA, cỡ nhóm, hạn chốt nhóm; tiêu chí chấm thang 10 | Giáo viên | 4 ✅ B21a |
+| FR-71 | Lập nhóm: giáo viên tạo / sửa / xoá nhóm, chuyển sinh viên giữa nhóm, chia ngẫu nhiên theo lớp; sinh viên tự lập / vào / rời nhóm trước hạn chốt nhóm | Giáo viên, Sinh viên | 4 ✅ B21a |
+| FR-72 → FR-81 | Trình soạn, đếm từ theo mục, trích dẫn, chấm rubric thang 10, cùng sửa realtime, đóng góp, xem trực tiếp, xuất file, đạo văn, AI — xem [12](12-viet-paper.md) mục 2 | | 4 |
 
 ---
 
@@ -200,6 +207,14 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | BR-20 | Đếm từ theo quy ước IELTS (gạch ngang, viết tắt, số = 1 từ; dấu câu đứng riêng không tính), cùng một thuật toán ở client và server. |
 | BR-21 | Nhận xét inline cần ít nhất một trong: mã lỗi, lời nhận xét, gợi ý sửa. Gợi ý sửa mặc định ẩn với sinh viên khi bài đang "Cần sửa", để sinh viên tự sửa theo mã lỗi. |
 | BR-22 | Mỗi giáo viên có ngân hàng nhận xét và mã lỗi riêng; bộ mã lỗi của hệ thống không sửa được. |
+| BR-23 | (Mức 3) Phần bật **chế độ thi** chỉ soạn / nộp được sau khi bấm "Bắt đầu". Mỗi sinh viên thi một phần đúng một lần: giờ kết thúc = lúc bắt đầu + thời lượng, cố định theo giờ server; tải lại trang, mở tab khác không đặt lại đồng hồ. |
+| BR-24 | (Mức 3) Hết giờ thi **không tự nộp**: sinh viên vẫn viết và nộp được, nhưng phiên bị gắn "Quá thời gian". Lúc hết giờ mà chưa nộp, hệ thống báo giáo viên và sinh viên đúng một lần. |
+| BR-26 | (Mức 3) Giáo viên chủ bài **xem trực tiếp** nội dung sinh viên đang gõ (kể cả nháp chưa nộp) khi phần còn đang làm, và **bình luận trực tiếp** qua kênh chat của bài nộp. Nội dung đang gõ chỉ giữ trong bộ nhớ server, không lưu thêm; đã nộp thì dừng xem trực tiếp. Đây là ngoại lệ có chủ đích của quy tắc "giáo viên chỉ đọc bài đã nộp". |
+| BR-27 | (Mức 4) Bài PAPER làm theo nhóm. Mỗi sinh viên thuộc **tối đa một nhóm** trong một bài (UNIQUE trong DB); nhóm không vượt cỡ tối đa (1–10, mặc định 4). Trước **hạn chốt nhóm** (không đặt = hạn nộp) sinh viên tự lập / vào / rời nhóm; sau đó chỉ giáo viên đổi được. Giáo viên xếp một sinh viên vào nhóm thì người đó tự rời nhóm cũ; nhóm sinh viên tự lập không còn ai thì tự xoá. |
+| BR-28 | (Mức 4) Bài làm của bài PAPER thuộc **nhóm**: một bài làm cho mỗi (giai đoạn, nhóm). Mọi thành viên hiện tại cùng thấy và sửa một bản nháp (khoá lạc quan chung), bất kỳ ai cũng nộp được (ghi người nộp gần nhất); kết quả chấm, yêu cầu sửa, thông báo, nhắc hạn, kênh chat bài nộp áp dụng cho cả nhóm. Chưa có nhóm thì chưa soạn / nộp được. Nhóm đã có bài làm thì sinh viên không tự rời và giáo viên không xoá nhóm. |
+| BR-29 | (Mức 4) Mỗi giai đoạn của bài PAPER có **khung mục** do giáo viên đặt (tiêu đề, bắt buộc hay không, số từ tối thiểu / tối đa); mã mục sinh từ tiêu đề, không trùng trong một phần. Phát hành cần mọi giai đoạn có ít nhất một mục. Mục bắt buộc phải có nội dung mới nộp được (kiểm ở B25); giới hạn số từ chỉ cảnh báo. |
+| BR-31 | (Mức 4) Tiêu chí của bài PAPER chấm **thang 10** (mặc định điểm tối đa 10, bước 0,25; được chọn bước 1 / 0,5 / 0,25); bài luận IELTS giữ band 0–9, bước 1 / 0,5. Rubric phân tích (mức đạt có mô tả) và cách tính điểm cả bài làm ở B25. |
+| BR-25 | (Mức 3) Trong phiên thi, rời trang làm bài (chuyển tab / thu nhỏ), rời cửa sổ làm bài mà tab vẫn hiện (Alt+Tab sang ứng dụng khác, màn hình thứ 2), dán văn bản, mất và có lại kết nối đều được ghi lại; sự kiện xảy ra lúc mất mạng được máy sinh viên giữ lại và gửi bù khi có mạng, ghi đúng giờ xảy ra kèm dấu "gửi bù" (kèm số ký tự dán, không lưu nội dung dán) và hiện ngay trên màn giám sát của giáo viên. Rời trang / cửa sổ và dán còn tạo thông báo cho giáo viên, tối đa một lần / 2 phút cho mỗi phiên. |
 
 ---
 

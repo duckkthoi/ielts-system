@@ -10,4 +10,6 @@ public interface AssignmentPartRepository extends JpaRepository<AssignmentPart, 
 
 	@Query("SELECT p FROM AssignmentPart p JOIN FETCH p.assignment WHERE p.id = :id")
 	Optional<AssignmentPart> findWithAssignment(@Param("id") Long id);
+
+	boolean existsByIdAndAssignmentTeacherId(Long id, Long teacherId);
 }

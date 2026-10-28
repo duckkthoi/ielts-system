@@ -4,7 +4,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
+import com.ltmtu.ielts.assignment.AssignmentEnums.CitationStyle;
 import com.ltmtu.ielts.common.BaseEntity;
 import com.ltmtu.ielts.user.User;
 
@@ -66,6 +68,28 @@ public class Assignment extends BaseEntity {
 	@Column(name = "open_notified_at")
 	private Instant openNotifiedAt;
 
+	/** ESSAY (mặc định) hoặc PAPER (V16, docs/12). */
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private AssignmentKind kind = AssignmentKind.ESSAY;
+
+	/** Chỉ PAPER: kiểu trích dẫn (BR-30). */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "citation_style", length = 10)
+	private CitationStyle citationStyle;
+
+	/** Chỉ PAPER: số thành viên tối đa của một nhóm (BR-27). */
+	@Column(name = "max_group_size")
+	private Integer maxGroupSize;
+
+	/** Chỉ PAPER: sau mốc này sinh viên không tự đổi nhóm; {@code null} = tới hạn nộp (BR-27). */
+	@Column(name = "group_lock_at")
+	private Instant groupLockAt;
+
+	/** Job đã báo giáo viên lúc tới hạn chốt nhóm chưa (chống báo trùng, V17). */
+	@Column(name = "group_lock_notified_at")
+	private Instant groupLockNotifiedAt;
+
 	/** BR-21: có hiện gợi ý sửa cho sinh viên khi bài đang "Cần sửa" không. */
 	@Column(name = "show_suggestions_on_revision", nullable = false)
 	private boolean showSuggestionsOnRevision;
@@ -81,5 +105,14 @@ public class Assignment extends BaseEntity {
 
 	public boolean isDraft() {
 		return status == AssignmentStatus.DRAFT;
+	}
+
+	public boolean isPaper() {
+		return kind == AssignmentKind.PAPER;
+	}
+
+	/** Mốc chốt nhóm thực tế: {@code groupLockAt}, không đặt thì là hạn nộp (BR-27). */
+	public Instant effectiveGroupLockAt() {
+		return groupLockAt != null ? groupLockAt : dueAt;
 	}
 }

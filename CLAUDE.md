@@ -51,6 +51,7 @@ LTMTU/
 │   ├─ 09-kiem-thu-tai.md   kết quả kiểm thử tải k6 (NFR-01/02/03)
 │   ├─ 10-huong-dan-su-dung.md  hướng dẫn sử dụng + danh sách tài khoản (cập nhật khi thêm màn hình)
 │   ├─ 11-huong-dan-trien-khai.md  clone, triển khai Docker / máy chủ có tên miền, cập nhật, sao lưu
+│   ├─ 12-viet-paper.md     thiết kế Mức 4: viết paper học thuật theo nhóm (đề xuất)
 ├─ docx/                    bản Word sinh từ docs/ (không sửa tay)
 ├─ design/                  prompt cho Figma Make; figma-make/ = code thiết kế xuất ra (chỉ tham khảo)
 ├─ shared/                  dữ liệu dùng chung FE + BE (vd bộ ca đếm từ)

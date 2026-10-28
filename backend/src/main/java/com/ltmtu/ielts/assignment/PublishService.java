@@ -191,6 +191,10 @@ public class PublishService {
 		copy.setAllowLate(src.isAllowLate());
 		copy.setMaxRevisions(src.getMaxRevisions());
 		copy.setShowSuggestionsOnRevision(src.isShowSuggestionsOnRevision());
+		// Bài paper: giữ loại, kiểu trích dẫn, cỡ nhóm; không chép hạn chốt nhóm (mốc thời gian) và các nhóm.
+		copy.setKind(src.getKind());
+		copy.setCitationStyle(src.getCitationStyle());
+		copy.setMaxGroupSize(src.getMaxGroupSize());
 		for (AssignmentPart p : src.getParts()) {
 			AssignmentPart np = new AssignmentPart();
 			np.setOrderNo(p.getOrderNo());
@@ -201,6 +205,18 @@ public class PublishService {
 			np.setMinWords(p.getMinWords());
 			np.setSuggestedMinutes(p.getSuggestedMinutes());
 			np.setWeight(p.getWeight());
+			np.setExamMode(p.isExamMode());
+			np.setExamDurationMinutes(p.getExamDurationMinutes());
+			for (PaperSection s : p.getSections()) {
+				PaperSection ns = new PaperSection();
+				ns.setOrderNo(s.getOrderNo());
+				ns.setSectionKey(s.getSectionKey());
+				ns.setTitle(s.getTitle());
+				ns.setRequired(s.isRequired());
+				ns.setMinWords(s.getMinWords());
+				ns.setMaxWords(s.getMaxWords());
+				np.addSection(ns);
+			}
 			for (RubricCriterion c : p.getCriteria()) {
 				RubricCriterion nc = new RubricCriterion();
 				nc.setOrderNo(c.getOrderNo());
@@ -236,6 +252,9 @@ public class PublishService {
 		for (AssignmentPart p : a.getParts()) {
 			if (p.getCriteria().isEmpty()) {
 				problems.add("phần " + p.getOrderNo() + " (" + p.getTitle() + ") chưa có tiêu chí chấm");
+			}
+			if (a.isPaper() && p.getSections().isEmpty()) {
+				problems.add("phần " + p.getOrderNo() + " (" + p.getTitle() + ") chưa có khung mục");
 			}
 			if (p.getPartDueAt() != null && !p.getPartDueAt().isAfter(now)) {
 				problems.add("hạn riêng của phần " + p.getOrderNo() + " đã qua");

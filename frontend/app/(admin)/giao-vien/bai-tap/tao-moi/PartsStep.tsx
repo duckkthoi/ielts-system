@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { App, Button, Card, DatePicker, Form, Input, InputNumber, Select, Tooltip } from 'antd';
+import { App, Button, Card, Form, Input, Select, Tooltip } from 'antd';
 import type { FormInstance } from 'antd';
 import { ArrowDown, ArrowUp, BookOpen, BookmarkPlus, Plus, Trash2 } from 'lucide-react';
 
@@ -11,17 +11,21 @@ import type { TaskType } from '@/lib/types/assignment';
 import { questionBankToPart } from '@/lib/utils/questionBank';
 
 import { MAX_PARTS, newPart, partDefaults, TASK_TYPE_OPTIONS } from './const';
+import { newPaperStage, newSection } from './paperTemplates';
+import { PartTimingFields } from './PartTimingFields';
 import { PromptImageInput } from './PromptImageInput';
 import { QuestionBankPickerModal } from './QuestionBankPickerModal';
 import { SaveToQuestionBankModal } from './SaveToQuestionBankModal';
+import { SectionsEditor } from './SectionsEditor';
 import type { AssignmentForm, PartForm } from './type';
 
-// ─── Bước 2: các phần của bài (Task 1, Task 2…) ───────────────────────────────
+// ─── Bước 2: các phần của bài (Task 1, Task 2…) — bài Paper: các giai đoạn + khung mục ─
 
 export function PartsStep({ form, onChanged }: { form: FormInstance<AssignmentForm>; onChanged: () => void }) {
   const { message, modal } = App.useApp();
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
   const [savingPart, setSavingPart] = useState<PartForm | null>(null);
+  const paper = Form.useWatch('kind', { form, preserve: true }) === 'PAPER';
 
   /** Đổi loại → điền lại tiêu đề / số từ / thời gian nếu đang là giá trị mặc định của loại cũ. */
   const handleTypeChange = (index: number, next: TaskType, prev: TaskType) => {
@@ -81,19 +85,23 @@ export function PartsStep({ form, onChanged }: { form: FormInstance<AssignmentFo
             {fields.map((field, index) => (
               <Card
                 key={field.key}
-                title={`Phần ${index + 1}`}
+                title={paper ? `Giai đoạn ${index + 1}` : `Phần ${index + 1}`}
                 extra={
                   <span className="flex flex-wrap justify-end gap-1">
-                    <Tooltip title="Sao chép một đề và rubric đã lưu vào phần này">
-                      <Button type="text" icon={<BookOpen size={16} />} onClick={() => setPickerIndex(index)}>
-                        <span className="hidden lg:inline">Chọn từ ngân hàng</span>
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="Lưu đề và rubric của phần này để dùng lại">
-                      <Button type="text" icon={<BookmarkPlus size={16} />} onClick={() => openSave(index)}>
-                        <span className="hidden lg:inline">Lưu vào ngân hàng</span>
-                      </Button>
-                    </Tooltip>
+                    {!paper && (
+                      <>
+                        <Tooltip title="Sao chép một đề và rubric đã lưu vào phần này">
+                          <Button type="text" icon={<BookOpen size={16} />} onClick={() => setPickerIndex(index)}>
+                            <span className="hidden lg:inline">Chọn từ ngân hàng</span>
+                          </Button>
+                        </Tooltip>
+                        <Tooltip title="Lưu đề và rubric của phần này để dùng lại">
+                          <Button type="text" icon={<BookmarkPlus size={16} />} onClick={() => openSave(index)}>
+                            <span className="hidden lg:inline">Lưu vào ngân hàng</span>
+                          </Button>
+                        </Tooltip>
+                      </>
+                    )}
                     <Tooltip title="Đưa lên">
                       <Button
                         type="text"
@@ -124,18 +132,18 @@ export function PartsStep({ form, onChanged }: { form: FormInstance<AssignmentFo
                   </span>
                 }
               >
-                <div className="grid gap-x-4 sm:grid-cols-[1fr_240px]">
+                <div className={paper ? 'grid gap-x-4' : 'grid gap-x-4 sm:grid-cols-[1fr_240px]'}>
                   <Form.Item
                     name={[field.name, 'title']}
-                    label="Tiêu đề phần"
+                    label={paper ? 'Tên giai đoạn' : 'Tiêu đề phần'}
                     rules={[
                       { required: true, whitespace: true, message: 'Vui lòng nhập tiêu đề phần' },
                       { max: 200, message: 'Tối đa 200 ký tự' }
                     ]}
                   >
-                    <Input placeholder="Task 1 – Line graph" />
+                    <Input placeholder={paper ? 'Đề cương' : 'Task 1 – Line graph'} />
                   </Form.Item>
-                  <Form.Item name={[field.name, 'taskType']} label="Loại">
+                  <Form.Item name={[field.name, 'taskType']} label="Loại" hidden={paper}>
                     <Select
                       options={TASK_TYPE_OPTIONS}
                       onChange={(next: TaskType) =>
@@ -146,7 +154,7 @@ export function PartsStep({ form, onChanged }: { form: FormInstance<AssignmentFo
                 </div>
                 <Form.Item
                   name={[field.name, 'promptText']}
-                  label="Đề bài"
+                  label={paper ? 'Yêu cầu của giai đoạn' : 'Đề bài'}
                   extra="Để một dòng trống giữa các đoạn."
                   rules={[{ max: 20000, message: 'Đề bài quá dài' }]}
                 >
@@ -159,27 +167,20 @@ export function PartsStep({ form, onChanged }: { form: FormInstance<AssignmentFo
                 <Form.Item name={[field.name, 'imageUrl']} label="Ảnh đề (biểu đồ, bảng…)">
                   <PromptImageInput />
                 </Form.Item>
-                <div className="grid gap-x-4 sm:grid-cols-4">
-                  <Form.Item name={[field.name, 'minWords']} label="Số từ tối thiểu">
-                    <InputNumber min={0} max={2000} className="w-full" />
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'suggestedMinutes']} label="Thời gian gợi ý (phút)">
-                    <InputNumber min={1} max={300} className="w-full" />
-                  </Form.Item>
-                  <Form.Item
-                    name={[field.name, 'weight']}
-                    label="Trọng số"
-                    tooltip="Khi gộp band cả bài. Để trống: Task 2 = 2, còn lại = 1 (BR-12)."
-                  >
-                    <InputNumber min={0.1} max={10} step={0.5} className="w-full" placeholder="Mặc định" />
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'partDueAt']} label="Hạn riêng" tooltip="Để trống = dùng hạn nộp chung">
-                    <DatePicker showTime={{ format: 'HH:mm' }} format="DD/MM/YYYY HH:mm" className="w-full" />
-                  </Form.Item>
-                </div>
+                {paper && <SectionsEditor partName={field.name} />}
+                <PartTimingFields form={form} fieldName={field.name} paper={paper} />
               </Card>
             ))}
-            {fields.length < MAX_PARTS && (
+            {fields.length < MAX_PARTS && paper && (
+              <Button
+                type="dashed"
+                icon={<Plus size={16} />}
+                onClick={() => add(newPaperStage(`Giai đoạn ${fields.length + 1}`, [newSection()], ''))}
+              >
+                Thêm giai đoạn
+              </Button>
+            )}
+            {fields.length < MAX_PARTS && !paper && (
               <div className="grid gap-2 sm:grid-cols-3">
                 {(['WRITING_TASK1', 'WRITING_TASK2', 'CUSTOM'] as TaskType[]).map((type) => (
                   <Button key={type} type="dashed" icon={<Plus size={16} />} onClick={() => add(newPart(type))}>

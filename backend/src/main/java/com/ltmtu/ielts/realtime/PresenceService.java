@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -50,6 +51,7 @@ public class PresenceService {
 
 	private final StudentAssignmentAccess assignmentAccess;
 	private final SimpMessagingTemplate messaging;
+	private final ApplicationEventPublisher events;
 	private final Clock clock;
 
 	public boolean isOnline(Long studentId) {
@@ -137,6 +139,8 @@ public class PresenceService {
 		for (Assignment a : assignments) {
 			messaging.convertAndSend(topic(a.getId()), new PresenceEvent(studentId, online, null, now));
 		}
+		// Phát sau khi đã báo giáo viên: lỗi của bên nghe (ghi DB) không làm mất tin online / offline.
+		events.publishEvent(new PresenceEvents.OnlineChanged(studentId, online));
 	}
 
 	private void send(Long assignmentId, Long studentId, Long partId) {
