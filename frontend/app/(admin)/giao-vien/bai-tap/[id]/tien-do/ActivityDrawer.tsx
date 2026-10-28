@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { Drawer, Empty, List, Spin, Tag } from 'antd';
-import { Activity } from 'lucide-react';
+import { Button, Drawer, Empty, List, Spin, Tag } from 'antd';
+import { Activity, Download } from 'lucide-react';
 
 import { activityApi } from '@/lib/api/activity';
 import { subscribeRealtime } from '@/lib/realtime';
@@ -40,7 +40,7 @@ export function ActivityDrawer({
 
     let cancelled = false;
     activityApi
-      .teacherActivity(assignmentId, { classId, limit: 100 })
+      .teacherActivity(assignmentId, { classId, limit: 200 })
       .then((latest) => {
         if (!cancelled) {
           setFeed((current) => ({
@@ -67,7 +67,7 @@ export function ActivityDrawer({
         return;
       }
       void activityApi
-        .teacherActivity(assignmentId, { classId, limit: 100 })
+        .teacherActivity(assignmentId, { classId, limit: 200 })
         .then((latest) => {
           if (!cancelled) setFeed({ key: queryKey, events: latest });
         })
@@ -95,6 +95,16 @@ export function ActivityDrawer({
         Ghi nhận khi học sinh vào/rời màn làm bài hoặc tab IELTS chuyển nền rồi quay lại. Trình duyệt không cung cấp
         địa chỉ trang bên ngoài mà học sinh mở.
       </p>
+      <div className="mb-3 flex justify-end">
+        <Button
+          size="small"
+          icon={<Download size={14} />}
+          disabled={events.length === 0}
+          onClick={() => downloadActivityCsv(assignmentId, events)}
+        >
+          Tải CSV ({events.length})
+        </Button>
+      </div>
       {loading && events.length === 0 ? (
         <div className="flex justify-center py-10">
           <Spin />
@@ -131,4 +141,25 @@ function mergeEvents(...groups: StudentActivityEvent[][]): StudentActivityEvent[
   const unique = new Map<number, StudentActivityEvent>();
   for (const event of groups.flat()) unique.set(event.id, event);
   return [...unique.values()].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 200);
+}
+
+function downloadActivityCsv(assignmentId: number, events: StudentActivityEvent[]) {
+  const rows = [
+    ['Mã sinh viên', 'Họ và tên', 'Hoạt động', 'Thời điểm (UTC)'],
+    ...events.map((event) => [event.studentCode, event.fullName, EVENT_META[event.type].label, event.occurredAt])
+  ];
+  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `hoat-dong-lam-bai-${assignmentId}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function csvCell(value: string): string {
+  const safe = value.replace(/^[\t\r ]*[=+\-@]/, "'$&");
+  return `"${safe.replaceAll('"', '""')}"`;
 }
