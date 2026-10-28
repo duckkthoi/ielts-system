@@ -35,8 +35,8 @@ class ChatQueries {
 	private final NamedParameterJdbcTemplate jdbc;
 
 	/**
-	 * Thành viên kênh (UC-29): bài nộp → sinh viên chủ bài nộp và giáo viên chủ bài tập; lớp → giáo viên của lớp và
-	 * thành viên hiện tại.
+	 * Thành viên kênh (UC-29): bài nộp → sinh viên của bài làm (bài PAPER: mọi thành viên nhóm — view
+	 * {@code submission_members}) và giáo viên chủ bài tập; lớp → giáo viên của lớp và thành viên hiện tại.
 	 */
 	boolean isMember(Long userId, ChatChannel channel) {
 		MapSqlParameterSource p = new MapSqlParameterSource("ref", channel.refId()).addValue("me", userId);
@@ -45,7 +45,8 @@ class ChatQueries {
 				SELECT EXISTS (
 				    SELECT 1 FROM submissions s JOIN assignment_parts ap ON ap.id = s.part_id
 				    JOIN assignments a ON a.id = ap.assignment_id
-				    WHERE s.id = :ref AND (s.student_id = :me OR a.teacher_id = :me))""";
+				    WHERE s.id = :ref AND (a.teacher_id = :me OR EXISTS (
+				        SELECT 1 FROM submission_members sm WHERE sm.submission_id = s.id AND sm.student_id = :me)))""";
 		case CLASSROOM -> """
 				SELECT EXISTS (
 				    SELECT 1 FROM classrooms c WHERE c.id = :ref
@@ -59,13 +60,14 @@ class ChatQueries {
 		return Boolean.TRUE.equals(jdbc.queryForObject(sql, p, Boolean.class));
 	}
 
-	/** Tên đăng nhập của bên còn lại trong kênh bài nộp (sinh viên chủ bài nộp / giáo viên chủ bài tập), trừ người gửi. */
+	/** Tên đăng nhập của những người khác trong kênh bài nộp (sinh viên / cả nhóm và giáo viên chủ bài), trừ người gửi. */
 	List<String> otherSubmissionMembers(long submissionId, Long exceptUserId) {
 		return jdbc.queryForList("""
-				SELECT u.username FROM submissions s JOIN assignment_parts ap ON ap.id = s.part_id
-				JOIN assignments a ON a.id = ap.assignment_id
-				JOIN users u ON u.id IN (s.student_id, a.teacher_id)
-				WHERE s.id = :ref AND u.id <> :me""",
+				SELECT u.username FROM users u
+				WHERE u.id <> :me AND (
+				    u.id IN (SELECT sm.student_id FROM submission_members sm WHERE sm.submission_id = :ref)
+				    OR u.id = (SELECT a.teacher_id FROM submissions s JOIN assignment_parts ap ON ap.id = s.part_id
+				               JOIN assignments a ON a.id = ap.assignment_id WHERE s.id = :ref))""",
 				new MapSqlParameterSource("ref", submissionId).addValue("me", exceptUserId), String.class);
 	}
 
@@ -154,12 +156,14 @@ class ChatQueries {
 				    WHERE c.teacher_id = :me
 				       OR EXISTS (SELECT 1 FROM class_members m WHERE m.classroom_id = c.id AND m.student_id = :me)
 				    UNION ALL
-				    SELECT 'SUBMISSION', s.id, a.title || ' – ' || ap.title || ' · ' || u.full_name
+				    SELECT 'SUBMISSION', s.id, a.title || ' – ' || ap.title || ' · ' || COALESCE(g.name, u.full_name)
 				    FROM submissions s
 				    JOIN assignment_parts ap ON ap.id = s.part_id
 				    JOIN assignments a ON a.id = ap.assignment_id
 				    JOIN users u ON u.id = s.student_id
-				    WHERE (s.student_id = :me OR a.teacher_id = :me)
+				    LEFT JOIN paper_groups g ON g.id = s.group_id
+				    WHERE (a.teacher_id = :me OR EXISTS (
+				        SELECT 1 FROM submission_members sm WHERE sm.submission_id = s.id AND sm.student_id = :me))
 				      AND EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.submission_id = s.id)
 				    UNION ALL
 				    SELECT 'DIRECT', d.id,

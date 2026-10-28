@@ -47,8 +47,12 @@
 | UC-29 | Trao đổi (chat) | Giáo viên, Sinh viên | FR-55 | 2 |
 | **Hệ thống** |||||
 | UC-30 | Nhắc hạn nộp tự động | Bộ lập lịch | FR-52 | 1 |
-| UC-31 | Tự nộp bài khi hết giờ thi | Bộ lập lịch | FR-26 | 3 |
+| UC-31 | Báo quá giờ thi | Bộ lập lịch | FR-26 | 3 |
 | UC-32 | Kiểm tra đạo văn | Hệ thống | FR-45 | 3 |
+| **Paper theo nhóm (Mức 4, [12](12-viet-paper.md))** |||||
+| UC-33 | Tạo bài paper (giai đoạn, khung mục, kiểu trích dẫn, cỡ nhóm, hạn chốt nhóm) | Giáo viên | FR-70 | 4 |
+| UC-34 | Lập / sửa nhóm | Giáo viên, Sinh viên | FR-71 | 4 |
+| UC-35 → UC-40 | Viết cùng nhóm, trích dẫn, nộp, chấm, đóng góp, xuất file — xem [12](12-viet-paper.md) mục 4 | | | 4 |
 
 ---
 
@@ -462,6 +466,28 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 
 ---
 
+### UC-20 · Quản lý ngân hàng đề
+| Mục | Nội dung |
+|---|---|
+| Tác nhân | Giáo viên |
+| Mô tả | Lưu đề kèm rubric/checklist và tag để tìm, sửa, xoá và dùng lại khi soạn bài tập. |
+| Tiền điều kiện | Giáo viên đã đăng nhập. |
+| Hậu điều kiện | Đề và rubric riêng được lưu trong ngân hàng của đúng giáo viên. |
+
+**Luồng chính**
+1. Giáo viên mở Ngân hàng đề, tìm kiếm theo tên/nội dung hoặc lọc theo loại Task và tag.
+2. Giáo viên tạo đề, nhập loại Task, nội dung, ảnh, số từ, thời gian gợi ý, tag và rubric/checklist.
+3. Hệ thống lọc HTML, kiểm tra rubric rồi lưu đề cùng một rubric mẫu riêng của giáo viên.
+4. Giáo viên xem, thay toàn bộ hoặc xoá đề của mình.
+5. Khi soạn bài tập, giáo viên chọn một đề trong ngân hàng; hệ thống sao chép đề và rubric sang phần bài tập, thay đổi về sau không ảnh hưởng bản đã sao chép.
+
+**Ngoại lệ**
+- E1. Ảnh không thuộc `/uploads/` hoặc URL HTTP(S), rubric sai bước điểm/giới hạn → `400 VALIDATION_ERROR`.
+- E2. Đề thuộc giáo viên khác hoặc không tồn tại → `404 NOT_FOUND`.
+- E3. Nội dung rỗng sau khi lọc HTML → `400 VALIDATION_ERROR`.
+
+---
+
 ### UC-23 · Làm bài và lưu nháp
 | Mục | Nội dung |
 |---|---|
@@ -576,20 +602,21 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 ### UC-27 / UC-31 · Làm bài ở chế độ thi (Mức 3)
 | Mục | Nội dung |
 |---|---|
-| Tác nhân | Sinh viên; Bộ lập lịch (tự nộp) |
-| Mô tả | Phần bài được bật "Chế độ thi" thì có giới hạn thời gian cứng tính từ lúc bấm Bắt đầu. |
-| Tiền điều kiện | Như UC-23. Sinh viên chưa bắt đầu phiên thi của phần này. |
-| Hậu điều kiện | Bài được nộp bởi sinh viên, hoặc tự nộp khi hết giờ. Nhật ký sự kiện được lưu để giáo viên xem (UC-21). |
+| Tác nhân | Sinh viên; Bộ lập lịch (báo quá giờ) |
+| Mô tả | Phần bài được bật "Chế độ thi" thì có thời gian làm bài tính từ lúc bấm Bắt đầu (BR-23). Hết giờ không tự nộp mà gắn "Quá thời gian" (BR-24). |
+| Tiền điều kiện | Như UC-23: phần còn soạn được (bài chưa đóng, phần chưa nộp, chưa quá hạn hoặc cho nộp muộn). |
+| Hậu điều kiện | Bài được sinh viên nộp, trong giờ hoặc quá giờ. Nhật ký sự kiện được lưu để giáo viên xem (UC-21). |
 
 **Luồng chính**
-1. Sinh viên bấm "Bắt đầu". Server tạo phiên thi với thời điểm kết thúc cố định, ví dụ 40 phút cho Task 2.
+1. Sinh viên bấm "Bắt đầu". Server tạo phiên thi với thời điểm kết thúc cố định, ví dụ 40 phút cho Task 2. Chưa bắt đầu mà lưu nháp / nộp → `409 EXAM_NOT_STARTED`.
 2. Sinh viên làm bài như UC-23. Đồng hồ chạy theo giờ server.
-3. Trong lúc làm, client gửi các sự kiện qua WebSocket: rời tab, quay lại tab, dán văn bản, mất kết nối, kết nối lại.
-4. Sinh viên nộp trước giờ → như UC-24.
-5. Hết giờ mà chưa nộp → **server tự nộp** bản nháp mới nhất (UC-31).
+3. Trong lúc làm, client gửi qua WebSocket: rời tab, quay lại tab, dán văn bản (kèm số ký tự). Server tự ghi mất kết nối / kết nối lại. Mỗi sự kiện hiện ngay trên màn giám sát của giáo viên; rời tab và dán còn tạo thông báo cho giáo viên (BR-25).
+4. Sinh viên nộp → như UC-24; phiên thi kết thúc ở lần nộp đầu tiên.
+5. Hết giờ mà chưa nộp → bộ lập lịch ghi sự kiện "Quá thời gian", báo giáo viên và sinh viên **một lần** (UC-31). Sinh viên vẫn viết tiếp và nộp được; phiên hiện "Nộp quá thời gian".
 
 **Ngoại lệ**
-- E1. Tải lại trang hoặc mất mạng → phiên vẫn chạy theo giờ server; vào lại thì tiếp tục với thời gian còn lại.
+- E1. Tải lại trang hoặc mất mạng → phiên vẫn chạy theo giờ server; bấm "Bắt đầu" lại trả về đúng phiên cũ với thời gian còn lại.
+- E2. Hai tab / bấm đúp "Bắt đầu" cùng lúc → chỉ một phiên được tạo.
 
 ---
 
@@ -608,7 +635,9 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 | UC-15 Đóng, nhân bản bài | Đóng thì sinh viên không nộp được nữa nhưng vẫn xem được kết quả. Nhân bản tạo bản Nháp mới gồm đủ phần và rubric, chưa có người nhận. |
 | UC-19 Thống kê và xuất bảng điểm | Thống kê một bài (điểm trung bình mỗi tiêu chí, phân bố band, tỉ lệ đúng hạn), theo sinh viên, theo lớp. Xuất `.xlsx` bảng điểm. |
 | UC-20 Ngân hàng đề | Lưu một phần (đề + rubric) vào ngân hàng, gắn tag dạng đề, tìm và dùng lại khi soạn bài. |
-| UC-21 Nhật ký chế độ thi | Giáo viên xem dòng thời gian sự kiện của từng sinh viên trong phiên thi. |
+| UC-33 Tạo bài paper | Trình soạn bài chọn loại **Paper**: kiểu trích dẫn (IEEE mặc định / APA), cỡ nhóm (mặc định 4), hạn chốt nhóm (trước hạn nộp); mỗi giai đoạn (vd Đề cương, Bản cuối) có khung mục và tiêu chí thang 10. Không dùng chế độ thi. Phát hành cần mọi giai đoạn có khung mục. |
+| UC-34 Lập / sửa nhóm | Sau khi phát hành: giáo viên xem người chưa có nhóm, tạo / đổi tên / xoá nhóm, chuyển sinh viên giữa nhóm, chia ngẫu nhiên (theo lớp) thành các nhóm đều nhau. Sinh viên trước hạn chốt nhóm: tự lập nhóm, vào nhóm còn chỗ (đủ người → báo đầy), rời nhóm. Ngoại lệ: đã có nhóm → phải rời trước; sau hạn chốt → chỉ giáo viên đổi. |
+| UC-21 Nhật ký chế độ thi | Màn giám sát của một bài (lọc theo lớp): các phiên thi với trạng thái Đang làm / Quá thời gian / Đã nộp / Nộp quá thời gian, online, số lần rời tab / dán / mất kết nối, cập nhật realtime. Bấm một phiên để xem dòng thời gian sự kiện. Giáo viên còn **xem trực tiếp** bài sinh viên đang gõ (mọi phần đang làm, không chỉ chế độ thi) và **bình luận trực tiếp** qua chat bài nộp (BR-26). |
 | UC-22 Xem bài được giao | Danh sách theo tab Cần làm / Sắp hết hạn (dưới 24 giờ) / Quá hạn / Đã nộp / Cần sửa. Mỗi bài có tiến độ từng phần và hạn nộp. |
 | UC-25 Xem kết quả chấm | Chỉ khi đã trả bài: band từng phần và cả bài, điểm và nhận xét từng tiêu chí, checklist, nhận xét chung, nhận xét inline tô màu trên bài. |
 | UC-28 Kết quả học tập | Biểu đồ band theo thời gian, điểm trung bình theo tiêu chí, số bài nộp muộn. |

@@ -28,8 +28,9 @@ public final class SubmissionDtos {
 	}
 
 	/** {@code draftVersion}: gửi lại ở lần lưu nháp sau để phát hiện tab / máy khác đã lưu (SD-06). */
+	/** {@code submissionId}: để mở kênh chat {@code submission-{id}} (bình luận trực tiếp, BR-26); chưa lưu lần nào → null. */
 	public record DraftResponse(String content, DraftSource source, Instant savedAt, int wordCount,
-			SubmissionStatus status, int currentVersion, int draftVersion) {
+			SubmissionStatus status, int currentVersion, int draftVersion, Long submissionId) {
 	}
 
 	/** {@code draftVersion} bỏ trống = không kiểm tra xung đột (ghi đè như Mức 1). */
@@ -38,7 +39,7 @@ public final class SubmissionDtos {
 			@Min(value = 0, message = "draftVersion không hợp lệ") Integer draftVersion) {
 	}
 
-	public record SaveDraftResponse(Instant savedAt, int wordCount, int draftVersion) {
+	public record SaveDraftResponse(Instant savedAt, int wordCount, int draftVersion, Long submissionId) {
 	}
 
 	/** {@code data} của lỗi 409 DRAFT_CONFLICT: bản đang lưu trên server, để client cho người dùng chọn bản. */

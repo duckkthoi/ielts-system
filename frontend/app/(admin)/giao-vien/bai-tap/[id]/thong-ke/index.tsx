@@ -75,7 +75,7 @@ export default function AssignmentStatsPage() {
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <AssignmentSubNav id={id} view="thong-ke" />
+      <AssignmentSubNav id={id} view="thong-ke" paper={assignment.kind === 'PAPER'} />
       <PageHeader
         title={`Thống kê — ${assignment.title}`}
         description="Chỉ tính các phần đã trả bài. Trung bình giữ 2 chữ số, chưa làm tròn kiểu IELTS."

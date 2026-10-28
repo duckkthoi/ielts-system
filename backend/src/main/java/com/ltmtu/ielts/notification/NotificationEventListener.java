@@ -79,7 +79,7 @@ public class NotificationEventListener {
 	/** UC-18: đã có kết quả. */
 	@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
 	public void onReturned(GradingEvents.Returned e) {
-		notifications.notify(Set.of(e.studentId()), new NewNotification(NotificationType.GRADE_RETURNED,
+		notifications.notify(e.recipientIds(), new NewNotification(NotificationType.GRADE_RETURNED,
 				"Đã có kết quả: " + e.assignmentTitle() + " – " + e.partTitle(), "Band: " + band(e.band()),
 				studentLink(e.assignmentId())));
 	}
@@ -90,10 +90,10 @@ public class NotificationEventListener {
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
 	public void onRevisionRequested(GradingEvents.RevisionRequested e) {
-		reminderLogRepository.resetRevision(e.partId(), e.studentId());
+		e.recipientIds().forEach(id -> reminderLogRepository.resetRevision(e.partId(), id));
 		String body = "Hạn sửa: " + timeFormat.format(e.revisionDueAt()) + "."
 				+ (e.note() == null ? "" : " Lời nhắn: " + e.note());
-		notifications.notify(Set.of(e.studentId()), new NewNotification(NotificationType.REVISION_REQUESTED,
+		notifications.notify(e.recipientIds(), new NewNotification(NotificationType.REVISION_REQUESTED,
 				"Cần sửa bài: " + e.assignmentTitle() + " – " + e.partTitle(), body, studentLink(e.assignmentId())));
 	}
 

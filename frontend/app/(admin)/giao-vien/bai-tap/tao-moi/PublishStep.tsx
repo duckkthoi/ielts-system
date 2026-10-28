@@ -23,6 +23,7 @@ export function PublishStep({ form, saving, onPublish }: PublishStepProps) {
   if (!values) return null;
   const problems = readinessProblems(values);
   const parts = values.parts ?? [];
+  const paper = values.kind === 'PAPER';
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -39,16 +40,28 @@ export function PublishStep({ form, saving, onPublish }: PublishStepProps) {
             },
             { key: 'due', label: 'Hạn nộp', children: values.dueAt ? values.dueAt.format('HH:mm DD/MM/YYYY') : '—' },
             { key: 'late', label: 'Nộp muộn', children: values.allowLate ? 'Cho phép' : 'Không cho phép' },
+            ...(paper
+              ? [
+                  {
+                    key: 'paper',
+                    label: 'Paper theo nhóm',
+                    children: `Trích dẫn ${values.citationStyle ?? 'IEEE'} · tối đa ${values.maxGroupSize ?? 4} người / nhóm · chốt nhóm ${
+                      values.groupLockAt ? values.groupLockAt.format('HH:mm DD/MM/YYYY') : 'lúc hạn nộp'
+                    }`
+                  }
+                ]
+              : []),
             {
               key: 'parts',
-              label: 'Các phần',
+              label: paper ? 'Các giai đoạn' : 'Các phần',
               children: (
                 <ul className="m-0 list-none p-0">
                   {parts.map((p, i) => (
                     <li key={i}>
                       {i + 1}. {p.title || 'Chưa đặt tên'}{' '}
                       <span className="text-small text-neutral-500">
-                        · {TASK_TYPE_LABEL[p.taskType]} · {p.criteria?.length ?? 0} tiêu chí
+                        · {paper ? `${p.sections?.length ?? 0} mục` : TASK_TYPE_LABEL[p.taskType]} ·{' '}
+                        {p.criteria?.length ?? 0} tiêu chí
                       </span>
                     </li>
                   ))}

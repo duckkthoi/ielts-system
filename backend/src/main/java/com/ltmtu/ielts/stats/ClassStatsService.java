@@ -129,6 +129,7 @@ public class ClassStatsService {
 		List<RankingRow> ranking = new ArrayList<>();
 		for (StudentRef m : members) {
 			List<BigDecimal> own = new ArrayList<>();
+			Map<Long, BigDecimal> assignmentBands = new LinkedHashMap<>();
 			int submittedParts = 0;
 			int lateParts = 0;
 			for (Long id : assignments.keySet()) {
@@ -137,10 +138,15 @@ public class ClassStatsService {
 				submittedParts += counts[0];
 				lateParts += counts[1];
 				if (bands.containsKey(k)) {
-					own.add(bands.get(k));
+					BigDecimal band = bands.get(k);
+					own.add(band);
+					assignmentBands.put(id, StatsMath.round(band));
+				} else {
+					assignmentBands.put(id, null);
 				}
 			}
-			ranking.add(new RankingRow(null, m, StatsMath.average(own), own.size(), submittedParts, lateParts));
+			ranking.add(new RankingRow(null, m, StatsMath.average(own), own.size(), submittedParts, lateParts,
+					assignmentBands));
 		}
 		return new ClassStats(new ClassInfo(c.id(), c.code(), c.name(), c.memberCount()),
 				StatsMath.average(bands.values()), assignmentStats, rank(ranking));
@@ -160,7 +166,7 @@ public class ClassStatsService {
 				rank = prev != null && r.averageBand().compareTo(prev.averageBand()) == 0 ? prev.rank() : i + 1;
 			}
 			out.add(new RankingRow(rank, r.student(), r.averageBand(), r.gradedAssignments(), r.submittedParts(),
-					r.lateParts()));
+					r.lateParts(), r.assignmentBands()));
 		}
 		return out;
 	}

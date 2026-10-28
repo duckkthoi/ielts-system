@@ -27,6 +27,10 @@ public final class AssignmentEvents {
 	public record Opened(Long assignmentId, String title, Instant dueAt, Set<Long> recipientIds) {
 	}
 
+	/** Bài PAPER tới hạn chốt nhóm (BR-27); {@code recipientIds}: người nhận bài lúc đó — module paper tính ai chưa có nhóm. */
+	public record GroupLockReached(Long assignmentId, Long teacherId, String title, Set<Long> recipientIds) {
+	}
+
 	/** Giáo viên nhắc thủ công (UC-16). {@code partTitle} null = nhắc cả bài. */
 	public record ManualReminder(Long assignmentId, String title, String partTitle, Instant dueAt,
 			Set<Long> studentIds) {

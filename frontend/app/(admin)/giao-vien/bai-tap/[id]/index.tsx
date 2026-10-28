@@ -12,7 +12,8 @@ import {
   PieChart,
   Send,
   Settings,
-  UserPlus
+  UserPlus,
+  UsersRound
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -122,6 +123,11 @@ export default function AssignmentDetailPage() {
         </>
       ) : (
         <>
+          {assignment.kind === 'PAPER' && (
+            <Link href={`/giao-vien/bai-tap/${assignment.id}/nhom`}>
+              <Button icon={<UsersRound size={16} />}>Nhóm</Button>
+            </Link>
+          )}
           <Link href={`/giao-vien/bai-tap/${assignment.id}/tien-do`}>
             <Button icon={<BarChart3 size={16} />}>Tiến độ</Button>
           </Link>
@@ -159,7 +165,12 @@ export default function AssignmentDetailPage() {
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusTag meta={ASSIGNMENT_STATUS_META[assignment.status]} size="sm" />
-            {assignment.parts.length} phần
+            {assignment.kind === 'PAPER' && (
+              <Tag className="m-0" color="purple">
+                Paper theo nhóm
+              </Tag>
+            )}
+            {assignment.parts.length} {assignment.kind === 'PAPER' ? 'giai đoạn' : 'phần'}
             {targets && <> · giao cho {targets.recipientCount} sinh viên</>}
           </span>
         }
@@ -177,7 +188,7 @@ export default function AssignmentDetailPage() {
             <Tabs
               items={assignment.parts.map((part, index) => ({
                 key: String(part.id),
-                label: `Phần ${index + 1} · ${part.title}`,
+                label: `${assignment.kind === 'PAPER' ? 'Giai đoạn' : 'Phần'} ${index + 1} · ${part.title}`,
                 children: <PartView part={part} />
               }))}
             />
@@ -214,6 +225,17 @@ export default function AssignmentDetailPage() {
                   label: 'Gợi ý khi sửa',
                   children: assignment.showSuggestionsOnRevision ? 'Hiện' : 'Ẩn'
                 },
+                ...(assignment.kind === 'PAPER'
+                  ? [
+                      { key: 'cite', label: 'Kiểu trích dẫn', children: assignment.citationStyle ?? 'IEEE' },
+                      { key: 'size', label: 'Cỡ nhóm', children: `Tối đa ${assignment.maxGroupSize} người` },
+                      {
+                        key: 'lock',
+                        label: 'Chốt nhóm',
+                        children: assignment.groupLockAt ? formatDateTime(assignment.groupLockAt) : 'Lúc hạn nộp'
+                      }
+                    ]
+                  : []),
                 ...(assignment.publishedAt
                   ? [{ key: 'pub', label: 'Phát hành lúc', children: formatDateTime(assignment.publishedAt) }]
                   : [])

@@ -67,6 +67,11 @@
 | 409 | `DRAFT_CONFLICT` | `draftVersion` lệch: tab / máy khác vừa lưu nháp. `data` = `{serverContent, draftVersion, savedAt}` (bước 10) |
 | 409 | `DUPLICATE` | Trùng mã lớp, tên đăng nhập… |
 | 409 | `INVALID_STATE` | Thao tác không hợp lệ với trạng thái hiện tại, ví dụ xoá bài đã phát hành |
+| 409 | `GROUP_LOCKED` | Bài PAPER: đã qua hạn chốt nhóm, sinh viên không tự đổi nhóm được (BR-27) |
+| 409 | `GROUP_FULL` | Bài PAPER: nhóm đã đủ người |
+| 409 | `ALREADY_IN_GROUP` | Bài PAPER: sinh viên đã ở trong một nhóm của bài này |
+| 409 | `NO_GROUP` | Bài PAPER: sinh viên chưa có nhóm nên chưa lưu nháp / nộp được (BR-28) |
+| 409 | `EXAM_NOT_STARTED` | Phần ở chế độ thi mà chưa bấm "Bắt đầu": chưa lưu nháp / nộp được (BR-23, Mức 3) |
 | 413 | `FILE_TOO_LARGE` | File vượt giới hạn |
 | 422 | `DEADLINE_PASSED` | Quá hạn và bài không cho nộp muộn |
 | 422 | `REVISION_LIMIT` | Đã hết số lần được yêu cầu sửa |
@@ -232,6 +237,10 @@
   "dueAt": "2026-11-07T16:59:00Z",
   "allowLate": true,
   "maxRevisions": 2,
+  "kind": "ESSAY",                 // Mức 4: ESSAY (mặc định) | PAPER
+  "citationStyle": null,           // PAPER: IEEE (mặc định) | APA
+  "maxGroupSize": null,            // PAPER: 1–10, mặc định 4
+  "groupLockAt": null,             // PAPER: hạn chốt nhóm, phải trước dueAt; null = tới hạn nộp
   "parts": [
     {
       "title": "Task 1 – Line graph",
@@ -242,6 +251,9 @@
       "suggestedMinutes": 20,
       "partDueAt": null,
       "weight": null,               // null → mặc định theo loại: WRITING_TASK2 = 2, còn lại = 1 (BR-12)
+      "examMode": false,            // Mức 3: bật chế độ thi tính giờ (BR-23)
+      "examDurationMinutes": null,  // bắt buộc khi examMode (1–300); bỏ trống → lấy suggestedMinutes, cả hai trống → 400
+      "sections": [],              // chỉ bài PAPER (Mức 4): [{sectionKey?, title, required?, minWords?, maxWords?}]
       "criteria": [
         {
           "code": "TA",             // TA | TR | CC | LR | GRA | null (tiêu chí tự định nghĩa); không lặp trong một phần
@@ -267,6 +279,21 @@
 - Giới hạn: 10 phần / bài, 10 tiêu chí / phần, 30 mục checklist / tiêu chí.
 - Bài nháp được phép chưa đủ phần hay tiêu chí. Điều kiện đủ chỉ kiểm tra khi **phát hành**.
 
+**Ngân hàng đề (UC-20, FR-25):**
+
+| Method | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `/api/teacher/question-bank?keyword&taskType&tag&page&size&sort` | Danh sách đề của tôi; `sort`: `title`, `taskType`, `createdAt`, `updatedAt` |
+| POST | `/api/teacher/question-bank` | Lưu đề + rubric/checklist + tag → `QuestionBankDetail` |
+| GET | `/api/teacher/question-bank/{id}` | Chi tiết đề của tôi |
+| PUT | `/api/teacher/question-bank/{id}` | Thay toàn bộ đề + rubric + tag |
+| DELETE | `/api/teacher/question-bank/{id}` | Xoá đề và rubric riêng đi kèm |
+
+Request dùng các trường `title`, `taskType`, `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `tags` và
+`criteria` cùng dạng với một phần trong `AssignmentRequest`. Tag được bỏ khoảng trắng, chuyển chữ thường và loại
+trùng; tối đa 20 tag, mỗi tag 50 ký tự. Giáo viên khác truy cập id của đề → `404`. Đề và rubric được sao chép khi
+nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo.
+
 ---
 
 ### A.6 Giáo viên — tiến độ, thống kê
@@ -279,6 +306,21 @@
 | GET | `/api/teacher/assignments/{id}/export?classId` | Bảng điểm `.xlsx` (FR-66) |
 | GET | `/api/teacher/stats/classes/{id}` | Thống kê lớp, bảng xếp hạng (FR-65) |
 | GET | `/api/teacher/stats/students/{id}` | Thống kê một sinh viên trên các bài của tôi (FR-64) → `StudentStats` (xem A.8 "Kết quả học tập") |
+| GET | `/api/teacher/assignments/{id}/exam-monitor?classId` | Màn giám sát chế độ thi (UC-21, Mức 3) → `ExamMonitor` |
+| GET | `/api/teacher/parts/{partId}/students/{studentId}/live` | Xem trực tiếp bài đang gõ (BR-26, Mức 3) → `LiveSnapshot` |
+| GET | `/api/teacher/assignments/{id}/exam-events?classId` | Bảng tin giám sát: 50 sự kiện thi mới nhất của bài → `[ExamPush]` (cùng dạng tin đẩy B.2), mới xảy ra trước |
+| GET | `/api/teacher/exam-sessions/{id}/events` | Dòng thời gian một phiên thi (UC-21) → `{session: MonitorRow, events: [{id, type, pasteChars, occurredAt, reportedLate}]}`, cũ trước (xếp theo giờ xảy ra) |
+
+**Giám sát chế độ thi (UC-21, Mức 3, đã cài ở B15a):**
+- `ExamMonitor` = `{assignmentId, title, parts: [{id, title, durationMinutes}], rows: [MonitorRow], serverTime}`: `parts` là các phần bật chế độ thi; `rows` là mọi phiên **đã bắt đầu**, mới bắt đầu trước. Sinh viên chưa bắt đầu xem ở ma trận tiến độ.
+- `MonitorRow` = `{sessionId, partId, partTitle, studentId, studentCode, studentName, startedAt, endsAt, finishedAt, status, online, tabHiddenCount, pasteCount, disconnectCount, lastEventAt}`; `tabHiddenCount` = số lần rời trang **hoặc** rời cửa sổ (`TAB_HIDDEN` + `WINDOW_BLUR`). `status` ∈ `IN_PROGRESS`, `OVERTIME` (hết giờ chưa nộp), `FINISHED`, `FINISHED_OVERTIME` (docs/06 mục 8).
+- `classId`: chỉ thành viên hiện tại của lớp; lớp không phải của mình → `400`. Bài / phiên của giáo viên khác → `404` (BR-15).
+- Trạng thái ban đầu lấy từ REST, sau đó cập nhật theo kênh `/topic/assignments/{id}/exam` (B.2).
+
+**Xem trực tiếp và bình luận trực tiếp (BR-26, Mức 3, đã cài ở B15b):**
+- Dùng cho **mọi phần đang làm** (không chỉ chế độ thi). `LiveSnapshot` = `{partId, studentId, submissionId, status, source, content, wordCount, updatedAt, online, viewingPartId}`. `source`: `LIVE` (bản đang gõ trong bộ nhớ), `DRAFT` (chưa gõ gì từ lúc server chạy → bản nháp đã lưu), `EMPTY`, `NOT_WORKING` (phần đã nộp / đang chấm → xem ở màn chấm, `content` rỗng).
+- Phần của giáo viên khác → `404` (BR-15). Sau REST, client nghe `/topic/live/parts/{partId}/students/{studentId}` (B.2).
+- **Bình luận trực tiếp** = tin chat ở kênh `submission-{submissionId}` (A.9, B.2), dùng được cả khi bài còn nháp; phía sinh viên lấy `submissionId` từ `GET` / `PUT …/draft` (A.8, có từ B15c, `null` khi chưa lưu lần nào); sinh viên nhận ngay qua `/user/queue/chat`. `submissionId = null` (sinh viên chưa lưu lần nào) thì chưa bình luận được — màn làm bài tự lưu sau 3 giây gõ.
 
 **Ma trận tiến độ (UC-16, đã cài ở B8a):**
 - **Hàng** = người nhận bài (giao trực tiếp ∪ thành viên lớp được giao, tính tại thời điểm truy vấn) **∪ người đã có bài làm** (sinh viên rời lớp sau khi nộp vẫn hiện, để không mất bài cần chấm). Sắp theo mã sinh viên. **Cột** = các phần theo thứ tự.
@@ -345,7 +387,7 @@
 - Tính trên **thành viên hiện tại** của lớp và các bài (đã phát hành / đã đóng) của giáo viên **giao cho lớp**. Bài chỉ giao trực tiếp cho từng người không tính; người được giao trực tiếp nhưng không ở lớp không tính.
 - Chỉ kết quả đã trả (BR-13), cùng cách chọn với các thống kê khác.
 - `assignments[]` (sắp theo hạn nộp): `completedCount` = thành viên đã nộp mọi phần, `completedRate` = `completedCount / memberCount`, `gradedCount` = thành viên đã được trả mọi phần, `averageBand` = trung bình band cả bài (BR-12) của những người đó.
-- `ranking[]`: mỗi thành viên một hàng — `averageBand` = trung bình band cả bài của các bài đã đủ phần (`gradedAssignments`), `submittedParts` / `lateParts` = số phần đã nộp / có lần nộp đầu muộn. Xếp band cao trước, **bằng band thì cùng hạng** (1, 1, 3), cùng hạng xếp theo mã SV; chưa có band → `rank = null`, đứng cuối.
+- `ranking[]`: mỗi thành viên một hàng — `averageBand` = trung bình band cả bài của các bài đã đủ phần (`gradedAssignments`), `submittedParts` / `lateParts` = số phần đã nộp / có lần nộp đầu muộn. `assignmentBands` là ánh xạ `assignmentId → band` (2 chữ số); bài chưa được trả đủ phần có giá trị `null`. Xếp band cao trước, **bằng band thì cùng hạng** (1, 1, 3), cùng hạng xếp theo mã SV; chưa có band → `rank = null`, đứng cuối.
 - `averageBand` của lớp = trung bình mọi band cả bài (thành viên × bài) đã đủ phần. Trung bình giữ 2 chữ số, không có dữ liệu → `null`.
 - Lớp của giáo viên khác → `404`. 4 câu SQL cố định.
 
@@ -357,7 +399,8 @@
   "assignments": [ { "assignmentId": 7, "title": "Tuần 5", "status": "CLOSED", "dueAt": "2026-11-07T16:59:00Z",
                      "partCount": 2, "completedCount": 40, "completedRate": 0.8889, "gradedCount": 38, "averageBand": 6.04 } ],
   "ranking": [ { "rank": 1, "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
-                 "averageBand": 7.17, "gradedAssignments": 3, "submittedParts": 6, "lateParts": 0 } ]
+                 "averageBand": 7.17, "gradedAssignments": 3, "submittedParts": 6, "lateParts": 0,
+                 "assignmentBands": { "7": 7.25 } } ]
 }
 ```
 
@@ -472,14 +515,15 @@
 |---|---|---|
 | GET | `/api/student/assignments?tab=TODO\|DUE_SOON\|OVERDUE\|SUBMITTED\|REVISION` | Bài được giao, theo tab (UC-22); bỏ trống `tab` = mọi bài. Không phân trang |
 | GET | `/api/student/assignments/{id}` | Chi tiết bài + trạng thái từng phần của tôi |
-| GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion}` |
-| PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion}` (SD-06) |
+| GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion, submissionId}` |
+| PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion, submissionId}` (SD-06) |
 | POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}` (SD-07) |
 | GET | `/api/student/parts/{partId}/versions` | Lịch sử nộp, có band nếu đã trả bài |
 | GET | `/api/student/parts/{partId}/versions/{versionNo}` | Nội dung một version + kết quả chấm (chỉ khi RETURNED, BR-13) |
 | GET | `/api/student/assignments/{id}/result` | Band từng phần và band cả bài (BR-12) |
 | GET | `/api/student/results` | Kết quả học tập của tôi (UC-28) → `StudentStats` |
-| POST | `/api/student/parts/{partId}/exam/start` | Bắt đầu chế độ thi → `{sessionId, endsAt}` (Mức 3) |
+| GET | `/api/student/parts/{partId}/exam` | Phiên thi của tôi → `ExamSessionDto`, chưa bắt đầu → `data: null` (Mức 3) |
+| POST | `/api/student/parts/{partId}/exam/start` | Bắt đầu chế độ thi → `ExamSessionDto` (Mức 3, BR-23) |
 
 **Làm bài và nộp bài (đã cài ở B5a):**
 - Mọi endpoint `/api/student/parts/{partId}/…` đều kiểm tra "được giao và được thấy" (BR-04, BR-05). Không được giao hoặc chưa tới giờ mở → `404`.
@@ -510,6 +554,13 @@
   - Sắp theo `nextDueAt` (hạn gần nhất của phần còn phải làm); bài không còn hạn xếp cuối.
 - `GET /api/student/assignments/{id}` → thêm `description`, `teacherName`, `tabs`, `allowLate`, `maxRevisions`, `serverTime`, và cho từng phần: `prompt`, `imageUrl`, `minWords`, `suggestedMinutes`, `revisionNote` / `revisionDueAt` (khi "Cần sửa"), `criteria[]` kèm `checklist[]` (`kind`, `maxBand`) để sinh viên biết tiêu chí chấm.
 - `canSubmit` = bài đang mở, phần còn mở với sinh viên, và chưa quá hạn hoặc bài cho nộp muộn.
+- Mỗi phần có thêm `examMode`, `examDurationMinutes` (Mức 3).
+
+**Chế độ thi (Mức 3, đã cài ở B15a; UC-27, BR-23, BR-24):**
+- `ExamSessionDto` = `{sessionId, partId, startedAt, endsAt, finishedAt, status, serverTime}`; `status` như `MonitorRow` (A.6). Đồng hồ đếm ngược = `endsAt` − giờ server.
+- `POST …/exam/start`: phần không bật chế độ thi → `409 INVALID_STATE`; bài đã đóng → `409 INVALID_STATE`; phần đã nộp → `409 ALREADY_SUBMITTED`; quá hạn không cho nộp muộn → `422 DEADLINE_PASSED`. Đã có phiên thì trả **đúng phiên cũ** (không đặt lại đồng hồ); 2 lần bấm đồng thời chỉ tạo một phiên (`INSERT … ON CONFLICT DO NOTHING`, có test).
+- Phần ở chế độ thi: `PUT …/draft` và `POST …/submit` khi chưa bắt đầu → `409 EXAM_NOT_STARTED`. Lần nộp đầu tiên kết thúc phiên (`finishedAt`).
+- **Hết giờ không tự nộp** (BR-24): sinh viên vẫn lưu nháp / nộp được (vẫn theo hạn nộp của bài như thường). Job mỗi 15 giây (`app.exam.overtime-check`) tìm phiên hết giờ chưa nộp, báo giáo viên + sinh viên `EXAM_OVERTIME` đúng một lần.
 
 **Lịch sử nộp và kết quả chấm (đã cài ở B6c; BR-13, BR-21, docs/08 mục 4.5):**
 - `GET …/versions` → `[{versionNo, submittedAt, wordCount, late, returned, band, returnedAt}]`, mới nhất trước. `band`, `returnedAt` chỉ có khi version đó đã được trả bài.
@@ -567,6 +618,52 @@
 
 ---
 
+### A.10 Paper theo nhóm (Mức 4, đã cài ở B21a — thiết kế: [12](12-viet-paper.md))
+
+**Bài tập loại PAPER** dùng chung API ở A.5, thêm các trường `kind`, `citationStyle`, `maxGroupSize`, `groupLockAt` và `sections[]` của từng phần (ví dụ ở A.5):
+- Bài PAPER: tiêu chí mặc định `maxScore = 10`, `step = 0.25` (được chọn 1 / 0.5 / 0.25); không dùng `examMode` (→ `400`); `groupLockAt` sau `dueAt` → `400`; mã mục (`sectionKey`) bỏ trống thì sinh từ tiêu đề (chữ thường không dấu, gạch ngang), trùng trong phần → `400`. Bài ESSAY gửi `sections` → `400`; điểm tối đa > 9 → `400`. Phát hành: giai đoạn chưa có khung mục → `400 NOT_READY`.
+- `PATCH …/settings` thêm `groupLockAt`, `maxGroupSize` (chỉ PAPER; cỡ nhóm không nhỏ hơn nhóm đông nhất đang có → `400`). Nhân bản giữ loại, kiểu trích dẫn, cỡ nhóm, khung mục (không chép hạn chốt nhóm, nhóm).
+- Chi tiết phía giáo viên và sinh viên (`GET /api/student/assignments/{id}`) có thêm `kind`, `citationStyle`, `maxGroupSize`, `groupLockAt` và `parts[].sections[]` = `{id, sectionKey, title, required, minWords, maxWords, orderNo}`.
+
+**Nhóm** — mọi thao tác trả lại toàn bộ màn hình (để client vẽ lại):
+
+| Method | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `/api/teacher/assignments/{id}/groups` | → `TeacherGroups` = `{assignmentId, maxGroupSize, lockAt, locked, groups: [GroupDto], ungrouped: [{id, studentCode, fullName}]}` |
+| POST | `/api/teacher/assignments/{id}/groups` | Tạo nhóm `{name, studentIds}` |
+| PUT | `/api/teacher/assignments/{id}/groups/{groupId}` | Đổi tên + **thay toàn bộ** thành viên; ai đang ở nhóm khác thì được chuyển sang |
+| DELETE | `/api/teacher/assignments/{id}/groups/{groupId}` | Xoá nhóm (thành viên thành chưa có nhóm) |
+| POST | `/api/teacher/assignments/{id}/groups/auto` | Chia ngẫu nhiên người **chưa có nhóm** `{classId?}`: ít nhóm nhất, không quá cỡ, chênh nhau tối đa 1 người, tên "Nhóm N" |
+| GET | `/api/student/assignments/{id}/groups` | → `StudentGroups` = `{assignmentId, myGroupId, canChange, maxGroupSize, lockAt, groups: [GroupDto]}` |
+| POST | `/api/student/assignments/{id}/groups` | Tự lập nhóm `{name}` và vào luôn |
+| POST | `/api/student/assignments/{id}/groups/{groupId}/join` | Vào nhóm còn chỗ |
+| DELETE | `/api/student/assignments/{id}/groups/mine` | Rời nhóm; nhóm sinh viên lập không còn ai thì xoá |
+
+- `GroupDto` = `{id, name, studentMade, members: [{studentId, studentCode, fullName, joinedAt}]}`; `lockAt` = hạn chốt nhóm thực tế (không đặt thì là hạn nộp).
+- Giáo viên: chỉ bài PAPER **đã phát hành** (bài ESSAY / bản nháp → `409 INVALID_STATE`); bài của người khác → `404`. Thành viên phải là người nhận bài và không quá cỡ nhóm → `400`; trùng tên nhóm → `409 DUPLICATE`. Giáo viên không bị hạn chốt nhóm.
+- Sinh viên: bài không được giao → `404`; bài ESSAY → `409 INVALID_STATE`; bài đã đóng → `409 INVALID_STATE`; tới hạn chốt nhóm → `409 GROUP_LOCKED`; đã có nhóm → `409 ALREADY_IN_GROUP`; nhóm đủ người → `409 GROUP_FULL`; rời khi chưa có nhóm → `404`.
+- **Bài làm theo nhóm (B21b, BR-28):**
+- Dùng chung API làm bài A.8. Bài PAPER: `GET …/draft` trả bản nháp **của nhóm** (chưa có nhóm → `source: EMPTY`); `PUT …/draft`, `POST …/submit` khi chưa có nhóm → `409 NO_GROUP`. Khoá lạc quan `draftVersion` và `expectedVersion` dùng chung cho cả nhóm (thành viên khác vừa lưu / nộp → `409 DRAFT_CONFLICT` / `VERSION_CONFLICT`). Hai thành viên lưu lần đầu cùng lúc → UNIQUE `(part_id, group_id)` chặn, một người nhận `409`.
+- Chi tiết / danh sách bài, lịch sử nộp, kết quả (`/result`, `/versions`) của mọi thành viên đều là của bài nhóm. Trả bài / yêu cầu sửa → thông báo tới **mọi thành viên**; nhắc hạn bỏ qua mọi thành viên khi nhóm đã nộp. Kênh chat `submission-{id}` gồm cả nhóm + giáo viên (tiêu đề kênh ghi tên nhóm).
+- Nhóm đã có bài làm: sinh viên rời nhóm / giáo viên xoá nhóm → `409 INVALID_STATE` (giáo viên vẫn chuyển được từng người).
+- Tới hạn chốt nhóm mà còn người chưa có nhóm → giáo viên nhận `PAPER_GROUP_LOCK` một lần (job 15 phút).
+
+**Tài liệu cùng sửa (B22, docs/12 mục 5.2):** nội dung là **Yjs** (CRDT); server chỉ cấp số thứ tự, lưu và chuyển tiếp nhị phân (base64 trong JSON), không đọc nội dung.
+
+| Method | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `/api/student/parts/{partId}/document` | Mở tài liệu của nhóm tôi cho giai đoạn này (tạo nếu chưa có) → `DocumentState`. Không phải PAPER → `409 INVALID_STATE`; chưa có nhóm → `409 NO_GROUP`; không được giao → `404` |
+| GET | `/api/papers/docs/{id}` | `DocumentState` — thành viên nhóm hoặc giáo viên chủ bài (chỉ đọc) |
+| GET | `/api/papers/docs/{id}/updates?afterSeq` | Lấy bù sau khi kết nối lại → `{updates, lastSeq, resync}`; `resync = true` khi các update cần lấy đã bị gộp → tải lại `DocumentState` |
+| PUT | `/api/papers/docs/{id}/snapshot` | Thành viên gửi snapshot đã gộp `{state, upToSeq, contentJson?, contentText?}`. `upToSeq` > `lastSeq` → `400`; ≤ snapshot đang có → bỏ qua (người khác vừa lưu bản mới hơn); JSON sai → `400`; snapshot > 4 MB / chữ > 200 000 ký tự → `400`. Update ≤ `upToSeq` bị bỏ nội dung (giữ dòng cho thống kê) |
+
+- `DocumentState` = `{documentId, partId, groupId, snapshot (base64 \| null), snapshotSeq, lastSeq, updates: [{seq, update, authorId, createdAt}], editable}`. Dựng tài liệu = áp `snapshot` rồi lần lượt `updates`. `editable = false` khi nhóm đã nộp giai đoạn này (chờ chấm / đã trả) hoặc bài đã đóng; "Cần sửa" thì sửa tiếp được.
+- Quyền: thành viên **hiện tại** của nhóm; người khác → `404`. Nhóm đã có chỉnh sửa trên tài liệu cũng tính là "đã có bài làm" (không tự rời / không xoá nhóm).
+- **Đồng thời** (có test): mỗi update khoá dòng tài liệu **trước** rồi mới đọc `last_seq` → hai người gửi dồn cùng lúc nhận seq liên tiếp, không trùng, không mất.
+- Chưa làm: thống kê band / xếp hạng / thống kê lớp vẫn tính theo từng sinh viên của bài luận — bài PAPER làm ở B25 cùng thang 10.
+
+- **Đồng thời** (có test): vào nhóm thì khoá dòng nhóm (`FOR UPDATE`) rồi mới đếm — hai người vào chỗ cuối cùng cùng lúc chỉ một người được; vào hai nhóm cùng lúc (2 tab) bị UNIQUE `(assignment_id, student_id)` chặn → `409 ALREADY_IN_GROUP`.
+
 ### A.9 Dùng chung
 
 | Method | Đường dẫn | Mô tả | Mức |
@@ -578,9 +675,6 @@
 | GET | `/api/chat/channels` | Các kênh chat của tôi, kèm tin cuối và số tin chưa đọc (bước 9b) | 2 ✅ |
 | POST | `/api/chat/direct/{studentId}` | Giáo viên mở / lấy kênh chat riêng với học sinh mình đang dạy | 2 ✅ |
 | GET | `/api/chat/{channelId}/messages?beforeId&size=50` | Lịch sử chat, tải ngược về trước (bước 9b) | 2 ✅ |
-| GET | `/api/teacher/parts/{partId}/exam-sessions` | Các phiên thi của một phần | 3 |
-| GET | `/api/teacher/exam-sessions/{id}/events` | Dòng thời gian sự kiện (UC-21) | 3 |
-| CRUD | `/api/teacher/question-bank` | Ngân hàng đề (UC-20) | 3 |
 
 **Chat (đã cài ở bước 9b; UC-29, FR-55, SD-12):**
 - Kênh `submission-{id}`: sinh viên chủ bài nộp và giáo viên chủ bài tập. Kênh `class-{id}`: giáo viên của lớp và **thành viên hiện tại**. Kênh `direct-{id}`: đúng cặp giáo viên–sinh viên đã mở kênh. Không thuộc kênh / mã kênh sai → `404` (REST) hoặc `ERROR` (STOMP).
@@ -605,6 +699,10 @@
   | Bài hẹn giờ tới giờ mở (job) | Mọi người nhận lúc mở | `ASSIGNMENT_PUBLISHED` | Có | `/sinh-vien/bai-tap/{assignmentId}` |
   | Còn ≤ 24 giờ / ≤ 2 giờ tới hạn nộp hoặc hạn sửa, chưa nộp (job, BR-14) | Sinh viên | `DEADLINE_REMINDER` | Có | `/sinh-vien/bai-tap/{assignmentId}` |
   | Giáo viên bấm nhắc | Sinh viên được chọn | `MANUAL_REMINDER` | Có | `/sinh-vien/bai-tap/{assignmentId}` |
+  | Chế độ thi: sinh viên rời trang làm bài / dán văn bản (tối đa 1 lần / 2 phút mỗi phiên, BR-25) | Giáo viên chủ bài | `EXAM_ALERT` | Không | `/giao-vien/bai-tap/{assignmentId}/giam-sat` |
+  | Chế độ thi: hết giờ mà chưa nộp (job, BR-24) | Giáo viên chủ bài | `EXAM_OVERTIME` | Không | `/giao-vien/bai-tap/{assignmentId}/giam-sat` |
+  | Chế độ thi: hết giờ mà chưa nộp | Sinh viên | `EXAM_OVERTIME` | Không | `/sinh-vien/lam-bai/{assignmentId}` |
+  | Bài paper tới hạn chốt nhóm mà còn người chưa có nhóm (job, BR-27) | Giáo viên chủ bài | `PAPER_GROUP_LOCK` | Không | `/giao-vien/bai-tap/{assignmentId}/nhom` |
 
 - Bài mở trong tương lai thì chưa thông báo lúc phát hành; job gửi khi tới giờ mở (`assignments.open_notified_at` đánh dấu đã gửi, B7b). Giờ trong nội dung hiển thị theo giờ Việt Nam (`app.zone`).
 - **Thứ tự** (SD-05): thông báo được lưu **trong cùng transaction** với nghiệp vụ (listener `BEFORE_COMMIT`), rồi **sau khi commit** mới đẩy WebSocket và gửi email nền. Nghiệp vụ rollback thì không có thông báo; người đang offline vẫn thấy khi vào lại. Email lỗi chỉ ghi log.
@@ -650,7 +748,14 @@
 | SEND | `/app/chat/{channelId}/send` | Thành viên kênh | `{content, clientMsgId}` | 2 ✅ |
 | SEND | `/app/chat/{channelId}/typing` | Thành viên kênh | `{}` (gửi tối đa 1 lần / 3 giây) | 2 ✅ |
 | SEND | `/app/chat/{channelId}/read` | Thành viên kênh | `{lastMessageId}` | 2 ✅ |
-| SEND | `/app/exam/{sessionId}/event` | Sinh viên trong phiên thi | `{type: "TAB_HIDDEN" \| "TAB_VISIBLE" \| "PASTE"}` | 3 |
+| SUBSCRIBE | `/topic/assignments/{id}/exam` | Giáo viên chủ bài | `ExamPush` = `{sessionId, partId, studentId, studentName, type, pasteChars, status, at, reportedLate}` | 3 ✅ |
+| SUBSCRIBE | `/topic/live/parts/{partId}/students/{studentId}` | Giáo viên chủ bài | `{type: "CONTENT" \| "SUBMITTED", partId, studentId, content, wordCount, at}` | 3 ✅ |
+| SEND | `/app/live/{partId}/content` | Sinh viên | `{content}` — toàn bộ ô soạn, gửi khi đang gõ (~1 lần / giây) | 3 ✅ |
+| SUBSCRIBE | `/topic/paper/{documentId}` | Thành viên nhóm, giáo viên chủ bài | `{documentId, seq, update (base64), authorId, clientId}` — update vừa lưu | 4 ✅ |
+| SUBSCRIBE | `/topic/paper/{documentId}/awareness` | Thành viên nhóm, giáo viên chủ bài | `{userId, userName, state}` — con trỏ / vùng chọn, không lưu | 4 ✅ |
+| SEND | `/app/paper/{documentId}/update` | Thành viên nhóm | `{update (base64, ≤ 32 KB), clientId, charsAdded?, charsRemoved?}` | 4 ✅ |
+| SEND | `/app/paper/{documentId}/awareness` | Thành viên nhóm | `{state}` (≤ 8 KB) | 4 ✅ |
+| SEND | `/app/exam/{sessionId}/event` | Sinh viên trong phiên thi | `{type: "TAB_HIDDEN" \| "TAB_VISIBLE" \| "WINDOW_BLUR" \| "WINDOW_FOCUS" \| "PASTE", pasteChars?, occurredAt?}` | 3 ✅ |
 
 - `channelId` có dạng `submission-{submissionId}`, `class-{classroomId}` hoặc `direct-{directChannelId}`.
 - `ChatEvent` có dạng `{type: "MESSAGE" | "TYPING" | "READ", ...}`:
@@ -670,6 +775,16 @@
 - `presence`: giữ trong bộ nhớ. Sinh viên có kết nối đầu tiên / mất kết nối cuối cùng → `online` true / false gửi tới kênh của **mọi bài sinh viên đang được giao**. Mở / đổi / rời phần → `viewingPartId` gửi tới kênh của bài đó. Bài không được thấy hoặc phần không thuộc bài → bỏ qua (không lỗi, không lộ thông tin).
 - Ma trận tiến độ REST (A.6) có sẵn `online`, `viewingPartId` của mỗi hàng làm trạng thái ban đầu; sau đó client cập nhật theo hai kênh trên.
 - Luật hiện có: chỉ **giáo viên chủ bài** SUBSCRIBE được `/topic/assignments/{id}/progress|presence`; chỉ **sinh viên** SEND được `/app/presence/viewing`. Kênh chat (`chat.ChatChannelRule`, bước 9b): chỉ chủ bài nộp và giáo viên của bài vào được `submission-{id}`; thành viên và giáo viên của lớp vào được `class-{id}`.
+
+**Chế độ thi (Mức 3, bước 15a; BR-25):**
+- `/topic/assignments/{id}/exam`: đẩy **sau commit** mỗi sự kiện vừa ghi — `STARTED`, `TAB_HIDDEN`, `TAB_VISIBLE`, `WINDOW_BLUR`, `WINDOW_FOCUS`, `PASTE`, `DISCONNECT`, `RECONNECT`, `OVERTIME`, `SUBMITTED`; `at` = lúc xảy ra, `status` là trạng thái phiên **lúc server ghi** (sự kiện gửi bù không làm bảng lùi trạng thái). Luật `exam.ExamChannelRule`: chỉ giáo viên chủ bài SUBSCRIBE được; chỉ sinh viên SEND được `/app/exam/{sessionId}/event`.
+- Client chỉ được gửi `TAB_HIDDEN`, `TAB_VISIBLE`, `WINDOW_BLUR`, `WINDOW_FOCUS`, `PASTE` (kèm `pasteChars` = số ký tự, **không gửi nội dung dán**). Client gộp `blur` + `visibilitychange` của một lần chuyển tab thành một sự kiện (bước 15e). Loại khác, phiên của người khác, hoặc quá 30 sự kiện / phút / phiên (`app.exam.max-events-per-minute`) → bỏ qua, không lỗi.
+- **Gửi bù (bước 15e):** client gửi kèm `occurredAt` (giờ xảy ra, đã quy về giờ server); gửi không được thì giữ trên máy (tối đa 30) và gửi lại theo thứ tự khi kết nối lại. Server: `occurredAt` sớm hơn lúc nhận ≥ 5 giây → ghi giờ đó (kẹp không sớm hơn `startedAt`) và `reportedLate = true`; còn lại → giờ nhận. Phiên đã nộp chỉ nhận sự kiện gửi bù xảy ra trước lúc nộp. Thông báo `EXAM_ALERT` của sự kiện gửi bù ghi rõ "xảy ra lúc mất mạng".
+- `DISCONNECT` / `RECONNECT`: server tự ghi vào mọi phiên chưa nộp khi sinh viên mất kết nối cuối cùng / có kết nối đầu tiên (cùng mốc với `presence`).
+
+**Tài liệu paper (Mức 4, bước 22):** luật `paper.PaperChannelRule` — thành viên nhóm và giáo viên chủ bài SUBSCRIBE được `/topic/paper/{id}[/awareness]`; chỉ sinh viên SEND được `/app/paper/{id}/update|awareness`. Update được lưu (cấp `seq`) rồi **sau commit** mới phát, kể cả cho chính người gửi (nhận ra qua `clientId`) — vì vậy lấy bù bằng `afterSeq` không bỏ sót. Lỗi (không phải thành viên `404`, tài liệu chỉ đọc `409 INVALID_STATE`, sai / quá lớn `400`, quá 600 update / phút / người / tài liệu `429 RATE_LIMITED`) trả riêng người gửi trên `/user/queue/errors`. Khung WebSocket tối đa 64 KB (bộ đệm Tomcat đã nâng từ 8 KB).
+
+**Xem trực tiếp (Mức 3, bước 15b; BR-26):** luật `realtime.LiveChannelRule` — chỉ giáo viên chủ bài của phần SUBSCRIBE được `/topic/live/…`; chỉ sinh viên SEND được `/app/live/{partId}/content`. Server giữ bản mới nhất trong bộ nhớ (không ghi DB, không log nội dung) rồi phát ngay; phần không được thấy, phần đã nộp, nội dung > 30 000 ký tự, hoặc quá 120 lần / phút / (phần, sinh viên) (`app.live.max-updates-per-minute`) → bỏ qua, không lỗi. Sinh viên nộp → phát `SUBMITTED` sau commit và xoá bản trong bộ nhớ.
 
 Sai quyền thì server trả khung `ERROR`.
 

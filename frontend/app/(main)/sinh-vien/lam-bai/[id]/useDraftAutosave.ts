@@ -25,6 +25,8 @@ export interface DraftInit {
   content: string;
   draftVersion: number;
   savedAt: string | null;
+  /** Bài làm trên server (kênh chat bình luận trực tiếp); chưa lưu lần nào → null. */
+  submissionId: number | null;
 }
 
 export function useDraftAutosave(userId: number, partId: number, init: DraftInit, onFatal: () => void) {
@@ -33,6 +35,7 @@ export function useDraftAutosave(userId: number, partId: number, init: DraftInit
   const [savedAt, setSavedAt] = useState(init.savedAt);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<DraftConflict | null>(null);
+  const [submissionId, setSubmissionId] = useState(init.submissionId);
 
   const localKey = offlineDraftKey(userId, partId);
   const contentRef = useRef(init.content);
@@ -91,6 +94,7 @@ export function useDraftAutosave(userId: number, partId: number, init: DraftInit
         versionRef.current = res.draftVersion;
         savedContentRef.current = text;
         setSavedAt(res.savedAt);
+        setSubmissionId(res.submissionId);
         setError(null);
         // Gõ thêm trong lúc đang lưu → còn thay đổi chưa lưu, hẹn lưu tiếp.
         if (contentRef.current !== text) {
@@ -244,5 +248,5 @@ export function useDraftAutosave(userId: number, partId: number, init: DraftInit
     [save]
   );
 
-  return { content, setContent, state, savedAt, error, conflict, save, resolveConflict, pause, stop };
+  return { content, setContent, state, savedAt, error, conflict, submissionId, save, resolveConflict, pause, stop };
 }

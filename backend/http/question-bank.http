@@ -1,0 +1,61 @@
+### Ngân hàng đề (UC-20) — cần tài khoản TEACHER đã đổi mật khẩu
+
+@baseUrl = http://localhost:8080
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.hanh", "password": "MatKhauMoi123" }
+
+### Lưu đề kèm rubric
+# @name created
+POST {{baseUrl}}/api/teacher/question-bank
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "title": "Opinion essay – University education",
+  "taskType": "WRITING_TASK2",
+  "prompt": "<p>University education should be free for everyone. To what extent do you agree or disagree?</p>",
+  "minWords": 250,
+  "suggestedMinutes": 40,
+  "tags": ["opinion", "education"],
+  "criteria": [
+    {
+      "code": "TR",
+      "name": "Task Response",
+      "checklist": [
+        { "content": "Có quan điểm rõ ràng", "kind": "CHECK" },
+        { "content": "Chưa trả lời đủ các phần", "kind": "LIMIT", "maxBand": 5 }
+      ]
+    }
+  ]
+}
+
+### Tìm và lọc
+GET {{baseUrl}}/api/teacher/question-bank?keyword=university&taskType=WRITING_TASK2&tag=opinion&sort=updatedAt,desc
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Chi tiết
+GET {{baseUrl}}/api/teacher/question-bank/{{created.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Thay toàn bộ
+PUT {{baseUrl}}/api/teacher/question-bank/{{created.response.body.data.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "title": "Opinion essay – Education updated",
+  "taskType": "WRITING_TASK2",
+  "prompt": "<p>Some people think all education should be free. Discuss.</p>",
+  "minWords": 250,
+  "suggestedMinutes": 40,
+  "tags": ["discussion", "education"],
+  "criteria": []
+}
+
+### Xoá
+DELETE {{baseUrl}}/api/teacher/question-bank/{{created.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}

@@ -17,6 +17,12 @@ import com.ltmtu.ielts.assignment.dto.AssignmentDtos.AssignmentRow;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
+	/** Số thành viên của nhóm đông nhất trong bài (chỉ đọc bảng nhóm của module paper). */
+	@Query(nativeQuery = true, value = """
+			SELECT COALESCE(MAX(c), 0) FROM (
+			    SELECT count(*) AS c FROM paper_group_members WHERE assignment_id = :id GROUP BY group_id) g""")
+	int largestGroupSize(@Param("id") Long assignmentId);
+
 	/** Bài tập chỉ "tồn tại" với giáo viên tạo ra nó (BR-15). */
 	Optional<Assignment> findByIdAndTeacherId(Long id, Long teacherId);
 
@@ -71,6 +77,17 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 	@Query("UPDATE Assignment a SET a.openNotifiedAt = :now WHERE a.id = :id AND a.openNotifiedAt IS NULL")
 	int claimOpenNotification(@Param("id") Long id, @Param("now") Instant now);
 
+	/** Bài PAPER đang mở đã tới hạn chốt nhóm (không đặt = hạn nộp) mà chưa báo giáo viên (BR-27). */
+	@Query("""
+			SELECT a FROM Assignment a JOIN FETCH a.teacher WHERE a.status = PUBLISHED
+			  AND a.kind = com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind.PAPER
+			  AND a.groupLockNotifiedAt IS NULL AND COALESCE(a.groupLockAt, a.dueAt) <= :now""")
+	List<Assignment> findGroupLockDue(@Param("now") Instant now);
+
+	@Modifying(flushAutomatically = true)
+	@Query("UPDATE Assignment a SET a.groupLockNotifiedAt = :now WHERE a.id = :id AND a.groupLockNotifiedAt IS NULL")
+	int claimGroupLockNotification(@Param("id") Long id, @Param("now") Instant now);
+
 	/** Số liệu nộp bài của một bài tập trong danh sách. */
 	interface ProgressCounts {
 		Long getAssignmentId();
@@ -96,10 +113,11 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 			    JOIN class_members m ON m.classroom_id = t.classroom_id
 			    WHERE t.assignment_id IN (:ids)
 			), done AS (
-			    SELECT p.assignment_id, s.student_id, count(*) AS parts_done
-			    FROM submissions s JOIN assignment_parts p ON p.id = s.part_id
+			    SELECT p.assignment_id, sm.student_id, count(*) AS parts_done
+			    FROM submissions s JOIN submission_members sm ON sm.submission_id = s.id
+			    JOIN assignment_parts p ON p.id = s.part_id
 			    WHERE p.assignment_id IN (:ids) AND s.current_version > 0
-			    GROUP BY p.assignment_id, s.student_id
+			    GROUP BY p.assignment_id, sm.student_id
 			)
 			SELECT a.id AS assignmentId,
 			       (SELECT count(*) FROM r WHERE r.assignment_id = a.id) AS recipients,
