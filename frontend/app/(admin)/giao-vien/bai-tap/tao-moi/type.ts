@@ -19,6 +19,15 @@ export interface CriterionForm {
   step: number;
   weight: number;
   checklist: ChecklistItemForm[];
+  /** Mức đạt — chỉ bài Paper (BR-31). */
+  levels?: LevelForm[];
+}
+
+export interface LevelForm {
+  label: string;
+  minScore: number | null;
+  maxScore: number | null;
+  descriptor?: string | null;
 }
 
 /** Một mục trong khung của giai đoạn bài PAPER (BR-29). */

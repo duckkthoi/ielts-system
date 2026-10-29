@@ -3,6 +3,7 @@ package com.ltmtu.ielts.grading;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -121,11 +122,13 @@ public class GradingService {
 		List<RubricCriterion> criteria = s.getPart().getCriteria();
 		Map<String, ErrorCode> codes = errorCodeRepository.findUsableBy(teacherId).stream()
 				.collect(Collectors.toMap(e -> e.getCode().toUpperCase(Locale.ROOT), Function.identity(), (a, b) -> a));
-		GradeUpdater.apply(g, criteria, v.getContent(), v.getWordCount(), req, codes, clock.instant());
+		boolean paper = isPaper(s);
+		GradeUpdater.apply(g, criteria, v.getContent(), v.getWordCount(), req, codes, clock.instant(), paper,
+				paper ? members(s) : Map.of());
 		submissions.markGraded(s);
 		gradeRepository.saveAndFlush(g);
 		log.info("Giáo viên {} lưu chấm bài nộp {} version {}", teacherId, s.getId(), v.getVersionNo());
-		return GradeMapper.toDto(g, criteria, v.getWordCount());
+		return GradeMapper.toDto(g, criteria, v.getWordCount(), paper);
 	}
 
 	/**
@@ -157,8 +160,8 @@ public class GradingService {
 		publish(g);
 		events.publishEvent(new GradingEvents.Returned(s.getId(), s.getPart().getAssignment().getId(),
 				s.getPart().getId(), s.getStudent().getId(), s.getCurrentVersion(),
-				BandCalculator.display(g.getOverallScore()), s.getPart().getAssignment().getTitle(), s.getPart().getTitle(),
-				submissions.memberIds(s)));
+				PaperScoreRules.display(g.getOverallScore(), isPaper(s)), s.getPart().getAssignment().getTitle(),
+				s.getPart().getTitle(), submissions.memberIds(s), isPaper(s)));
 		audit.record(teacherId, AuditAction.RETURN_GRADE, "SUBMISSION", s.getId(), Map.of("versionNo", s.getCurrentVersion()));
 		log.info("Giáo viên {} trả bài nộp {} version {}", teacherId, s.getId(), s.getCurrentVersion());
 		return buildScreen(s, g.getVersion());
@@ -189,7 +192,7 @@ public class GradingService {
 		submissions.markRevisionRequested(s, note, req.dueAt());
 		publish(g);
 		events.publishEvent(new GradingEvents.RevisionRequested(s.getId(), a.getId(), s.getPart().getId(),
-				s.getStudent().getId(), s.getCurrentVersion(), BandCalculator.display(g.getOverallScore()), note,
+				s.getStudent().getId(), s.getCurrentVersion(), PaperScoreRules.display(g.getOverallScore(), isPaper(s)), note,
 				req.dueAt(), a.getTitle(), s.getPart().getTitle(), submissions.memberIds(s)));
 		audit.record(teacherId, AuditAction.REQUEST_REVISION, "SUBMISSION", s.getId(),
 				Map.of("versionNo", s.getCurrentVersion(), "revision", used + 1));
@@ -198,6 +201,17 @@ public class GradingService {
 	}
 
 	// ─── Nội bộ ──────────────────────────────────────────────────────────────
+
+	private static boolean isPaper(Submission s) {
+		return s.getPart().getAssignment().isPaper();
+	}
+
+	/** Thành viên hiện tại của nhóm làm bài PAPER, theo id (để cộng / trừ riêng). */
+	private Map<Long, User> members(Submission s) {
+		Map<Long, User> map = new LinkedHashMap<>();
+		submissions.memberIds(s).forEach(id -> map.put(id, userQueryService.requireUser(id)));
+		return map;
+	}
 
 	private static void requireGradable(Submission s) {
 		if (s.getStatus() != SubmissionStatus.SUBMITTED && s.getStatus() != SubmissionStatus.GRADED) {
@@ -240,25 +254,31 @@ public class GradingService {
 		boolean canReturn = editable && complete && s.getStatus() == SubmissionStatus.GRADED;
 		int revisionsUsed = s.getCurrentVersion() - 1;
 		boolean canRevise = canReturn && revisionsUsed < a.getMaxRevisions() && a.getStatus() != AssignmentStatus.CLOSED;
+		boolean paper = a.isPaper();
+		List<StudentInfo> members = paper ? members(s).values().stream()
+				.map(u -> new StudentInfo(u.getId(), u.getStudentCode(), u.getFullName())).toList() : List.of();
 		return new GradingScreen(
 				new SubmissionInfo(s.getId(), s.getStatus(), s.getCurrentVersion(), revisionsUsed,
 						new StudentInfo(student.getId(), student.getStudentCode(), student.getFullName()),
 						s.getRevisionNote(), s.getRevisionDueAt()),
 				new AssignmentInfo(a.getId(), a.getTitle(), a.getStatus(), a.getMaxRevisions(),
-						a.isShowSuggestionsOnRevision()),
+						a.isShowSuggestionsOnRevision(), a.getKind()),
 				new PartInfo(part.getId(), part.getOrderNo(), part.getTitle(), part.getTaskType(), part.getPrompt(),
 						part.getImageUrl(), part.getMinWords(), part.getWeight()),
 				new VersionInfo(v.getVersionNo(), v.getContent(), v.getWordCount(), v.getSubmittedAt(), v.isLate()),
-				warnings(v.getWordCount(), part.getMinWords()),
+				warnings(v.getWordCount(), part.getMinWords(), paper),
 				GradeMapper.criteria(criteria),
-				grade == null ? null : GradeMapper.toDto(grade, criteria, v.getWordCount()),
-				versionSummaries(s), editable, canReturn, canRevise);
+				grade == null ? null : GradeMapper.toDto(grade, criteria, v.getWordCount(), paper),
+				versionSummaries(s), editable, canReturn, canRevise, members);
 	}
 
-	/** docs/08 mục 3.3: ≤ 20 từ thì hệ thống tự giới hạn; thiếu số từ tối thiểu chỉ cảnh báo, không tự trừ điểm. */
-	private static List<Warning> warnings(int wordCount, Integer minWords) {
+	/**
+	 * docs/08 mục 3.3: ≤ 20 từ thì hệ thống tự giới hạn; thiếu số từ tối thiểu chỉ cảnh báo, không tự trừ điểm. Bài
+	 * PAPER không áp giới hạn ≤ 20 từ (BR-31).
+	 */
+	private static List<Warning> warnings(int wordCount, Integer minWords, boolean paper) {
 		List<Warning> list = new ArrayList<>();
-		if (wordCount <= GradingRules.SHORT_ESSAY_WORDS) {
+		if (!paper && wordCount <= GradingRules.SHORT_ESSAY_WORDS) {
 			list.add(new Warning("SHORT_ESSAY", "Bài chỉ có " + wordCount + " từ (≤ " + GradingRules.SHORT_ESSAY_WORDS
 					+ " từ): mọi tiêu chí tối đa Band " + GradingRules.SHORT_ESSAY_MAX_BAND + " (BR-18)"));
 		} else if (minWords != null && wordCount < minWords) {
@@ -274,7 +294,7 @@ public class GradingService {
 		return versions.stream().map(v -> {
 			Grade g = grades.get(v.getId());
 			return new VersionSummary(v.getVersionNo(), v.getSubmittedAt(), v.getWordCount(), v.isLate(),
-					g == null ? null : g.getStatus(), g == null ? null : BandCalculator.display(g.getOverallScore()));
+					g == null ? null : g.getStatus(), g == null ? null : PaperScoreRules.display(g.getOverallScore(), isPaper(s)));
 		}).toList();
 	}
 

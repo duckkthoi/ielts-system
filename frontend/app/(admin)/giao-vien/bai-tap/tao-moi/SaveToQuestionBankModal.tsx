@@ -50,7 +50,9 @@ export function SaveToQuestionBankModal({ open, part, onClose, onSaved }: SaveTo
     setSaving(true);
     setError(null);
     try {
-      await questionBankApi.create(partToQuestionBank(part, values.title, values.tags ?? []));
+      // Ngân hàng đề chỉ dành cho bài luận IELTS — không mang mức đạt của bài Paper.
+      const essayPart = { ...part, criteria: part.criteria.map((c) => ({ ...c, levels: undefined })) };
+      await questionBankApi.create(partToQuestionBank(essayPart, values.title, values.tags ?? []));
       onSaved();
       close();
     } catch (cause) {

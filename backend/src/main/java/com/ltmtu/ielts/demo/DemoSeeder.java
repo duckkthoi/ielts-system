@@ -186,6 +186,7 @@ public class DemoSeeder implements ApplicationRunner {
 	private static CriterionRequest criterion(CriterionDto c) {
 		List<ChecklistItemRequest> checklist = c.checklist().stream()
 				.map(i -> new ChecklistItemRequest(i.content(), i.kind(), i.maxBand())).toList();
-		return new CriterionRequest(c.code(), c.name(), c.description(), c.maxScore(), c.step(), c.weight(), checklist);
+		return new CriterionRequest(c.code(), c.name(), c.description(), c.maxScore(), c.step(), c.weight(), checklist,
+				null);
 	}
 }

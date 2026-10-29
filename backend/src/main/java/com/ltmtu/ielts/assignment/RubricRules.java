@@ -2,8 +2,11 @@ package com.ltmtu.ielts.assignment;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
@@ -12,6 +15,7 @@ import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.AssignmentRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.ChecklistItemRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.CriterionRequest;
+import com.ltmtu.ielts.assignment.dto.AssignmentDtos.LevelRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.PartRequest;
 import com.ltmtu.ielts.assignment.dto.QuestionBankDtos.QuestionBankRequest;
 import com.ltmtu.ielts.common.ApiException;
@@ -87,6 +91,45 @@ final class RubricRules {
 			List<ChecklistItemRequest> items = cr.checklist() == null ? List.of() : cr.checklist();
 			for (ChecklistItemRequest item : items) {
 				validateItem(item, max, step, at);
+			}
+			validateLevels(cr.levels(), max, step, at, kind);
+		}
+	}
+
+	/**
+	 * BR-31: mức đạt chỉ có ở bài PAPER; 2–6 mức, tên không trùng; mỗi khoảng [min, max] nằm trong [0, điểm tối đa], là
+	 * bội số của bước; các khoảng không chồng nhau (không bắt buộc phủ kín thang điểm).
+	 */
+	static void validateLevels(List<LevelRequest> levels, BigDecimal max, BigDecimal step, String at,
+			AssignmentKind kind) {
+		if (levels == null || levels.isEmpty()) {
+			return;
+		}
+		if (kind != AssignmentKind.PAPER) {
+			throw invalid(at + ": chỉ bài Paper mới có mức đạt");
+		}
+		if (levels.size() < 2) {
+			throw invalid(at + ": cần ít nhất 2 mức đạt");
+		}
+		Set<String> labels = new HashSet<>();
+		for (LevelRequest l : levels) {
+			String name = l.label().trim();
+			if (!labels.add(name.toLowerCase(Locale.ROOT))) {
+				throw invalid(at + ": mức đạt \"" + name + "\" bị lặp");
+			}
+			if (l.minScore().signum() < 0 || l.minScore().compareTo(l.maxScore()) > 0 || l.maxScore().compareTo(max) > 0) {
+				throw invalid(at + ": mức \"" + name + "\" phải có 0 ≤ điểm thấp nhất ≤ điểm cao nhất ≤ "
+						+ max.stripTrailingZeros().toPlainString());
+			}
+			if (!isMultiple(l.minScore(), step) || !isMultiple(l.maxScore(), step)) {
+				throw invalid(at + ": khoảng điểm của mức \"" + name + "\" phải là bội số của bước điểm");
+			}
+		}
+		List<LevelRequest> sorted = levels.stream().sorted(Comparator.comparing(LevelRequest::minScore)).toList();
+		for (int i = 1; i < sorted.size(); i++) {
+			if (sorted.get(i).minScore().compareTo(sorted.get(i - 1).maxScore()) <= 0) {
+				throw invalid(at + ": mức \"" + sorted.get(i - 1).label().trim() + "\" và \"" + sorted.get(i).label().trim()
+						+ "\" chồng khoảng điểm");
 			}
 		}
 	}

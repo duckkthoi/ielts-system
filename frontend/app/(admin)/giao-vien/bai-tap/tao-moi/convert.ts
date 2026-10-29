@@ -1,6 +1,7 @@
 import type { AssignmentDetail, AssignmentRequest, CriterionDto } from '@/lib/types/assignment';
 import { parseServerDate } from '@/lib/utils/date';
 import { htmlToText, textToHtml } from '@/lib/utils/promptText';
+import { levelProblems } from '@/lib/utils/rubricLevels';
 
 import type { AssignmentForm, CriterionForm } from './type';
 
@@ -15,7 +16,13 @@ export function criterionToForm(c: CriterionDto): CriterionForm {
     maxScore: c.maxScore,
     step: c.step,
     weight: c.weight,
-    checklist: c.checklist.map((i) => ({ content: i.content, kind: i.kind, maxBand: i.maxBand }))
+    checklist: c.checklist.map((i) => ({ content: i.content, kind: i.kind, maxBand: i.maxBand })),
+    levels: (c.levels ?? []).map((l) => ({
+      label: l.label,
+      minScore: l.minScore,
+      maxScore: l.maxScore,
+      descriptor: l.descriptor ?? ''
+    }))
   };
 }
 
@@ -103,7 +110,17 @@ export function formToRequest(f: AssignmentForm): AssignmentRequest {
           content: i.content.trim(),
           kind: i.kind,
           maxBand: i.kind === 'LIMIT' ? (i.maxBand ?? null) : null
-        }))
+        })),
+        // Mức đạt chỉ có ở bài Paper (bài luận gửi lên sẽ bị từ chối).
+        levels:
+          f.kind === 'PAPER'
+            ? (c.levels ?? []).map((l) => ({
+                label: l.label.trim(),
+                minScore: l.minScore as number,
+                maxScore: l.maxScore as number,
+                descriptor: blankToNull(l.descriptor)
+              }))
+            : []
       }))
     }))
   };
@@ -120,6 +137,11 @@ export function readinessProblems(f: AssignmentForm, now: number = Date.now()): 
   parts.forEach((p, i) => {
     if (!p.promptText?.trim()) problems.push(`Phần ${i + 1} chưa có đề bài`);
     if (!p.criteria?.length) problems.push(`Phần ${i + 1} chưa có tiêu chí chấm`);
+    if (f.kind === 'PAPER')
+      p.criteria?.forEach((c, j) => {
+        const issues = levelProblems(c.levels ?? [], c.maxScore, c.step);
+        if (issues.length) problems.push(`Giai đoạn ${i + 1}, tiêu chí ${j + 1}: ${issues[0]}`);
+      });
     if (p.partDueAt && p.partDueAt.valueOf() <= now) problems.push(`Hạn riêng của phần ${i + 1} đã qua`);
     if (f.kind === 'PAPER' && !p.sections?.length) problems.push(`Giai đoạn ${i + 1} chưa có khung mục`);
     if (f.kind !== 'PAPER' && p.examMode && !p.examDurationMinutes && !p.suggestedMinutes)

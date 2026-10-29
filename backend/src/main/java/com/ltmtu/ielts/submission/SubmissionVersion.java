@@ -2,6 +2,7 @@ package com.ltmtu.ielts.submission;
 
 import java.time.Instant;
 
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.annotations.Immutable;
 
 import jakarta.persistence.Column;
@@ -52,6 +53,16 @@ public class SubmissionVersion {
 	@Column(name = "is_late", nullable = false)
 	private boolean late;
 
+	/** Bài PAPER: JSON trình soạn lúc nộp (B25a); bài luận → {@code null}. */
+	@Column(name = "content_json", columnDefinition = "jsonb")
+	@ColumnTransformer(write = "?::jsonb")
+	private String contentJson;
+
+	/** Bài PAPER: các tài liệu được trích trong bài lúc nộp, dạng {@code [{id, csl}]}; bài luận → {@code null}. */
+	@Column(name = "references_json", columnDefinition = "jsonb")
+	@ColumnTransformer(write = "?::jsonb")
+	private String referencesJson;
+
 	public static SubmissionVersion of(Submission submission, int versionNo, String content, Instant submittedAt,
 			boolean late) {
 		SubmissionVersion v = new SubmissionVersion();
@@ -62,5 +73,19 @@ public class SubmissionVersion {
 		v.submittedAt = submittedAt;
 		v.late = late;
 		return v;
+	}
+
+	/** Lần nộp của bài PAPER: số từ do module paper đếm trên phần thân các mục (không tính tiêu đề mục). */
+	public static SubmissionVersion ofPaper(Submission submission, int versionNo, PaperContentSource.PaperContent paper,
+			Instant submittedAt, boolean late) {
+		SubmissionVersion v = of(submission, versionNo, paper.text(), submittedAt, late);
+		v.wordCount = paper.wordCount();
+		v.contentJson = paper.contentJson();
+		v.referencesJson = paper.referencesJson();
+		return v;
+	}
+
+	public boolean isPaper() {
+		return contentJson != null;
 	}
 }

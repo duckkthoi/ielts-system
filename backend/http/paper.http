@@ -75,3 +75,42 @@ Content-Type: application/json
 Authorization: Bearer {{student.response.body.data.accessToken}}
 
 { "name": "Nhóm tự lập" }
+
+### ─── Thư viện trích dẫn của nhóm (B24a) — groupId: lấy myGroupId ở "Sinh viên xem nhóm" ───
+@groupId = 1
+
+### Tra DOI (chưa lưu) — nhận cả https://doi.org/… hoặc doi:…
+GET {{baseUrl}}/api/papers/doi?value=10.1145/3368089.3409731
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+### Thêm một tài liệu (CSL-JSON)
+POST {{baseUrl}}/api/papers/groups/{{groupId}}/references
+Content-Type: application/json
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+{
+  "csl": {
+    "type": "article-journal",
+    "title": "Attention is all you need",
+    "author": [{ "given": "Ashish", "family": "Vaswani" }],
+    "issued": { "date-parts": [[2017]] },
+    "container-title": "Advances in Neural Information Processing Systems",
+    "DOI": "10.48550/arXiv.1706.03762"
+  }
+}
+
+### Nhập nhiều mục (DOI đã có / lặp lại bị bỏ qua)
+POST {{baseUrl}}/api/papers/groups/{{groupId}}/references/batch
+Content-Type: application/json
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+{
+  "items": [
+    { "type": "book", "title": "Clean Code", "author": [{ "given": "Robert C.", "family": "Martin" }], "issued": { "date-parts": [[2008]] }, "publisher": "Prentice Hall" },
+    { "title": "Thiếu tác giả và năm" }
+  ]
+}
+
+### Thư viện của nhóm (giáo viên chủ bài cũng xem được)
+GET {{baseUrl}}/api/papers/groups/{{groupId}}/references
+Authorization: Bearer {{student.response.body.data.accessToken}}

@@ -35,6 +35,7 @@ public class StudentSubmissionService {
 	private final UserQueryService userQueryService;
 	private final ApplicationEventPublisher events;
 	private final Clock clock;
+	private final PaperContentSource paperContent;
 
 	@Transactional(readOnly = true)
 	public DraftResponse draft(Long studentId, Long partId) {
@@ -100,6 +101,8 @@ public class StudentSubmissionService {
 	/**
 	 * UC-24 / SD-07: nộp một phần. Khoá dòng bài làm ({@code FOR UPDATE}) rồi so {@code expectedVersion}: hai
 	 * request đồng thời (bấm đúp, 2 tab, mạng gửi lại) chỉ tạo đúng một version. Hạn và cờ "muộn" theo giờ server.
+	 * Bài PAPER (B25a): bỏ qua {@code content} client gửi, nộp snapshot tài liệu của nhóm (BR-28) và kiểm tra mục bắt
+	 * buộc (BR-29) qua {@link PaperContentSource}; bài luận thiếu nội dung → 400.
 	 */
 	@Transactional
 	public SubmitResponse submit(Long studentId, Long partId, String content, int expectedVersion) {
@@ -114,6 +117,10 @@ public class StudentSubmissionService {
 		}
 		requireWritable(part, s, now);
 		requireExamStarted(part, studentId);
+		PaperContentSource.PaperContent paper = groupId == null ? null : paperContent.capture(partId, groupId);
+		if (paper == null && (content == null || content.isBlank())) {
+			throw ApiException.badRequest("VALIDATION_ERROR", "Nội dung không được để trống");
+		}
 		boolean late = DeadlineRules.isPastDue(DeadlineRules.effectiveDue(part, s), now);
 
 		if (s == null) {
@@ -129,7 +136,8 @@ public class StudentSubmissionService {
 		s.setDraftContent(null);
 		s.setDraftSavedAt(null);
 		saveNew(s, "VERSION_CONFLICT");
-		SubmissionVersion v = versionRepository.save(SubmissionVersion.of(s, versionNo, content, now, late));
+		SubmissionVersion v = versionRepository.save(paper == null ? SubmissionVersion.of(s, versionNo, content, now, late)
+				: SubmissionVersion.ofPaper(s, versionNo, paper, now, late));
 
 		events.publishEvent(new SubmissionEvents.Submitted(s.getId(), part.getAssignment().getId(), partId, studentId,
 				part.getAssignment().getTeacher().getId(), versionNo, late, part.getAssignment().getTitle(),
