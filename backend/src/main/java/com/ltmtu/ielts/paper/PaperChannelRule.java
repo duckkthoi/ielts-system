@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PaperChannelRule implements StompAccessRule {
 
-	private static final Pattern TOPIC = Pattern.compile("^/topic/paper/(\\d{1,18})(/awareness)?$");
+	private static final Pattern TOPIC = Pattern.compile("^/topic/paper/(\\d{1,18})(/(awareness|comments))?$");
 	private static final Pattern SEND = Pattern.compile("^/app/paper/\\d{1,18}/(update|awareness)$");
 
 	private final PaperDocAccess access;

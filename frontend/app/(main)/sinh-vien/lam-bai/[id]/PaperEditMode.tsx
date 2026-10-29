@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Alert, App, Button, Result, Skeleton, Tooltip } from 'antd';
 import { BookMarked, Send, Users } from 'lucide-react';
@@ -42,7 +42,15 @@ export function PaperEditMode({
 }) {
   const { modal, message } = App.useApp();
   const online = useOnlineStatus();
-  const paper = usePaperDocument(part.partId, part.sections);
+  const mirrorDraft = useCallback(
+    async (contentText: string) => {
+      // Bài Paper dùng một bản nháp chung của nhóm; bỏ kiểm tra draftVersion để
+      // hai thành viên có thể tự lưu nối tiếp nhau mà không bật xung đột giả.
+      await studentApi.saveDraft(part.partId, contentText, null);
+    },
+    [part.partId]
+  );
+  const paper = usePaperDocument(part.partId, part.sections, mirrorDraft);
   const [json, setJson] = useState<DocNode | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
