@@ -3,8 +3,9 @@
 
 import type { ExamEventType, ExamStatus } from '@/lib/types/exam';
 import type { NotificationType } from '@/lib/types/notification';
+import type { WordHint } from '@/lib/utils/paperDoc';
 
-import { BRAND, SEMANTIC } from './tokens';
+import { BRAND, NEUTRAL, SEMANTIC } from './tokens';
 import type { ColorSet, SolidColorSet } from './tokens';
 
 // ─── Bài nộp ──────────────────────────────────────────────────────────────────
@@ -131,3 +132,21 @@ export const EXAM_EVENT_META: Record<ExamEventType, { label: string; alert: bool
   OVERTIME: { label: 'Hết giờ mà chưa nộp', alert: true },
   SUBMITTED: { label: 'Nộp bài', alert: false }
 };
+
+// ─── Số từ của một mục paper (docs/12, BR-29: chỉ nhắc, không chặn nộp) ──────
+// Mục trống tách hai loại: bắt buộc (đỏ — server sẽ chặn nộp ở B25) và không bắt buộc (xám).
+
+export type PaperWordHint = Exclude<WordHint, 'empty'> | 'empty-required' | 'empty-optional';
+
+export const PAPER_WORD_HINT_META: Record<PaperWordHint, ColorSet & { label: string }> = {
+  'empty-required': { label: 'Chưa viết · bắt buộc', ...SEMANTIC.error },
+  'empty-optional': { label: 'Chưa viết', text: NEUTRAL[500], bg: NEUTRAL[50], border: NEUTRAL[100] },
+  short: { label: 'Còn thiếu từ', ...SEMANTIC.warning },
+  long: { label: 'Vượt giới hạn', ...SEMANTIC.warning },
+  ok: { label: 'Đạt', ...SEMANTIC.success }
+};
+
+export function getPaperWordHint(hint: WordHint, required: boolean): PaperWordHint {
+  if (hint !== 'empty') return hint;
+  return required ? 'empty-required' : 'empty-optional';
+}

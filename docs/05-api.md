@@ -43,7 +43,7 @@
   "fieldErrors": { "content": "Nội dung không được để trống" }
 }
 ```
-**HTTP status luôn là `200`** (kể cả khi lỗi, kể cả lỗi của Spring Security như chưa đăng nhập / không có quyền). Kết quả thật đọc trong body: `success`; khi lỗi thì `errorCode` (mã lỗi, bảng dưới), `errorMessage` (câu tiếng Việt hiển thị thẳng cho người dùng) và `status` (mã kiểu HTTP: 400, 401, 403, 404, 409, 422, 429, 500 — để phân loại lỗi, vd `401` → client refresh token rồi gửi lại). `fieldErrors` chỉ có khi lỗi validate. Response thành công không có các trường này; `message` ở response thành công là câu thông báo (vd "Đã gửi email"). Trong tài liệu này, các chỗ ghi "→ `409`", "`429 RATE_LIMITED`"… là giá trị `status` trong body; endpoint tạo mới trước đây trả `201` nay trả `200`. Ngoại lệ ngoài ứng dụng: lỗi mạng, nginx (`502`/`504`) và `/actuator/health` (`503` khi hỏng) vẫn dùng HTTP status thật.
+**HTTP status luôn là `200`** (kể cả khi lỗi, kể cả lỗi của Spring Security như chưa đăng nhập / không có quyền). Kết quả thật đọc trong body: `success`; khi lỗi thì `errorCode` (mã lỗi, bảng dưới), `errorMessage` (câu tiếng Việt hiển thị thẳng cho người dùng) và `status` (mã kiểu HTTP: 400, 401, 403, 404, 409, 422, 429, 500, 503 — để phân loại lỗi, vd `401` → client refresh token rồi gửi lại). `fieldErrors` chỉ có khi lỗi validate. Response thành công không có các trường này; `message` ở response thành công là câu thông báo (vd "Đã gửi email"). Trong tài liệu này, các chỗ ghi "→ `409`", "`429 RATE_LIMITED`"… là giá trị `status` trong body; endpoint tạo mới trước đây trả `201` nay trả `200`. Ngoại lệ ngoài ứng dụng: lỗi mạng, nginx (`502`/`504`) và `/actuator/health` (`503` khi hỏng) vẫn dùng HTTP status thật.
 
 #### Mã lỗi
 | `status` | `errorCode` | Khi nào |
@@ -71,13 +71,17 @@
 | 409 | `GROUP_FULL` | Bài PAPER: nhóm đã đủ người |
 | 409 | `ALREADY_IN_GROUP` | Bài PAPER: sinh viên đã ở trong một nhóm của bài này |
 | 409 | `NO_GROUP` | Bài PAPER: sinh viên chưa có nhóm nên chưa lưu nháp / nộp được (BR-28) |
+| 409 | `SNAPSHOT_STALE` | Nộp bài PAPER khi snapshot tài liệu cũ hơn thay đổi cuối (thành viên vừa gõ): client lưu snapshot rồi nộp lại (B25a) |
 | 409 | `EXAM_NOT_STARTED` | Phần ở chế độ thi mà chưa bấm "Bắt đầu": chưa lưu nháp / nộp được (BR-23, Mức 3) |
 | 413 | `FILE_TOO_LARGE` | File vượt giới hạn |
 | 422 | `DEADLINE_PASSED` | Quá hạn và bài không cho nộp muộn |
+| 422 | `REQUIRED_SECTIONS_EMPTY` | Nộp bài PAPER khi mục bắt buộc còn trống (BR-29). Message liệt kê tên mục |
+| 422 | `LEVEL_MISMATCH` | Chấm bài PAPER: điểm nằm ngoài khoảng của mức đạt đã chọn (BR-31) |
 | 422 | `REVISION_LIMIT` | Đã hết số lần được yêu cầu sửa |
 | 422 | `SCORE_LIMITED` | Điểm tiêu chí vượt giới hạn do mục checklist "Giới hạn điểm" đang tick (BR-17) hoặc bài ≤ 20 từ (BR-18). Message nêu lý do |
-| 429 | `RATE_LIMITED` | Đăng nhập sai quá nhiều lần (5 lần / 5 phút theo IP hoặc theo tài khoản, NFR-09), hoặc nhắc thủ công quá 3 lần / 10 phút cho một bài. Message ghi số phút phải chờ |
+| 429 | `RATE_LIMITED` | Đăng nhập sai quá nhiều lần (5 lần / 5 phút theo IP hoặc theo tài khoản, NFR-09), hoặc nhắc thủ công quá 3 lần / 10 phút cho một bài, hoặc tra DOI quá 20 lần / phút. Message ghi thời gian phải chờ |
 | 500 | `INTERNAL_ERROR` | Lỗi không mong muốn |
+| 503 | `DOI_UNAVAILABLE` | Tra DOI: dịch vụ doi.org / Crossref lỗi, trả dữ liệu lạ hoặc quá thời gian chờ (B24) — nhập tay hoặc thử lại sau |
 
 > Giáo viên truy cập lớp hoặc bài của người khác nhận **404** chứ không phải 403, để không lộ việc tài nguyên đó có tồn tại.
 
@@ -413,7 +417,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 | GET | `/api/teacher/submissions?assignmentId&partId&classId&status&keyword&page&size` | Hàng đợi chấm → danh sách `QueueRow`. Mặc định `status=SUBMITTED`, bài nộp trước xếp trước |
 | GET | `/api/teacher/submissions/{id}?versionNo` | Dữ liệu màn hình chấm (mặc định version mới nhất) |
 | GET | `/api/teacher/submissions/{id}/versions` | Danh sách version (mới nhất trước), kèm trạng thái và band của từng version |
-| PUT | `/api/teacher/submissions/{id}/grade` | Lưu nháp chấm → `GradeDto` (SD-08) |
+| PUT | `/api/teacher/submissions/{id}/grade` | Lưu nháp chấm → `GradeDto` (SD-08). Bài PAPER: `scores[].levelId`, `memberAdjustments` (B25b, xem dưới) |
 | POST | `/api/teacher/submissions/{id}/return` | Trả bài → `GradingScreen`. Yêu cầu đã chấm đủ mọi tiêu chí |
 | POST | `/api/teacher/submissions/{id}/request-revision` | Yêu cầu sửa `{note?, dueAt}` → `GradingScreen` |
 | PATCH | `/api/teacher/submissions/{id}/inline-comments/{commentId}` | So sánh 2 lần nộp: đánh giá lỗi của lần **cũ** `{resolution: FIXED \| NOT_FIXED \| CHANGED \| null}` → `InlineCommentDto` (V9) |
@@ -436,6 +440,13 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - Ngân hàng nhận xét: lọc `criterion=CC` thì trả mục CC **và** mục dùng chung. `keyword` tìm không phân biệt hoa thường, `%` và `_` hiểu theo nghĩa đen.
 - `…/use` không đếm với nhận xét mẫu của hệ thống: mẫu dùng chung cho mọi giáo viên, nếu đếm thì thứ tự của người này sẽ phụ thuộc người khác.
 - Giới hạn mỗi giáo viên: 100 mã riêng, 500 nhận xét (`app.grading.*`).
+
+**Chấm bài PAPER thang 10 (B25b, BR-31, docs/12 mục 5.4):**
+- Tiêu chí của bài PAPER có thêm `levels` khi soạn bài (`CriterionRequest.levels` = `[{label, minScore, maxScore, descriptor?}]`, trả về trong `CriterionDto.levels` / `CriterionInfo.levels` = `[{id, label, minScore, maxScore, descriptor, orderNo}]`). Kiểm tra: chỉ bài PAPER (bài luận có mức → `400`); 2–6 mức, tên không trùng; `0 ≤ min ≤ max ≤ maxScore`; bội số của `step`; các khoảng không chồng nhau (không bắt buộc phủ kín). Nhân bản bài chép cả mức.
+- Lưu chấm: `scores[].levelId` (tuỳ chọn) — mức phải thuộc tiêu chí (`400`), điểm phải nằm trong khoảng của mức → `422 LEVEL_MISMATCH`; bài luận gửi `levelId` → `400`. `ScoreDto` trả thêm `levelId`. **Không** áp BR-18 (bài ≤ 20 từ) và không làm tròn kiểu IELTS: `GradeDto.band` của bài PAPER = trung bình có trọng số làm tròn 2 chữ số (vd 7.67), `rawBand` giữ số chưa làm tròn. Checklist "Giới hạn điểm" vẫn dùng được (`maxBand` ≤ 10).
+- `memberAdjustments` = `[{studentId, delta, reason}]` (PUT = thay toàn bộ; chỉ bài PAPER, bài luận → `400`): người phải là thành viên **hiện tại** của nhóm, `delta` khác 0, trong ±2, bước 0,25, có `reason` → nếu không `400`. `GradeDto.adjustments` = `[{studentId, studentName, delta, reason, score}]` với `score` = điểm cả bài + `delta` kẹp [0, 10].
+- `GradingScreen` thêm `assignment.kind` và `members` (thành viên nhóm `[{id, studentCode, fullName}]`, bài luận rỗng); bài PAPER không có cảnh báo `SHORT_ESSAY`. Thông báo trả bài của bài PAPER ghi "Điểm: x / 10".
+- Chưa làm (B25c / B25e): hàng đợi chấm vẫn hiện điểm làm tròn kiểu IELTS và chưa ghi tên nhóm; kết quả phía sinh viên chưa hiện điểm riêng của mình.
 
 **Chấm bài, trả bài, yêu cầu sửa (đã cài ở B6b; UC-17, UC-18, SD-08):**
 - Chỉ giáo viên tạo bài tập mới thấy và chấm được bài nộp (BR-15). Bài nộp của người khác → `404`.
@@ -517,9 +528,9 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 | GET | `/api/student/assignments/{id}` | Chi tiết bài + trạng thái từng phần của tôi |
 | GET | `/api/student/parts/{partId}/draft` | Nạp bản nháp → `{content, source, savedAt, wordCount, status, currentVersion, draftVersion, submissionId}` |
 | PUT | `/api/student/parts/{partId}/draft` | Lưu nháp `{content, draftVersion}` → `{savedAt, wordCount, draftVersion, submissionId}` (SD-06) |
-| POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}` (SD-07) |
+| POST | `/api/student/parts/{partId}/submit` | Nộp `{content, expectedVersion}` → `200 {versionNo, submittedAt, late, wordCount}` (SD-07). Bài luận thiếu `content` → `400`; bài PAPER bỏ qua `content` (xem A.10, B25a) |
 | GET | `/api/student/parts/{partId}/versions` | Lịch sử nộp, có band nếu đã trả bài |
-| GET | `/api/student/parts/{partId}/versions/{versionNo}` | Nội dung một version + kết quả chấm (chỉ khi RETURNED, BR-13) |
+| GET | `/api/student/parts/{partId}/versions/{versionNo}` | Nội dung một version + kết quả chấm (chỉ khi RETURNED, BR-13): `{versionNo, submittedAt, wordCount, late, content, contentJson, references, result}`; `contentJson` / `references` chỉ có ở bài PAPER (B25a), bài luận `null` |
 | GET | `/api/student/assignments/{id}/result` | Band từng phần và band cả bài (BR-12) |
 | GET | `/api/student/results` | Kết quả học tập của tôi (UC-28) → `StudentStats` |
 | GET | `/api/student/parts/{partId}/exam` | Phiên thi của tôi → `ExamSessionDto`, chưa bắt đầu → `data: null` (Mức 3) |
@@ -647,6 +658,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - Chi tiết / danh sách bài, lịch sử nộp, kết quả (`/result`, `/versions`) của mọi thành viên đều là của bài nhóm. Trả bài / yêu cầu sửa → thông báo tới **mọi thành viên**; nhắc hạn bỏ qua mọi thành viên khi nhóm đã nộp. Kênh chat `submission-{id}` gồm cả nhóm + giáo viên (tiêu đề kênh ghi tên nhóm).
 - Nhóm đã có bài làm: sinh viên rời nhóm / giáo viên xoá nhóm → `409 INVALID_STATE` (giáo viên vẫn chuyển được từng người).
 - Tới hạn chốt nhóm mà còn người chưa có nhóm → giáo viên nhận `PAPER_GROUP_LOCK` một lần (job 15 phút).
+- **Nộp bài PAPER (B25a, BR-28, BR-29):** `POST …/submit` **bỏ qua `content` client gửi**; server khoá dòng bài làm của nhóm rồi khoá dòng tài liệu (cùng khoá với nhận update — update đến sau phải chờ, rồi bị từ chối vì tài liệu đã chỉ đọc) và nộp **snapshot mới nhất**: chưa ai viết → `400`; snapshot cũ hơn thay đổi cuối hoặc thiếu JSON → `409 SNAPSHOT_STALE` (client gửi snapshot rồi nộp lại); mục bắt buộc không có chữ / hình / bảng / công thức / code → `422 REQUIRED_SECTIONS_EMPTY` "Mục bắt buộc còn trống: …". Lần nộp lưu `content` = chữ thuần của snapshot, `wordCount` = số từ phần thân các mục, `contentJson`, `references` = các tài liệu **được trích** trong bài lúc nộp (theo thứ tự xuất hiện; trích tới mục đã xoá thì bỏ). Module bài nộp gọi module paper qua interface `submission.PaperContentSource` (paper cài đặt) để giữ phụ thuộc một chiều.
 
 **Tài liệu cùng sửa (B22, docs/12 mục 5.2):** nội dung là **Yjs** (CRDT); server chỉ cấp số thứ tự, lưu và chuyển tiếp nhị phân (base64 trong JSON), không đọc nội dung.
 
@@ -658,9 +670,25 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 | PUT | `/api/papers/docs/{id}/snapshot` | Thành viên gửi snapshot đã gộp `{state, upToSeq, contentJson?, contentText?}`. `upToSeq` > `lastSeq` → `400`; ≤ snapshot đang có → bỏ qua (người khác vừa lưu bản mới hơn); JSON sai → `400`; snapshot > 4 MB / chữ > 200 000 ký tự → `400`. Update ≤ `upToSeq` bị bỏ nội dung (giữ dòng cho thống kê) |
 
 - `DocumentState` = `{documentId, partId, groupId, snapshot (base64 \| null), snapshotSeq, lastSeq, updates: [{seq, update, authorId, createdAt}], editable}`. Dựng tài liệu = áp `snapshot` rồi lần lượt `updates`. `editable = false` khi nhóm đã nộp giai đoạn này (chờ chấm / đã trả) hoặc bài đã đóng; "Cần sửa" thì sửa tiếp được.
-- Quyền: thành viên **hiện tại** của nhóm; người khác → `404`. Nhóm đã có chỉnh sửa trên tài liệu cũng tính là "đã có bài làm" (không tự rời / không xoá nhóm).
+- Quyền: thành viên **hiện tại** của nhóm; người khác → `404`. Nhóm đã có chỉnh sửa trên tài liệu (hoặc có mục trong thư viện trích dẫn) cũng tính là "đã có bài làm" (không tự rời / không xoá nhóm).
 - **Đồng thời** (có test): mỗi update khoá dòng tài liệu **trước** rồi mới đọc `last_seq` → hai người gửi dồn cùng lúc nhận seq liên tiếp, không trùng, không mất.
 - Chưa làm: thống kê band / xếp hạng / thống kê lớp vẫn tính theo từng sinh viên của bài luận — bài PAPER làm ở B25 cùng thang 10.
+
+**Thư viện trích dẫn của nhóm (B24a, UC-36, BR-30, docs/12 mục 5.3):** mỗi tài liệu tham khảo là một bản ghi **CSL-JSON**; định dạng IEEE / APA và danh mục sinh ở client.
+
+| Method | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `/api/papers/groups/{groupId}/references` | Thư viện của nhóm theo thứ tự thêm → `[ReferenceDto]`. Thành viên nhóm hoặc giáo viên chủ bài (chỉ xem) |
+| POST | `/api/papers/groups/{groupId}/references` | Thêm `{csl}` → `ReferenceDto`. DOI đã có trong thư viện nhóm → `409 DUPLICATE` |
+| POST | `/api/papers/groups/{groupId}/references/batch` | Nhập nhiều mục `{items: [csl]}` (1–100, vd từ BibTeX đã đổi sang CSL ở client) → `{added: [ReferenceDto], skipped}`; mục có DOI đã có / lặp trong lần nhập bị bỏ qua; một mục sai → `400` cả lần, message "Mục thứ N: …" |
+| PUT | `/api/papers/groups/{groupId}/references/{id}` | Thay toàn bộ `{csl}`; đổi sang DOI của mục khác → `409 DUPLICATE` |
+| DELETE | `/api/papers/groups/{groupId}/references/{id}` | Xoá (client cảnh báo trước nếu mục đang được trích dẫn trong tài liệu) |
+| GET | `/api/papers/doi?value=` | Tra DOI (nhận cả `https://doi.org/…`, `doi:…`) → `{doi, csl, missing}`, **chưa lưu**. Server gọi `https://doi.org/{doi}` với `Accept: application/vnd.citationstyles.csl+json`. DOI sai dạng → `400`; không có → `404`; dịch vụ lỗi / quá 10 giây → `503 DOI_UNAVAILABLE`; quá 20 lần / phút / người → `429 RATE_LIMITED`. Sinh viên và giáo viên |
+
+- `ReferenceDto` = `{id, csl, doi, missing, createdById, createdByName, createdAt, updatedAt}`. `missing` ⊆ `[AUTHOR, YEAR, SOURCE]` — tác giả (hoặc biên tập viên), năm (`issued`), nguồn (`container-title` / `publisher` / `URL` / `event`) còn thiếu → client **cảnh báo** (BR-30), không chặn.
+- **Lọc CSL ở server:** chỉ giữ `type` (thiếu → `document`), `title` (**bắt buộc**, thiếu → `400`), `author` / `editor` (mỗi người chỉ giữ phần tên, tối đa 100 người), `issued` / `accessed`, `container-title`, `volume`, `issue`, `page`, `publisher`, `DOI`, `URL`, `ISBN`, `ISSN`… (chuỗi ≤ 2000 ký tự); các trường khác (vd danh mục tham khảo, cơ quan tác giả của Crossref) bị bỏ. Sau khi lọc > 16 KB → `400`. `DOI` được chuẩn hoá: bỏ tiền tố, chữ thường, dạng `10.xxxx/…` (sai → `400`).
+- Quyền: thêm / sửa / xoá chỉ thành viên **hiện tại** của nhóm (người khác → `404`, giáo viên → `403`); bài đã đóng → `409 INVALID_STATE` (vẫn xem được). Tối đa 300 mục / nhóm → `400`.
+- **Đồng thời** (có test): mọi thao tác ghi khoá dòng nhóm (`FOR UPDATE`) trước rồi mới kiểm tra trùng DOI / số mục — hai thành viên thêm cùng DOI cùng lúc chỉ một người được; UNIQUE `(group_id, doi)` là chốt cuối.
 
 - **Đồng thời** (có test): vào nhóm thì khoá dòng nhóm (`FOR UPDATE`) rồi mới đếm — hai người vào chỗ cuối cùng cùng lúc chỉ một người được; vào hai nhóm cùng lúc (2 tab) bị UNIQUE `(assignment_id, student_id)` chặn → `409 ALREADY_IN_GROUP`.
 

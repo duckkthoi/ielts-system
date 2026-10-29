@@ -13,6 +13,8 @@ import com.ltmtu.ielts.assignment.dto.AssignmentDtos.ChecklistItemDto;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.ChecklistItemRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.CriterionDto;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.CriterionRequest;
+import com.ltmtu.ielts.assignment.dto.AssignmentDtos.LevelDto;
+import com.ltmtu.ielts.assignment.dto.AssignmentDtos.LevelRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.PartDto;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.PartRequest;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.RubricTemplateDto;
@@ -112,6 +114,17 @@ final class AssignmentMapper {
 			item.setMaxBand(item.getKind() == ChecklistKind.LIMIT ? ir.maxBand() : null);
 			c.addItem(item);
 		}
+		List<LevelRequest> levels = req.levels() == null ? List.of() : req.levels();
+		for (int i = 0; i < levels.size(); i++) {
+			LevelRequest lr = levels.get(i);
+			RubricLevel level = new RubricLevel();
+			level.setOrderNo(i + 1);
+			level.setLabel(lr.label().trim());
+			level.setMinScore(lr.minScore());
+			level.setMaxScore(lr.maxScore());
+			level.setDescriptor(blankToNull(lr.descriptor()));
+			c.addLevel(level);
+		}
 		return c;
 	}
 
@@ -139,7 +152,12 @@ final class AssignmentMapper {
 		return new CriterionDto(c.getId(), c.getCode(), c.getName(), c.getDescription(), c.getMaxScore(), c.getStep(),
 				c.getWeight(), c.getOrderNo(), c.getChecklist().stream()
 						.map(i -> new ChecklistItemDto(i.getId(), i.getContent(), i.getKind(), i.getMaxBand(), i.getOrderNo()))
-						.toList());
+						.toList(), toLevelDtos(c));
+	}
+
+	private static List<LevelDto> toLevelDtos(RubricCriterion c) {
+		return c.getLevels().stream().map(l -> new LevelDto(l.getId(), l.getLabel(), l.getMinScore(), l.getMaxScore(),
+				l.getDescriptor(), l.getOrderNo())).toList();
 	}
 
 	static RubricTemplateDto toTemplateDto(RubricTemplate t) {
@@ -149,7 +167,7 @@ final class AssignmentMapper {
 								c.getMaxScore(), c.getStep(), c.getWeight(), c.getOrderNo(), c.getChecklist().stream()
 										.map(i -> new ChecklistItemDto(i.getId(), i.getContent(), i.getKind(),
 												i.getMaxBand(), i.getOrderNo()))
-										.toList()))
+										.toList(), List.of()))
 						.toList());
 	}
 

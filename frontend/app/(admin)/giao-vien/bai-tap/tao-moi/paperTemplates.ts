@@ -1,10 +1,11 @@
 import type { CitationStyle } from '@/lib/types/assignment';
+import { defaultLevels } from '@/lib/utils/rubricLevels';
 
-import type { CriterionForm, PartForm, SectionForm } from './type';
+import type { CriterionForm, LevelForm, PartForm, SectionForm } from './type';
 
 // ─── Mẫu cho bài loại Paper (docs/12) ─────────────────────────────────────────
-// Khung mục theo IMRaD của bài báo ngành IT; rubric mẫu 6 tiêu chí thang 10 (docs/12 mục 5.4). Giáo viên sửa tự do.
-// Mô tả tiêu chí là lời tự viết (không chép rubric của trường nào).
+// Khung mục theo IMRaD của bài báo ngành IT; rubric mẫu 6 tiêu chí thang 10, mỗi tiêu chí 4 mức đạt (docs/12 mục 5.4).
+// Giáo viên sửa tự do. Mô tả tiêu chí / mức là lời tự viết (không chép rubric của trường nào).
 
 export const CITATION_OPTIONS: { value: CitationStyle; label: string }[] = [
   { value: 'IEEE', label: 'IEEE — đánh số [1], [2] (ngành IT)' },
@@ -70,14 +71,25 @@ export function defaultPaperStages(): PartForm[] {
   ];
 }
 
-const criterion = (name: string, weight: number, description: string): CriterionForm => ({
+/** 4 mức của thang 10 bước 0,25: mô tả theo thứ tự Xuất sắc → Chưa đạt (trống = giáo viên tự viết). */
+function levels(descriptors: [string, string, string, string] = ['', '', '', '']): LevelForm[] {
+  return defaultLevels(10, 0.25).map((l, i) => ({ ...l, descriptor: descriptors[i] }));
+}
+
+const criterion = (
+  name: string,
+  weight: number,
+  description: string,
+  descriptors?: [string, string, string, string]
+): CriterionForm => ({
   code: null,
   name,
   description,
   maxScore: 10,
   step: 0.25,
   weight,
-  checklist: []
+  checklist: [],
+  levels: levels(descriptors)
 });
 
 /** Rubric mẫu paper IT: trọng số dồn vào nội dung khoa học, định dạng chiếm ít (docs/12 mục 5.4). */
@@ -86,13 +98,44 @@ export function paperCriteria(): CriterionForm[] {
     criterion(
       'Vấn đề & đóng góp',
       1.5,
-      'Vấn đề rõ, có động lực; đóng góp nêu cụ thể, đo được (Abstract, Introduction).'
+      'Vấn đề rõ, có động lực; đóng góp nêu cụ thể, đo được (Abstract, Introduction).',
+      [
+        'Vấn đề rõ, có động lực; đóng góp nêu cụ thể, đo được',
+        'Vấn đề rõ, đóng góp còn chung chung',
+        'Vấn đề mơ hồ, đóng góp khó nhận ra',
+        'Không nêu được vấn đề / đóng góp'
+      ]
     ),
-    criterion('Nghiên cứu liên quan', 1.5, 'So sánh có phân tích với các hướng chính, chỉ ra khoảng trống bài lấp.'),
-    criterion('Phương pháp / thiết kế', 2.5, 'Mô tả đủ để người khác làm lại được; lựa chọn có lý do.'),
-    criterion('Kết quả & đánh giá', 2, 'Thí nghiệm hợp lý, có so sánh, bảng / hình rõ, nêu hạn chế.'),
-    criterion('Cấu trúc & văn phong học thuật', 1.5, 'Mạch lạc, đúng khung, văn phong khách quan, ít lỗi.'),
-    criterion('Trích dẫn & định dạng', 1, 'Ý của người khác đều có trích dẫn; danh mục đúng chuẩn IEEE / APA.')
+    criterion('Nghiên cứu liên quan', 1.5, 'So sánh có phân tích với các hướng chính, chỉ ra khoảng trống bài lấp.', [
+      'So sánh có phân tích với các hướng chính, chỉ ra khoảng trống mà bài lấp',
+      'Đủ nguồn, có so sánh nhưng nông',
+      'Liệt kê nguồn, không so sánh',
+      'Rất ít hoặc không có nguồn'
+    ]),
+    criterion('Phương pháp / thiết kế', 2.5, 'Mô tả đủ để người khác làm lại được; lựa chọn có lý do.', [
+      'Mô tả đủ để người khác làm lại được; lựa chọn có lý do',
+      'Đủ ý chính, thiếu vài chi tiết',
+      'Thiếu nhiều chi tiết, khó làm lại',
+      'Không mô tả được cách làm'
+    ]),
+    criterion('Kết quả & đánh giá', 2, 'Thí nghiệm hợp lý, có so sánh, bảng / hình rõ, nêu hạn chế.', [
+      'Thí nghiệm hợp lý, có so sánh với phương pháp khác, bảng / hình rõ, có phân tích hạn chế',
+      'Có thí nghiệm và số liệu, phân tích còn mỏng',
+      'Số liệu ít, không so sánh',
+      'Không có kết quả kiểm chứng'
+    ]),
+    criterion('Cấu trúc & văn phong học thuật', 1.5, 'Mạch lạc, đúng khung, văn phong khách quan, ít lỗi.', [
+      'Mạch lạc, đúng khung, văn phong khách quan, gần như không lỗi',
+      'Mạch lạc, ít lỗi',
+      'Rời rạc ở vài chỗ, nhiều lỗi',
+      'Khó đọc, sai khung'
+    ]),
+    criterion('Trích dẫn & định dạng', 1, 'Ý của người khác đều có trích dẫn; danh mục đúng chuẩn IEEE / APA.', [
+      'Mọi ý của người khác đều có trích dẫn, danh mục đúng chuẩn',
+      'Vài lỗi định dạng nhỏ',
+      'Thiếu trích dẫn ở vài chỗ',
+      'Không trích dẫn / có dấu hiệu đạo văn'
+    ])
   ];
 }
 

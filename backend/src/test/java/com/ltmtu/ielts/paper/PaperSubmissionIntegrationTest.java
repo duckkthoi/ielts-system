@@ -74,6 +74,8 @@ class PaperSubmissionIntegrationTest extends PaperTestSupport {
 		criterionId = detail.get("parts").get(0).get("criteria").get(0).get("id").asLong();
 		call(postJson("/api/teacher/assignments/" + assignmentId + "/groups",
 				Map.of("name", "Nhóm AB", "studentIds", List.of(a.getId(), b.getId()))), teacher).andExpect(apiStatus(200));
+		// B25a: bài PAPER nộp từ tài liệu nhóm — nhóm AB đã viết mục Abstract.
+		writeDocument(a, partId, docJson(sectionsOf("abstract", TEXT)), "Abstract " + TEXT);
 	}
 
 	@Test

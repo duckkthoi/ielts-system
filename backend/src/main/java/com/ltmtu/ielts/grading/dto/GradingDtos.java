@@ -4,10 +4,12 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
+import com.ltmtu.ielts.assignment.dto.AssignmentDtos.LevelDto;
 import com.ltmtu.ielts.grading.GradingEnums.CriterionGroup;
 import com.ltmtu.ielts.grading.GradingEnums.EditOp;
 import com.ltmtu.ielts.grading.GradingEnums.GradeStatus;
@@ -45,8 +47,9 @@ public final class GradingDtos {
 			StudentInfo student, String revisionNote, Instant revisionDueAt) {
 	}
 
+	/** {@code kind = PAPER}: chấm thang 10 theo mức đạt (BR-31), không áp quy tắc riêng của IELTS. */
 	public record AssignmentInfo(Long id, String title, AssignmentStatus status, int maxRevisions,
-			boolean showSuggestionsOnRevision) {
+			boolean showSuggestionsOnRevision, AssignmentKind kind) {
 	}
 
 	public record PartInfo(Long id, int orderNo, String title, TaskType taskType, String prompt, String imageUrl,
@@ -65,12 +68,18 @@ public final class GradingDtos {
 
 	/** {@code group}: nhóm tiêu chí để khớp mã lỗi / nhận xét mẫu (TA, TR → TASK). */
 	public record CriterionInfo(Long id, CriterionCode code, CriterionGroup group, String name, String description,
-			BigDecimal maxScore, BigDecimal step, BigDecimal weight, List<ChecklistInfo> checklist) {
+			BigDecimal maxScore, BigDecimal step, BigDecimal weight, List<ChecklistInfo> checklist,
+			List<LevelDto> levels) {
 	}
 
 	/** {@code maxAllowed} / {@code limitReason}: giới hạn điểm hiện tại của tiêu chí (BR-17, BR-18). */
+	/** {@code levelId}: mức đạt đã chọn (bài PAPER), {@code null} = chấm điểm trực tiếp. */
 	public record ScoreDto(Long criterionId, BigDecimal score, String comment, BigDecimal maxAllowed,
-			String limitReason) {
+			String limitReason, Long levelId) {
+	}
+
+	/** Cộng / trừ riêng một thành viên (bài PAPER): {@code score} = điểm của người đó sau cộng / trừ, kẹp [0, 10]. */
+	public record AdjustmentDto(Long studentId, String studentName, BigDecimal delta, String reason, BigDecimal score) {
 	}
 
 	public record MarkDto(Long checklistItemId, boolean checked) {
@@ -89,9 +98,14 @@ public final class GradingDtos {
 	 * {@code rawBand}: band phần chưa làm tròn; {@code band}: đã làm tròn để hiển thị (BR-12). {@code complete}: đã
 	 * chấm đủ mọi tiêu chí — điều kiện để trả bài.
 	 */
+	/**
+	 * {@code band}: điểm hiển thị — bài luận theo band IELTS (BR-12), bài PAPER thang 10 làm tròn 2 chữ số (BR-31).
+	 * {@code adjustments}: chỉ bài PAPER.
+	 */
 	public record GradeDto(Long id, int versionNo, GradeStatus status, ZeroReason zeroReason, String generalComment,
 			BigDecimal rawBand, BigDecimal band, boolean complete, String graderName, Instant updatedAt,
-			Instant returnedAt, List<ScoreDto> scores, List<MarkDto> checklist, List<InlineCommentDto> inlineComments) {
+			Instant returnedAt, List<ScoreDto> scores, List<MarkDto> checklist, List<InlineCommentDto> inlineComments,
+			List<AdjustmentDto> adjustments) {
 	}
 
 	public record VersionSummary(int versionNo, Instant submittedAt, int wordCount, boolean late,
@@ -102,17 +116,28 @@ public final class GradingDtos {
 	 * Dữ liệu màn chấm của một version. {@code editable}: version mới nhất và chưa trả bài. {@code canReturn}: sửa
 	 * được và đã chấm đủ. {@code canRequestRevision}: trả được, còn lượt sửa (BR-10), bài chưa đóng.
 	 */
+	/** {@code members}: bài PAPER — thành viên hiện tại của nhóm (để cộng / trừ riêng); bài luận → rỗng. */
 	public record GradingScreen(SubmissionInfo submission, AssignmentInfo assignment, PartInfo part,
 			VersionInfo version, List<Warning> warnings, List<CriterionInfo> criteria, GradeDto grade,
-			List<VersionSummary> versions, boolean editable, boolean canReturn, boolean canRequestRevision) {
+			List<VersionSummary> versions, boolean editable, boolean canReturn, boolean canRequestRevision,
+			List<StudentInfo> members) {
 	}
 
 	// ─── Lưu chấm ────────────────────────────────────────────────────────────
 
+	/** {@code levelId}: bài PAPER — mức đạt đã chọn; điểm phải nằm trong khoảng của mức. */
 	public record ScoreRequest(
 			@NotNull(message = "Thiếu tiêu chí") Long criterionId,
 			BigDecimal score,
-			@Size(max = 2000, message = "Nhận xét tiêu chí tối đa 2000 ký tự") String comment) {
+			@Size(max = 2000, message = "Nhận xét tiêu chí tối đa 2000 ký tự") String comment,
+			Long levelId) {
+	}
+
+	/** Cộng / trừ riêng một thành viên nhóm (bài PAPER): -2…+2, bước 0,25, bắt buộc lý do. */
+	public record AdjustmentRequest(
+			@NotNull(message = "Thiếu sinh viên") Long studentId,
+			@NotNull(message = "Thiếu điểm cộng / trừ") BigDecimal delta,
+			@Size(max = 500, message = "Lý do tối đa 500 ký tự") String reason) {
 	}
 
 	public record MarkRequest(@NotNull(message = "Thiếu mục checklist") Long checklistItemId, Boolean checked) {
@@ -141,7 +166,8 @@ public final class GradingDtos {
 			@Valid List<MarkRequest> checklist,
 			@Valid @Size(max = 300, message = "Tối đa 300 nhận xét inline") List<InlineCommentRequest> inlineComments,
 			@Size(max = 5000, message = "Nhận xét chung tối đa 5000 ký tự") String generalComment,
-			ZeroReason zeroReason) {
+			ZeroReason zeroReason,
+			@Valid @Size(max = 10, message = "Tối đa 10 thành viên") List<AdjustmentRequest> memberAdjustments) {
 	}
 
 	public record RevisionRequest(

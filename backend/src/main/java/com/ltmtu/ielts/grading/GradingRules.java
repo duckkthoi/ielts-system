@@ -42,9 +42,15 @@ public final class GradingRules {
 	 * Trùng mức thì giữ lý do xuất hiện trước.
 	 */
 	public static ScoreCap cap(BigDecimal maxScore, Collection<LimitMark> checkedLimits, int wordCount) {
+		return cap(maxScore, checkedLimits, wordCount, true);
+	}
+
+	/** Như trên; {@code shortEssayRule = false} cho bài PAPER — BR-18 là quy tắc riêng của IELTS (BR-31). */
+	public static ScoreCap cap(BigDecimal maxScore, Collection<LimitMark> checkedLimits, int wordCount,
+			boolean shortEssayRule) {
 		BigDecimal max = maxScore;
 		String reason = null;
-		if (wordCount <= SHORT_ESSAY_WORDS && SHORT_ESSAY_MAX_BAND.compareTo(max) < 0) {
+		if (shortEssayRule && wordCount <= SHORT_ESSAY_WORDS && SHORT_ESSAY_MAX_BAND.compareTo(max) < 0) {
 			max = SHORT_ESSAY_MAX_BAND;
 			reason = "Bài chỉ có " + wordCount + " từ (≤ " + SHORT_ESSAY_WORDS + " từ)";
 		}

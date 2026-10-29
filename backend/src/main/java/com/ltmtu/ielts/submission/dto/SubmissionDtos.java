@@ -5,7 +5,6 @@ import java.time.Instant;
 import com.ltmtu.ielts.submission.SubmissionStatus;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -46,8 +45,9 @@ public final class SubmissionDtos {
 	public record DraftConflict(String serverContent, int draftVersion, Instant savedAt) {
 	}
 
+	/** {@code content}: bài luận bắt buộc (service kiểm tra); bài PAPER bỏ qua — server nộp snapshot tài liệu nhóm. */
 	public record SubmitRequest(
-			@NotBlank(message = "Nội dung không được để trống") @Size(max = MAX_CONTENT, message = "Bài quá dài") String content,
+			@Size(max = MAX_CONTENT, message = "Bài quá dài") String content,
 			@NotNull(message = "Thiếu expectedVersion") @Min(0) Integer expectedVersion) {
 	}
 

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
 import com.ltmtu.ielts.assignment.ChecklistItem;
 import com.ltmtu.ielts.assignment.RubricCriterion;
+import com.ltmtu.ielts.assignment.RubricLevel;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.grading.BandCalculator.Weighted;
 import com.ltmtu.ielts.grading.GradingEnums.CriterionGroup;
@@ -22,14 +23,17 @@ import com.ltmtu.ielts.grading.GradingEnums.EditOp;
 import com.ltmtu.ielts.grading.GradingEnums.InlineKind;
 import com.ltmtu.ielts.grading.GradingRules.LimitMark;
 import com.ltmtu.ielts.grading.GradingRules.ScoreCap;
+import com.ltmtu.ielts.grading.dto.GradingDtos.AdjustmentRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.InlineCommentRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.MarkRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.SaveGradeRequest;
 import com.ltmtu.ielts.grading.dto.GradingDtos.ScoreRequest;
+import com.ltmtu.ielts.user.User;
 
 /**
  * Áp body "lưu chấm" vào một {@link Grade} (thay toàn bộ), kiểm tra mọi quy tắc trước khi đổi dữ liệu:
- * BR-11 / BR-17 / BR-18 (điểm), BR-19 ("Chấm 0"), BR-21 (nhận xét inline). Không phụ thuộc Spring.
+ * BR-11 / BR-17 / BR-18 (điểm), BR-19 ("Chấm 0"), BR-21 (nhận xét inline); bài PAPER thêm mức đạt + cộng / trừ thành
+ * viên, bỏ BR-18 (BR-31). Không phụ thuộc Spring.
  */
 final class GradeUpdater {
 
@@ -40,9 +44,11 @@ final class GradeUpdater {
 	 * @param criteria tiêu chí của phần (kèm checklist)
 	 * @param content  nội dung version đang chấm — offset nhận xét inline tính trên chuỗi này
 	 * @param codes    mã lỗi dùng được (của hệ thống + của giáo viên), khoá là mã viết hoa
+	 * @param paper    bài PAPER: chọn mức đạt, không áp BR-18, có cộng / trừ thành viên (BR-31)
+	 * @param members  bài PAPER: thành viên hiện tại của nhóm theo id (được cộng / trừ); bài luận → rỗng
 	 */
 	static void apply(Grade grade, List<RubricCriterion> criteria, String content, int wordCount,
-			SaveGradeRequest req, Map<String, ErrorCode> codes, Instant now) {
+			SaveGradeRequest req, Map<String, ErrorCode> codes, Instant now, boolean paper, Map<Long, User> members) {
 		Map<Long, RubricCriterion> criteriaById = criteria.stream()
 				.collect(Collectors.toMap(RubricCriterion::getId, Function.identity()));
 		Map<Long, ScoreRequest> scores = indexScores(req.scores(), criteriaById);
@@ -54,16 +60,22 @@ final class GradeUpdater {
 
 		// Kiểm tra và tính hết trước, rồi mới ghi vào entity: lỗi ở tiêu chí sau không để lại thay đổi dở dang.
 		Map<Long, BigDecimal> finalScores = new HashMap<>();
+		Map<Long, RubricLevel> finalLevels = new HashMap<>();
 		for (RubricCriterion c : criteria) {
 			ScoreRequest s = scores.get(c.getId());
 			BigDecimal score = zero ? BigDecimal.ZERO : (s == null ? null : s.score());
+			RubricLevel level = levelOf(c, s, paper);
 			if (!zero) {
 				GradingRules.requireValidScore(c.getName(), score, c.getMaxScore(), c.getStep(),
-						capOf(c, checked, wordCount));
+						capOf(c, checked, wordCount, paper));
+				PaperScoreRules.requireWithinLevel(c.getName(), level, score);
 			}
-			finalScores.put(c.getId(), score == null ? null : score.setScale(1, RoundingMode.UNNECESSARY));
+			// Cột điểm 2 chữ số thập phân (bước 0,25 của bài PAPER); điểm đã được kiểm là bội số của bước.
+			finalScores.put(c.getId(), score == null ? null : score.setScale(2, RoundingMode.UNNECESSARY));
+			finalLevels.put(c.getId(), zero ? null : level);
 		}
 		List<InlineComment> inline = buildInline(req.inlineComments(), criteria, criteriaById, content, codes, now);
+		Map<Long, AdjustmentRequest> adjustments = indexAdjustments(req.memberAdjustments(), paper, members);
 
 		Map<Long, GradeCriterionScore> existingScores = grade.getScores().stream()
 				.collect(Collectors.toMap(s -> s.getCriterion().getId(), Function.identity()));
@@ -78,6 +90,7 @@ final class GradeUpdater {
 			}
 			ScoreRequest s = scores.get(c.getId());
 			row.setScore(finalScores.get(c.getId()));
+			row.setLevel(finalLevels.get(c.getId()));
 			row.setComment(s == null ? null : blankToNull(s.comment()));
 			weighted.add(new Weighted(row.getScore(), c.getWeight()));
 			for (ChecklistItem item : c.getChecklist()) {
@@ -97,15 +110,67 @@ final class GradeUpdater {
 		grade.setGeneralComment(blankToNull(req.generalComment()));
 		grade.setZeroReason(req.zeroReason());
 		grade.setOverallScore(BandCalculator.partBand(weighted));
+		applyAdjustments(grade, adjustments, members);
 	}
 
-	/** Giới hạn điểm của một tiêu chí theo các mục LIMIT đang tick và số từ. */
-	static ScoreCap capOf(RubricCriterion c, Map<Long, Boolean> checked, int wordCount) {
+	/** Giới hạn điểm của một tiêu chí theo các mục LIMIT đang tick và số từ (bài PAPER không áp BR-18). */
+	static ScoreCap capOf(RubricCriterion c, Map<Long, Boolean> checked, int wordCount, boolean paper) {
 		List<LimitMark> limits = c.getChecklist().stream()
 				.filter(i -> i.getKind() == ChecklistKind.LIMIT && checked.getOrDefault(i.getId(), false))
 				.map(i -> new LimitMark(i.getContent(), i.getMaxBand()))
 				.toList();
-		return GradingRules.cap(c.getMaxScore(), limits, wordCount);
+		return GradingRules.cap(c.getMaxScore(), limits, wordCount, !paper);
+	}
+
+	/** Mức đạt đã chọn cho tiêu chí: phải thuộc tiêu chí; chỉ bài PAPER mới chọn mức (BR-31). */
+	private static RubricLevel levelOf(RubricCriterion c, ScoreRequest s, boolean paper) {
+		if (s == null || s.levelId() == null) {
+			return null;
+		}
+		if (!paper) {
+			throw invalid(c.getName() + ": chỉ bài Paper mới chọn mức đạt");
+		}
+		return c.getLevels().stream().filter(l -> l.getId().equals(s.levelId())).findFirst()
+				.orElseThrow(() -> invalid(c.getName() + ": mức đạt " + s.levelId() + " không thuộc tiêu chí này"));
+	}
+
+	/** Cộng / trừ thành viên: chỉ bài PAPER, người phải là thành viên hiện tại của nhóm, mỗi người một dòng. */
+	private static Map<Long, AdjustmentRequest> indexAdjustments(List<AdjustmentRequest> list, boolean paper,
+			Map<Long, User> members) {
+		Map<Long, AdjustmentRequest> map = new HashMap<>();
+		List<AdjustmentRequest> items = Objects.requireNonNullElse(list, List.of());
+		if (!items.isEmpty() && !paper) {
+			throw invalid("Chỉ bài Paper mới cộng / trừ điểm riêng từng thành viên");
+		}
+		for (AdjustmentRequest a : items) {
+			User member = members.get(a.studentId());
+			if (member == null) {
+				throw invalid("Sinh viên " + a.studentId() + " không thuộc nhóm của bài này");
+			}
+			PaperScoreRules.requireValidAdjustment(member.getFullName(), a.delta(), a.reason());
+			if (map.put(a.studentId(), a) != null) {
+				throw invalid(member.getFullName() + ": bị gửi hai lần");
+			}
+		}
+		return map;
+	}
+
+	/** Cập nhật tại chỗ theo khoá (grade, sinh viên) — xoá hết rồi thêm lại sẽ vướng INSERT trước DELETE của Hibernate. */
+	private static void applyAdjustments(Grade grade, Map<Long, AdjustmentRequest> wanted, Map<Long, User> members) {
+		grade.getAdjustments().removeIf(a -> !wanted.containsKey(a.getStudent().getId()));
+		Map<Long, GradeMemberAdjustment> existing = grade.getAdjustments().stream()
+				.collect(Collectors.toMap(a -> a.getStudent().getId(), Function.identity()));
+		wanted.forEach((studentId, req) -> {
+			BigDecimal delta = req.delta().setScale(2, RoundingMode.UNNECESSARY);
+			GradeMemberAdjustment row = existing.get(studentId);
+			if (row == null) {
+				grade.getAdjustments().add(new GradeMemberAdjustment(grade, members.get(studentId), delta,
+						req.reason().trim()));
+			} else {
+				row.setDelta(delta);
+				row.setReason(req.reason().trim());
+			}
+		});
 	}
 
 	private static Map<Long, ScoreRequest> indexScores(List<ScoreRequest> scores, Map<Long, RubricCriterion> criteria) {

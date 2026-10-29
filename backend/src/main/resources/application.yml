@@ -121,6 +121,12 @@ app:
     max-snapshot-bytes: 4194304
     max-text-chars: 200000
     max-updates-per-minute: 600
+    # Thư viện trích dẫn (B24): tra DOI qua backend (tránh CORS, có giới hạn tần suất).
+    max-references: 300
+    max-csl-bytes: 16384
+    doi-base-url: https://doi.org
+    doi-timeout: 10s
+    doi-lookups-per-minute: 20
   grading:
     max-error-codes-per-teacher: 100
     max-comment-bank-items-per-teacher: 500

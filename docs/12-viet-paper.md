@@ -147,10 +147,10 @@ sequenceDiagram
 
 | Thư viện | Ở đâu | Lý do |
 |---|---|---|
-| `@tiptap/*` (react, starter-kit, table, image, code-block-lowlight, collaboration, collaboration-cursor), `lowlight` | Frontend | Trình soạn có định dạng + cộng tác; tự viết là không khả thi |
-| `yjs`, `y-protocols`, `y-indexeddb` | Frontend | CRDT cho cùng sửa + giữ thay đổi khi mất mạng |
-| `katex` | Frontend | Hiển thị công thức |
-| `citation-js` (+ plugin bibtex, csl) | Frontend | Đọc BibTeX, định dạng trích dẫn IEEE / APA theo CSL |
+| `@tiptap/*` 3.x (react, pm, starter-kit, extensions, extension-table, -image, -code-block-lowlight, -mathematics, -collaboration, y-tiptap), `lowlight` — **đã thêm ở B23b** | Frontend | Trình soạn có định dạng + cộng tác; tự viết là không khả thi. `y-tiptap` là cầu nối ProseMirror ↔ Yjs mà `collaboration` bản 3 cần; `extensions` cho chữ gợi ý trong mục |
+| `yjs` — **đã thêm ở B23b**; `y-protocols`, `y-indexeddb`, con trỏ người khác (B26) | Frontend | CRDT cho cùng sửa + giữ thay đổi khi mất mạng |
+| `katex` — **đã thêm ở B23b** | Frontend | Hiển thị công thức (`extension-mathematics` vẽ bằng KaTeX) |
+| `@citation-js/core`, `plugin-bibtex`, `plugin-csl` 0.9 (MIT) — **đã thêm ở B24b-1**; style `ieee.csl` chính thức (CC BY-SA 3.0, đóng gói nguyên văn trong `lib/constants/ieeeCsl.ts` kèm ghi nguồn) | Frontend | Đọc BibTeX, định dạng trích dẫn IEEE / APA theo CSL (APA có sẵn trong plugin) |
 | — | Backend | **Không thêm**: Yjs chỉ chuyển tiếp nhị phân; DOCX dùng POI có sẵn; LaTeX sinh bằng chuỗi |
 
 ---
@@ -180,7 +180,7 @@ sequenceDiagram
 | REST | `/api/teacher/assignments/{id}/groups` (GET, POST, PUT, `…/auto`) | Xem / tạo / sửa nhóm, chia ngẫu nhiên theo lớp |
 | REST | `/api/student/assignments/{id}/group` (GET, POST tạo, POST `…/join`, DELETE rời) | Sinh viên tự lập nhóm trước hạn chốt |
 | REST | `GET /api/papers/docs/{docId}/state` · `PUT …/snapshot` | Trạng thái tài liệu, lưu snapshot |
-| REST | `/api/papers/groups/{groupId}/references` (CRUD), `GET /api/papers/doi/{doi}` | Thư viện trích dẫn, tra DOI |
+| REST | `/api/papers/groups/{groupId}/references` (CRUD + `…/batch`), `GET /api/papers/doi?value=` | Thư viện trích dẫn, tra DOI (DOI có dấu `/` nên đi bằng tham số) — **đã cài ở B24a** |
 | REST | `POST /api/student/parts/{partId}/submit` | Bài PAPER: nộp snapshot của tài liệu nhóm (kiểm tra mục bắt buộc — BR-29) |
 | REST | `GET /api/papers/versions/{versionId}/export?format=docx\|latex` | Xuất file |
 | REST | `GET /api/teacher/papers/docs/{docId}/contributions` | Thống kê đóng góp |
@@ -210,16 +210,16 @@ sequenceDiagram
 | B21a ✅ | Backend nền: `kind`, kiểu trích dẫn, cỡ nhóm, hạn chốt nhóm, khung mục, tiêu chí thang 10, nhóm (giáo viên chia + chia ngẫu nhiên + sinh viên tự lập, BR-27) |
 | B21b ✅ | `submissions.group_id` + view `submission_members` + quyền đọc / nộp theo nhóm (BR-28), thông báo tới mọi thành viên, nhắc giáo viên khi tới hạn chốt nhóm mà còn người chưa có nhóm; khoá đổi nhóm khi nhóm đã có bài làm | Test: một sinh viên một nhóm; mọi thành viên thấy chung bài làm; bài ESSAY không đổi hành vi |
 | B22 ✅ | Lưu tài liệu: `paper_documents`, `paper_doc_updates`, REST state / snapshot, kênh STOMP update (một người viết vẫn đi qua Yjs — để B25 không phải làm lại) | Test: update lưu theo seq; snapshot gộp; người ngoài nhóm bị từ chối |
-| B23 | Frontend trình soạn: TipTap + Yjs, khung mục, bảng, hình, code, công thức, mục lục, đếm từ theo mục; giáo viên soạn bài PAPER + chia nhóm | Lint / build / test; viết được một paper đủ mục và lưu lại được |
-| B24 | Trích dẫn: thư viện nhóm, tra DOI, nhập BibTeX, chèn trích dẫn, danh mục IEEE / APA (BR-30) | Test định dạng IEEE / APA với bộ mẫu |
-| B25 | Nộp + chấm: kiểm tra mục bắt buộc (BR-29), rubric phân tích + rubric mẫu paper IT, thang 10 (BR-31), điểm cộng / trừ riêng từng thành viên, nhận xét theo khối, so sánh lần nộp, màn chấm và màn kết quả cho tài liệu có định dạng | Test: nộp thiếu mục bắt buộc → lỗi; điểm ngoài khoảng của mức → lỗi; điểm thang 10 đúng; mọi thành viên thấy kết quả |
+| B23 ✅ | Frontend trình soạn: TipTap + Yjs, khung mục, bảng, hình, code, công thức, mục lục, đếm từ theo mục; giáo viên soạn bài PAPER + chia nhóm. **B23a ✅** giáo viên soạn bài PAPER + chia nhóm, sinh viên lập / vào nhóm · **B23b-1 ✅** `PaperEditor` + đồng bộ Yjs ở màn làm bài, snapshot định kỳ, nộp tạm bằng chữ thuần · **B23b-2 ✅** `PaperOutline`: mục lục + đếm từ theo mục, nhắc thiếu / vượt / mục bắt buộc trống. Chú thích + đánh số hình / bảng, chú thích cuối trang (FR-72) để sau | Lint / build / test; viết được một paper đủ mục và lưu lại được |
+| B24 ✅ | Trích dẫn: thư viện nhóm, tra DOI, nhập BibTeX, chèn trích dẫn, danh mục IEEE / APA (BR-30). **B24a ✅** backend: `paper_references` (V19), API thư viện + nhập nhiều mục + tra DOI qua backend, lọc CSL, trường còn thiếu · **B24b-1 ✅** frontend thư viện trích dẫn: `ReferenceLibrary` (tra DOI, nhập tay, nhập BibTeX bằng citation-js, sửa / xoá, xem theo IEEE / APA, cảnh báo trường thiếu) · **B24b-2 ✅** node `citation` (`refIds` dạng chuỗi "3,7" trong Yjs, nhãn tính lại bằng decoration — IEEE đánh số theo thứ tự xuất hiện, gộp `[1]–[3]`; APA qua citeproc), hộp chọn tài liệu, danh mục **References** tự sinh cuối bài (ngoài tài liệu Yjs; lúc nộp server dựng lại ở B25) | Test định dạng IEEE / APA với bộ mẫu |
+| B25 🟨 | Nộp + chấm: kiểm tra mục bắt buộc (BR-29), rubric phân tích + rubric mẫu paper IT, thang 10 (BR-31), điểm cộng / trừ riêng từng thành viên, nhận xét theo khối, so sánh lần nộp, màn chấm và màn kết quả cho tài liệu có định dạng. Tách: **B25a ✅** nộp snapshot phía server + chặn mục bắt buộc trống (BR-29) + lưu `content_json` / `references_json` (V20), xem bản nộp có định dạng · **B25b ✅** chấm thang 10 + mức đạt (`rubric_levels`, V21 — kèm sửa cột bước / điểm 2 chữ số thập phân) + cộng / trừ từng thành viên (`grade_member_adjustments`) · B25c FE (tách: **B25c-1 ✅** soạn mức đạt + rubric mẫu paper IT 4 mức · B25c-2 màn chấm Paper · B25c-3 hàng đợi ghi tên nhóm + điểm thang 10) · B25d nhận xét theo khối + so sánh lần nộp · B25e kết quả phía sinh viên + thống kê / xếp hạng | Test: nộp thiếu mục bắt buộc → lỗi; điểm ngoài khoảng của mức → lỗi; điểm thang 10 đúng; mọi thành viên thấy kết quả |
 | **P2 — viết nhóm thật sự** | | |
 | B26 | Cùng sửa realtime: chuyển tiếp nhiều người, con trỏ + tên, mất mạng rồi đồng bộ, thống kê đóng góp (BR-32), giáo viên xem trực tiếp chỉ đọc, chat nhóm | 2 trình duyệt sửa cùng đoạn không mất chữ; tắt mạng một bên rồi bật lại tự gộp |
 | **P3 — hoàn thiện** | | |
 | B27 | Xuất DOCX / LaTeX (IEEEtran, `.zip`) / bản in PDF | Mở DOCX bằng Word; `.zip` biên dịch được trên Overleaf |
 | B28 | Đạo văn + gợi ý AI cho paper (sau khi xong bước 16 và 18) | Như bước 16 / 18 |
 
-Mỗi bước trên còn được tách nhỏ hơn khi bắt đầu làm (vd B23a trình soạn, B23b giao diện giáo viên), như đã làm ở bước 15.
+Mỗi bước trên còn được tách nhỏ hơn khi bắt đầu làm (vd B23a giao diện giáo viên + nhóm, B23b trình soạn), như đã làm ở bước 15.
 
 ## 10. Rủi ro và cách giảm
 

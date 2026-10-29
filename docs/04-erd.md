@@ -41,7 +41,10 @@
 | `V16__paper_assignments.sql` | Mức 4 / bước 21a | `assignments.kind`, `citation_style`, `max_group_size`, `group_lock_at` (CK: chỉ PAPER mới có, PAPER bắt buộc kiểu trích dẫn + cỡ nhóm); `paper_sections`, `paper_groups`, `paper_group_members` | ✅ đã viết |
 | `V17__paper_group_submissions.sql` | Mức 4 / bước 21b | `submissions.group_id`; bỏ UK `(part_id, student_id)`, thay bằng 2 UK một phần: `(part_id, student_id)` khi `group_id IS NULL`, `(part_id, group_id)` khi có nhóm; view `submission_members`; `assignments.group_lock_notified_at` | ✅ đã viết |
 | `V18__paper_documents.sql` | Mức 4 / bước 22 | `paper_documents` (snapshot Yjs + JSON + chữ thuần, `last_seq`), `paper_doc_updates` (log update Yjs, `payload` NULL khi đã gộp) | ✅ đã viết |
-| `V19__…` trở đi | Mức 3 – 4 | Trích dẫn, rubric phân tích, đạo văn, gợi ý AI | ⬜ |
+| `V19__paper_references.sql` | Mức 4 / bước 24a | `paper_references`: thư viện trích dẫn CSL-JSON của nhóm, UK một phần `(group_id, doi)` khi có DOI | ✅ đã viết |
+| `V20__paper_submission_content.sql` | Mức 4 / bước 25a | `submission_versions.content_json`, `references_json` (bài PAPER: tài liệu có định dạng + tài liệu được trích lúc nộp; CK cả hai cùng có hoặc cùng NULL) | ✅ đã viết |
+| `V21__paper_analytic_rubric.sql` | Mức 4 / bước 25b | Nới `rubric_criteria.step`, `grade_criterion_scores.score`, `checklist_items.max_band` sang 2 chữ số thập phân (bước 0,25 của bài PAPER trước đó bị làm tròn thành 0,3) + `max_band` ≤ 10; `rubric_levels` (mức đạt); `grade_criterion_scores.level_id`; `grade_member_adjustments` | ✅ đã viết |
+| `V22__…` trở đi | Mức 3 – 4 | Đạo văn, gợi ý AI | ⬜ |
 
 > V6–V8 phục vụ Mức 2; V9–V10 phục vụ đánh dấu bài; V11–V12 mở rộng và sửa kênh chat riêng. Mức 3 bắt đầu từ V13. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
@@ -217,6 +220,8 @@ erDiagram
         int word_count
         timestamptz submitted_at
         boolean is_late
+        jsonb content_json "bài PAPER"
+        jsonb references_json "bài PAPER"
     }
     grades {
         bigint id PK
@@ -516,9 +521,21 @@ Index: `teacher_id`, `(status, due_at)`.
 | name | VARCHAR(150) | NN | Ví dụ "Task Response" |
 | description | TEXT | | |
 | max_score | NUMERIC(4,1) | NN, DF 9 | |
-| step | NUMERIC(3,1) | NN, DF 0.5 | Bước điểm |
+| step | NUMERIC(4,2) (V21; V1 là 3,1) | NN, DF 0.5 | Bước điểm: bài luận 1 / 0,5; bài PAPER thêm 0,25 |
 | weight | NUMERIC(5,2) | NN, DF 1 | Trọng số khi tính band (BR-12) |
 | order_no | INT | NN, UK cùng part_id | |
+
+#### `rubric_levels` — mức đạt của tiêu chí (V21, chỉ bài PAPER — BR-31)
+| Cột | Kiểu | Ràng buộc | Ý nghĩa |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| criterion_id | BIGINT | FK `rubric_criteria` (cascade), NN | |
+| label | VARCHAR(50) | NN | "Xuất sắc", "Tốt"… |
+| min_score, max_score | NUMERIC(4,2) | NN, CK `0 ≤ min ≤ max` | Khoảng điểm của mức; ứng dụng kiểm tra ≤ điểm tối đa, bội số của bước, các mức không chồng khoảng |
+| descriptor | TEXT | | Bài ở mức này trông như thế nào |
+| order_no | INT | NN, UK cùng criterion_id | |
+
+Sống chết theo tiêu chí (aggregate bài tập → phần → tiêu chí → mức). Nhân bản bài tập chép cả mức.
 
 #### `checklist_items` — mục checklist của một tiêu chí (V1)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -586,6 +603,10 @@ Dòng `submissions` được tạo khi sinh viên **lưu nháp lần đầu**. M
 | word_count | INT | NN | Do **server** đếm |
 | submitted_at | TIMESTAMPTZ | NN | Giờ server |
 | is_late | BOOLEAN | NN | Nộp sau hạn áp dụng (BR-08) |
+| content_json | JSONB | NULL (V20) | Bài PAPER: JSON trình soạn lúc nộp (lấy từ snapshot tài liệu nhóm). Bài luận: NULL |
+| references_json | JSONB | NULL (V20), CK cùng có / cùng NULL với `content_json` | Bài PAPER: các tài liệu được trích lúc nộp `[{id, csl}]` theo thứ tự xuất hiện — danh mục không đổi khi nhóm sửa thư viện sau đó |
+
+Bài PAPER: `content` = chữ thuần (tiêu đề mục + nội dung) client gửi kèm snapshot; `word_count` = số từ phần thân các mục (không tính tiêu đề mục, công thức).
 
 **Bất biến (NFR-11):** ứng dụng chỉ `INSERT`, không bao giờ `UPDATE` hay `DELETE` bảng này. Entity JPA đánh dấu `@Immutable`.
 
@@ -607,7 +628,10 @@ Dòng `submissions` được tạo khi sinh viên **lưu nháp lần đầu**. M
 `overall_score` ở V1 là `NUMERIC(3,1)`, sẽ làm mất phần lẻ (6.25 thành 6.3), trái với quy tắc "chỉ làm tròn khi hiển thị". V5 đổi sang 6 chữ số thập phân.
 
 #### `grade_criterion_scores` — điểm từng tiêu chí (V1)
-PK `(grade_id, criterion_id)`; cột `score NUMERIC(3,1)`, `comment TEXT`. Ứng dụng kiểm tra `0 ≤ score ≤ max_score` và `score` chia hết cho `step`.
+PK `(grade_id, criterion_id)`; cột `score NUMERIC(4,2)` (V21; V1 là 3,1), `comment TEXT`, `level_id` (V21, FK `rubric_levels` SET NULL — mức đạt đã chọn khi chấm bài PAPER). Ứng dụng kiểm tra `0 ≤ score ≤ max_score`, `score` chia hết cho `step`, và nằm trong khoảng của mức đã chọn (BR-31).
+
+#### `grade_member_adjustments` — cộng / trừ riêng thành viên nhóm (V21, bài PAPER)
+PK `(grade_id, student_id)` (cả hai FK cascade); `delta NUMERIC(3,2)` (CK khác 0, trong [-2, 2]; ứng dụng kiểm tra bước 0,25), `reason TEXT NN`. Điểm của thành viên = điểm cả bài (làm tròn 2 chữ số) + `delta`, kẹp trong [0, 10]. Sống chết theo kết quả chấm.
 
 #### `grade_checklist_marks` — tick checklist (V1)
 PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
@@ -725,6 +749,7 @@ Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction
 | view `submission_members` (V17) | Bài làm thuộc về ai: bài luận → `student_id` của dòng; bài PAPER → mọi thành viên **hiện tại** của nhóm. Các truy vấn "bài của tôi", quyền kênh chat bài nộp, ma trận tiến độ, nhắc hạn, số người nộp đủ đều join qua view này |
 | `paper_documents` (V18) | Tài liệu của (giai đoạn, nhóm), UK `(part_id, group_id)`, tạo bằng `INSERT … ON CONFLICT`. `snapshot` (bytea, trạng thái Yjs đã gộp tới `snapshot_seq`), `last_seq` (số thứ tự update lớn nhất đã cấp — chỉ tăng khi đã khoá dòng; CK `snapshot_seq ≤ last_seq`), `content_json` (jsonb) + `content_text` do client gửi kèm snapshot để server đếm từ / nộp / xuất file. Server không đọc nội dung Yjs |
 | `paper_doc_updates` (V18) | Log update Yjs: PK `(document_id, seq)`, `payload` (bytea; **NULL = đã gộp vào snapshot**, dòng vẫn giữ), `author_id` (SET NULL), `chars_added` / `chars_removed` (client tính, cho thống kê đóng góp — BR-32), `created_at`. Chỉ INSERT |
+| `paper_references` (V19) | Thư viện trích dẫn của nhóm (BR-30): `group_id` (FK cascade), `csl` (jsonb, CK là object — bản ghi CSL-JSON đã lọc trường ở server), `doi` (đã chuẩn hoá chữ thường, CK `doi = lower(doi)`; **UK một phần `(group_id, doi)` khi có DOI**), `created_by` (SET NULL), `created_at`, `updated_at`. Index `(group_id, id)`. Nhóm có mục trong thư viện tính là "đã có bài làm" (không xoá nhóm / không tự rời) |
 | `paper_group_members` (V16) | Thành viên nhóm: PK `(group_id, student_id)`; `assignment_id` lặp lại với FK kép `(group_id, assignment_id)` → `paper_groups` và **UK `(assignment_id, student_id)`** — DB chặn một sinh viên ở hai nhóm của cùng bài (BR-27). |
 
 ---

@@ -45,6 +45,6 @@ public class ChecklistItem {
 	@Column(nullable = false, length = 10)
 	private ChecklistKind kind = ChecklistKind.CHECK;
 
-	@Column(name = "max_band", precision = 3, scale = 1)
+	@Column(name = "max_band", precision = 4, scale = 2)
 	private BigDecimal maxBand;
 }
