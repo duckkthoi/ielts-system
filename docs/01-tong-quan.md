@@ -15,7 +15,7 @@ Giáo viên dạy IELTS Writing thường giao bài qua email hoặc nhóm chat,
 - không thống kê được sự tiến bộ của sinh viên.
 
 ### 1.2 Mục tiêu
-Xây dựng website giúp giáo viên **giao bài và chấm bài IELTS Writing trực tuyến**:
+Xây dựng website **AcaWrite** (*Academic Writing*) giúp giáo viên **giao bài và chấm bài IELTS Writing trực tuyến** (từ Mức 4 có thêm paper học thuật viết theo nhóm, xem [docs/12](12-viet-paper.md)):
 - Server **tự tạo tài khoản sinh viên theo mã sinh viên** từ file danh sách giáo viên cung cấp.
 - Giáo viên tạo bài tập gồm **nhiều phần** (ví dụ Task 1 và Task 2), giao cho **lớp** hoặc **từng sinh viên**, đặt **hạn nộp** và **tiêu chí chấm**.
 - Sinh viên làm bài ngay trên web: **tự lưu nháp**, **nộp riêng từng phần**.

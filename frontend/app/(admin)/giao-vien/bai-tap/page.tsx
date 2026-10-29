@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import AssignmentListPage from './index';
 
-export const metadata: Metadata = { title: 'Bài tập — IELTS Writing' };
+export const metadata: Metadata = { title: 'Bài tập — AcaWrite' };
 
 export default function Page() {
   return <AssignmentListPage />;

@@ -18,6 +18,12 @@
 | **Dùng được trên điện thoại** | Sinh viên làm bài được trên điện thoại. Giáo viên chấm bài tối ưu cho màn hình ≥ 1280px |
 | **Tiếp cận (a11y)** | Tương phản chữ ≥ 4.5:1 (WCAG AA), có viền focus rõ, thao tác được bằng bàn phím, icon-only button luôn có tooltip và `aria-label` |
 
+### 1.1 Tên và logo
+- **Tên:** **AcaWrite** (viết tắt *Academic Writing*), dùng chung cho bài luận IELTS và paper học thuật. Viết liền, chữ `A` và `W` hoa. Tiêu đề tab trình duyệt: `<Tên trang> — AcaWrite`. Câu giới thiệu: "Luyện viết IELTS và paper học thuật trực tuyến".
+- **Logo:** ngòi bút hướng lên (đồng thời là chữ "A") trên một dòng kẻ, nét trắng dày 2 / 24, bo đầu nét, đặt trong ô vuông nền `brand-600` bo góc. Trên nền brand thì ô trong suốt, viền trắng 25%.
+- **Code:** component `BrandMark` (`md` 36px dùng ở sidebar / đầu thẻ đăng nhập, `lg` 52px dùng ở panel trang đăng nhập); favicon `app/icon.svg` cùng hình.
+- Nhãn loại bài "Bài luận IELTS", "IELTS Writing Task 1 / 2" giữ nguyên vì nói về loại bài, không phải tên hệ thống.
+
 ---
 
 ## 2. Màu sắc

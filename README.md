@@ -1,6 +1,6 @@
-# Hệ thống giao bài & chấm bài IELTS Writing trực tuyến
+# AcaWrite — giao bài & chấm bài IELTS Writing và paper học thuật trực tuyến
 
-Đồ án môn **Lập trình mạng**. Giáo viên tạo bài tập IELTS Writing nhiều phần, giao theo lớp hoặc từng sinh viên, chấm theo rubric IELTS (checklist, mã lỗi, nhận xét gắn vào đoạn văn) và theo dõi tiến độ. Sinh viên làm bài trên web, tự lưu nháp, nộp từng phần và xem kết quả.
+Đồ án môn **Lập trình mạng**. **AcaWrite** (Academic Writing) là nơi luyện viết học thuật: bài luận IELTS Writing cá nhân và paper ngành IT viết theo nhóm. Giáo viên tạo bài tập IELTS Writing nhiều phần, giao theo lớp hoặc từng sinh viên, chấm theo rubric IELTS (checklist, mã lỗi, nhận xét gắn vào đoạn văn) và theo dõi tiến độ. Sinh viên làm bài trên web, tự lưu nháp, nộp từng phần và xem kết quả.
 
 Phần mạng là trọng tâm: **REST qua HTTPS**, **WebSocket STOMP qua WSS** (thông báo realtime, ai đang online, tiến độ live, chat, một tài khoản một phiên), một **server TCP tự viết** để import sinh viên bằng client dòng lệnh `admin-cli`, rate limit, nhật ký hệ thống, Docker + nginx, và **kiểm thử tải bằng k6**.
 
