@@ -44,6 +44,7 @@
 | `V19__paper_references.sql` | Mức 4 / bước 24a | `paper_references`: thư viện trích dẫn CSL-JSON của nhóm, UK một phần `(group_id, doi)` khi có DOI | ✅ đã viết |
 | `V20__paper_submission_content.sql` | Mức 4 / bước 25a | `submission_versions.content_json`, `references_json` (bài PAPER: tài liệu có định dạng + tài liệu được trích lúc nộp; CK cả hai cùng có hoặc cùng NULL) | ✅ đã viết |
 | `V21__paper_analytic_rubric.sql` | Mức 4 / bước 25b | Nới `rubric_criteria.step`, `grade_criterion_scores.score`, `checklist_items.max_band` sang 2 chữ số thập phân (bước 0,25 của bài PAPER trước đó bị làm tròn thành 0,3) + `max_band` ≤ 10; `rubric_levels` (mức đạt); `grade_criterion_scores.level_id`; `grade_member_adjustments` | ✅ đã viết |
+| `V22__paper_live_comments.sql` | Mức 1 mở rộng | `paper_live_comments`: nhận xét tạm thời của giáo viên trên đoạn văn Paper đang viết | ✅ đã viết |
 | `V22__…` trở đi | Mức 3 – 4 | Đạo văn, gợi ý AI | ⬜ |
 
 > V6–V8 phục vụ Mức 2; V9–V10 phục vụ đánh dấu bài; V11–V12 mở rộng và sửa kênh chat riêng. Mức 3 bắt đầu từ V13. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
@@ -749,6 +750,7 @@ Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction
 | view `submission_members` (V17) | Bài làm thuộc về ai: bài luận → `student_id` của dòng; bài PAPER → mọi thành viên **hiện tại** của nhóm. Các truy vấn "bài của tôi", quyền kênh chat bài nộp, ma trận tiến độ, nhắc hạn, số người nộp đủ đều join qua view này |
 | `paper_documents` (V18) | Tài liệu của (giai đoạn, nhóm), UK `(part_id, group_id)`, tạo bằng `INSERT … ON CONFLICT`. `snapshot` (bytea, trạng thái Yjs đã gộp tới `snapshot_seq`), `last_seq` (số thứ tự update lớn nhất đã cấp — chỉ tăng khi đã khoá dòng; CK `snapshot_seq ≤ last_seq`), `content_json` (jsonb) + `content_text` do client gửi kèm snapshot để server đếm từ / nộp / xuất file. Server không đọc nội dung Yjs |
 | `paper_doc_updates` (V18) | Log update Yjs: PK `(document_id, seq)`, `payload` (bytea; **NULL = đã gộp vào snapshot**, dòng vẫn giữ), `author_id` (SET NULL), `chars_added` / `chars_removed` (client tính, cho thống kê đóng góp — BR-32), `created_at`. Chỉ INSERT |
+| `paper_live_comments` (V22) | Nhận xét trực tiếp của giáo viên trên tài liệu Paper: `document_id`, `author_id`, đoạn chọn bằng `start_offset` / `end_offset`, `quote` bất biến và `comment`; xoá theo tài liệu. Đây là phản hồi hướng dẫn trong lúc viết, không phải điểm chấm bản nộp. |
 | `paper_references` (V19) | Thư viện trích dẫn của nhóm (BR-30): `group_id` (FK cascade), `csl` (jsonb, CK là object — bản ghi CSL-JSON đã lọc trường ở server), `doi` (đã chuẩn hoá chữ thường, CK `doi = lower(doi)`; **UK một phần `(group_id, doi)` khi có DOI**), `created_by` (SET NULL), `created_at`, `updated_at`. Index `(group_id, id)`. Nhóm có mục trong thư viện tính là "đã có bài làm" (không xoá nhóm / không tự rời) |
 | `paper_group_members` (V16) | Thành viên nhóm: PK `(group_id, student_id)`; `assignment_id` lặp lại với FK kép `(group_id, assignment_id)` → `paper_groups` và **UK `(assignment_id, student_id)`** — DB chặn một sinh viên ở hai nhóm của cùng bài (BR-27). |
 

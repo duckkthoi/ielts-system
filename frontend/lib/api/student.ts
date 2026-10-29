@@ -77,7 +77,7 @@ export async function draft(partId: number): Promise<DraftResponse> {
 }
 
 /** Tự lưu chạy nền: trạng thái hiện ở AutosaveIndicator, 409 DRAFT_CONFLICT mở hộp thoại → tắt toast. */
-export async function saveDraft(partId: number, content: string, draftVersion: number): Promise<SaveDraftResponse> {
+export async function saveDraft(partId: number, content: string, draftVersion: number | null): Promise<SaveDraftResponse> {
   const res = (await axiosClient.put(
     formatUrl(URL.draft, { partId }),
     { content, draftVersion },
