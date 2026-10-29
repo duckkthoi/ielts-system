@@ -43,7 +43,10 @@ export function MonitorCell({
   now: number;
   onOpen: () => void;
 }) {
-  const status = cell?.status ?? 'NOT_STARTED';
+  const rawStatus = cell?.status ?? 'NOT_STARTED';
+  // Paper tạo submission lúc nộp, còn lúc đang soạn chỉ báo qua PresenceService.
+  // Đang mở đúng phần nghĩa là sinh viên đang làm, không nên hiện "Chưa làm".
+  const status = viewing && rawStatus === 'NOT_STARTED' ? 'DRAFT' : rawStatus;
   const working = WORKING.has(status);
   const clock = exam && !exam.finishedAt ? formatExamClock(exam.endsAt, now) : null;
 
