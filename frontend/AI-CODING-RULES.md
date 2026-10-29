@@ -58,7 +58,7 @@ stores/                                zustand: useAuthStore, useAppStore (+ sto
 
   | File | Nội dung |
   |---|---|
-  | `page.tsx` | Server component mỏng: `export const metadata = { title: '… — IELTS Writing' }` + render component client (bọc `<Suspense>` nếu dùng `useSearchParams`) |
+  | `page.tsx` | Server component mỏng: `export const metadata = { title: '… — AcaWrite' }` + render component client (bọc `<Suspense>` nếu dùng `useSearchParams`) |
   | `index.tsx` | `'use client'`, toàn bộ giao diện và tương tác |
   | `const.tsx` | Cột bảng, cấu hình form, map nhãn của riêng trang |
   | `type.ts` | Kiểu dữ liệu form / state của riêng trang |

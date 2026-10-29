@@ -1,4 +1,4 @@
-# Frontend — IELTS Writing (Next.js)
+# Frontend — AcaWrite (Next.js)
 
 Next.js 16 (App Router) · React 19 · Ant Design 6 · Tailwind CSS 4 · Zustand 5 · axios · dayjs · lucide-react · STOMP.
 

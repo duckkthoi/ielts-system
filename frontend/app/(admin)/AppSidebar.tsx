@@ -27,7 +27,7 @@ export function AppSidebar({ items, selectedKeys, collapsed = false, onNavigate 
         )}
       >
         <BrandMark />
-        {!collapsed && <span className="font-semibold text-neutral-900">IELTS Writing</span>}
+        {!collapsed && <span className="font-semibold text-neutral-900">AcaWrite</span>}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         <Menu

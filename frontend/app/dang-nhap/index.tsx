@@ -47,9 +47,9 @@ function BrandPanel() {
       <span className="pointer-events-none absolute -bottom-40 -left-45 size-80 rounded-full border border-neutral-0/10" />
       <div className="relative max-w-125">
         <BrandMark size="lg" onBrand />
-        <p className="mt-4 text-h3 font-semibold">IELTS Writing</p>
+        <p className="mt-4 text-h3 font-semibold">AcaWrite</p>
         <h1 className="mt-5 mb-3 text-[34px] leading-tight font-semibold">
-          Giao bài và chấm bài IELTS Writing trực tuyến
+          Luyện viết IELTS và paper học thuật trực tuyến
         </h1>
         <p className="max-w-115 text-prompt text-neutral-0/70">
           Không gian học thuật tập trung cho toàn bộ quá trình luyện viết.
@@ -63,7 +63,7 @@ function BrandPanel() {
           ))}
         </ul>
       </div>
-      <p className="absolute bottom-8 left-16 text-caption text-neutral-0/55">© 2026 IELTS Writing</p>
+      <p className="absolute bottom-8 left-16 text-caption text-neutral-0/55">© 2026 AcaWrite</p>
     </section>
   );
 }
@@ -111,7 +111,7 @@ export default function LoginPage() {
         <Card className="w-full max-w-100 border-0 shadow-md" styles={{ body: { padding: 32 } }}>
           <div className="mb-7 flex items-center gap-2.5 lg:hidden">
             <BrandMark />
-            <span className="font-semibold text-neutral-900">IELTS Writing</span>
+            <span className="font-semibold text-neutral-900">AcaWrite</span>
           </div>
           <h1 className="mb-2 text-h1 font-semibold text-neutral-900">Đăng nhập</h1>
           <p className="text-neutral-500">Chào mừng bạn trở lại. Vui lòng nhập thông tin tài khoản.</p>

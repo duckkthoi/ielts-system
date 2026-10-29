@@ -189,7 +189,7 @@ class StudentImportIntegrationTest extends IntegrationTest {
 
 		var mails = mail.awaitMatching(m -> List.of(m.getTo()).contains(email), 1, Duration.ofSeconds(5));
 		assertThat(mails).hasSize(1);
-		assertThat(mails.getFirst().getSubject()).isEqualTo("Tài khoản hệ thống IELTS Writing");
+		assertThat(mails.getFirst().getSubject()).isEqualTo("Tài khoản hệ thống AcaWrite");
 		assertThat(mails.getFirst().getText()).contains(c1, password, "Lớp import");
 		assertThat(mail.sent()).noneMatch(m -> m.getText() != null && m.getText().contains(c2));
 	}
