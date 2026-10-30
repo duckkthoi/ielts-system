@@ -4,16 +4,17 @@ import { Lock } from 'lucide-react';
 
 import { BandBadge } from '@/components/BandBadge';
 import { DescriptorPanel } from '@/components/DescriptorPanel';
-import type { TaskType } from '@/lib/types/assignment';
+import type { LevelDto, TaskType } from '@/lib/types/assignment';
 import type { GradingCriterion } from '@/lib/types/grading';
+import { formatScore as fmt } from '@/lib/utils/grading';
 
+import { LevelPicker } from './LevelPicker';
 import { ScorePicker } from './ScorePicker';
 
 // ─── Một tiêu chí trên màn chấm (docs/07 mục 7.2 CriterionCard, Prompt 6b ý 2) ─
 // Checklist "Đạt" (CHECK) và "Giới hạn điểm" (LIMIT, tick thì nền warning + khoá các mức cao hơn), ScorePicker,
 // ô nhận xét. Viền trái brand-600 khi đã chấm. Tiêu chí IELTS có nút ⓘ mở bảng mô tả band (DescriptorPanel).
-
-const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+// Bài PAPER (BR-31): điểm "x / tối đa" thay cho band; tiêu chí có mức đạt thì chọn mức trước rồi chỉnh điểm trong khoảng.
 
 export function CriterionCard({
   criterion,
@@ -23,7 +24,10 @@ export function CriterionCard({
   checked,
   cap,
   disabled,
+  paper = false,
+  levelId = null,
   onScore,
+  onLevel,
   onComment,
   onToggle
 }: {
@@ -34,10 +38,15 @@ export function CriterionCard({
   checked: Record<number, boolean>;
   cap: { max: number; reason: string | null };
   disabled: boolean;
+  paper?: boolean;
+  levelId?: number | null;
   onScore: (score: number | null) => void;
+  onLevel?: (level: LevelDto | null) => void;
   onComment: (comment: string) => void;
   onToggle: (itemId: number, value: boolean) => void;
 }) {
+  const hasLevels = paper && criterion.levels.length > 0;
+  const level = hasLevels ? (criterion.levels.find((l) => l.id === levelId) ?? null) : null;
   return (
     <section
       className={clsx(
@@ -55,8 +64,20 @@ export function CriterionCard({
             )}
           </h3>
           {criterion.description && <p className="text-small text-neutral-500">{criterion.description}</p>}
+          {paper && (
+            <p className="text-caption text-neutral-500">
+              Tối đa {fmt(criterion.maxScore)} · trọng số {fmt(criterion.weight)}
+            </p>
+          )}
         </div>
-        <BandBadge band={score} />
+        {paper ? (
+          <span className="shrink-0 font-semibold text-neutral-900 tabular-nums">
+            {score === null ? '—' : fmt(score)}
+            <span className="text-small font-normal text-neutral-500"> / {fmt(criterion.maxScore)}</span>
+          </span>
+        ) : (
+          <BandBadge band={score} />
+        )}
       </div>
 
       {criterion.checklist.length > 0 && (
@@ -86,16 +107,31 @@ export function CriterionCard({
         </ul>
       )}
 
-      <ScorePicker
-        label={criterion.name}
-        value={score}
-        maxScore={criterion.maxScore}
-        step={criterion.step}
-        cap={cap.max}
-        capReason={cap.reason}
-        disabled={disabled}
-        onChange={onScore}
-      />
+      {hasLevels && (
+        <LevelPicker
+          label={criterion.name}
+          levels={criterion.levels}
+          value={level?.id ?? null}
+          cap={cap.max}
+          disabled={disabled}
+          onChange={(l) => onLevel?.(l)}
+        />
+      )}
+      {hasLevels && !level ? (
+        <p className="text-small text-neutral-500">Chọn một mức đạt để chấm điểm trong khoảng của mức.</p>
+      ) : (
+        <ScorePicker
+          label={criterion.name}
+          value={score}
+          maxScore={criterion.maxScore}
+          step={criterion.step}
+          cap={cap.max}
+          capReason={cap.reason}
+          range={level ? { min: level.minScore, max: level.maxScore } : null}
+          disabled={disabled}
+          onChange={onScore}
+        />
+      )}
       {cap.reason && (
         <p className="text-small text-warning">
           Bị giới hạn tối đa {fmt(cap.max)} vì: {cap.reason}

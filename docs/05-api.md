@@ -446,7 +446,8 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - Lưu chấm: `scores[].levelId` (tuỳ chọn) — mức phải thuộc tiêu chí (`400`), điểm phải nằm trong khoảng của mức → `422 LEVEL_MISMATCH`; bài luận gửi `levelId` → `400`. `ScoreDto` trả thêm `levelId`. **Không** áp BR-18 (bài ≤ 20 từ) và không làm tròn kiểu IELTS: `GradeDto.band` của bài PAPER = trung bình có trọng số làm tròn 2 chữ số (vd 7.67), `rawBand` giữ số chưa làm tròn. Checklist "Giới hạn điểm" vẫn dùng được (`maxBand` ≤ 10).
 - `memberAdjustments` = `[{studentId, delta, reason}]` (PUT = thay toàn bộ; chỉ bài PAPER, bài luận → `400`): người phải là thành viên **hiện tại** của nhóm, `delta` khác 0, trong ±2, bước 0,25, có `reason` → nếu không `400`. `GradeDto.adjustments` = `[{studentId, studentName, delta, reason, score}]` với `score` = điểm cả bài + `delta` kẹp [0, 10].
 - `GradingScreen` thêm `assignment.kind` và `members` (thành viên nhóm `[{id, studentCode, fullName}]`, bài luận rỗng); bài PAPER không có cảnh báo `SHORT_ESSAY`. Thông báo trả bài của bài PAPER ghi "Điểm: x / 10".
-- Chưa làm (B25c / B25e): hàng đợi chấm vẫn hiện điểm làm tròn kiểu IELTS và chưa ghi tên nhóm; kết quả phía sinh viên chưa hiện điểm riêng của mình.
+- `GradingScreen` (B25c-2) thêm `assignment.citationStyle` và `version.contentJson` / `version.references` (`[{id, csl}]` — tài liệu được trích lúc nộp, giống phía sinh viên) để màn chấm hiện bài nộp có định dạng; bài luận để null.
+- Chưa làm (B25c-3 / B25e): hàng đợi chấm vẫn hiện điểm làm tròn kiểu IELTS và chưa ghi tên nhóm; kết quả phía sinh viên chưa hiện điểm riêng của mình.
 
 **Chấm bài, trả bài, yêu cầu sửa (đã cài ở B6b; UC-17, UC-18, SD-08):**
 - Chỉ giáo viên tạo bài tập mới thấy và chấm được bài nộp (BR-15). Bài nộp của người khác → `404`.

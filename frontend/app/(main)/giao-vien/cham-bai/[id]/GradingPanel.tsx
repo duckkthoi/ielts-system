@@ -8,8 +8,10 @@ import { BandBadge } from '@/components/BandBadge';
 import { ZERO_REASON_LABEL } from '@/lib/constants';
 import type { GradingScreen } from '@/lib/types/grading';
 import { formatDateTime, formatTime } from '@/lib/utils/date';
+import { formatScore } from '@/lib/utils/grading';
 
 import { CriterionCard } from './CriterionCard';
+import { MemberAdjustments } from './MemberAdjustments';
 import { capOf, useGradeForm } from './useGradeForm';
 
 // ─── Bảng chấm bên phải: tiêu chí → band phần → nhận xét chung → thanh hành động dính đáy ─
@@ -118,25 +120,56 @@ export function GradingPanel({
             score={zero ? 0 : g.form.scores[c.id]}
             comment={g.form.comments[c.id] ?? ''}
             checked={g.form.checked}
-            cap={capOf(c, g.form.checked, screen.version.wordCount)}
+            cap={capOf(c, g.form.checked, screen.version.wordCount, g.paper)}
             disabled={!editable || zero !== null}
-            onScore={(s) => g.setScore(c.id, s)}
+            paper={g.paper}
+            levelId={g.form.levels[c.id]}
+            onScore={(s) => g.setScore(c, s)}
+            onLevel={(l) => g.setLevel(c, l)}
             onComment={(v) => g.setComment(c.id, v)}
             onToggle={(itemId, v) => g.toggleItem(c, itemId, v)}
           />
         ))}
 
-        <div className="flex items-center gap-4 rounded-lg border border-neutral-100 bg-neutral-0 p-4">
-          <BandBadge band={g.bandPreview} size="lg" />
-          <div>
-            <p className="font-semibold text-neutral-900">Band của phần</p>
-            <p className="text-small text-neutral-500">
-              {g.bandPreview === null
-                ? 'Chấm đủ mọi tiêu chí để có band'
-                : 'Trung bình có trọng số các tiêu chí, làm tròn theo IELTS (.25 / .75)'}
-            </p>
+        {g.paper ? (
+          <div className="flex items-center gap-4 rounded-lg border border-neutral-100 bg-neutral-0 p-4">
+            <span className="shrink-0 text-h2 font-semibold text-brand-600 tabular-nums">
+              {g.bandPreview === null ? '—' : formatScore(g.bandPreview)}
+              <span className="text-small font-normal text-neutral-500"> / 10</span>
+            </span>
+            <div>
+              <p className="font-semibold text-neutral-900">Điểm của nhóm</p>
+              <p className="text-small text-neutral-500">
+                {g.bandPreview === null
+                  ? 'Chấm đủ mọi tiêu chí để có điểm'
+                  : 'Trung bình có trọng số các tiêu chí, thang 10, làm tròn 2 chữ số'}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-4 rounded-lg border border-neutral-100 bg-neutral-0 p-4">
+            <BandBadge band={g.bandPreview} size="lg" />
+            <div>
+              <p className="font-semibold text-neutral-900">Band của phần</p>
+              <p className="text-small text-neutral-500">
+                {g.bandPreview === null
+                  ? 'Chấm đủ mọi tiêu chí để có band'
+                  : 'Trung bình có trọng số các tiêu chí, làm tròn theo IELTS (.25 / .75)'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {g.paper && (
+          <MemberAdjustments
+            members={screen.members}
+            adjustments={g.form.adjustments}
+            groupScore={g.bandPreview}
+            disabled={!editable}
+            onDelta={g.setAdjustment}
+            onReason={g.setAdjustmentReason}
+          />
+        )}
 
         <div className="flex flex-col gap-1">
           <label htmlFor="general-comment" className="font-semibold text-neutral-900">
