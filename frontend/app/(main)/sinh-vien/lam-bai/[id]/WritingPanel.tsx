@@ -2,183 +2,35 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { Alert, App, Button, Collapse, Skeleton, Tooltip } from 'antd';
-import { Send } from 'lucide-react';
+import { Alert, Button, Skeleton } from 'antd';
 import Link from 'next/link';
 
-import { CountdownTimer } from '@/components/CountdownTimer';
 import { EssayAnnotator, studentAnnotationViews } from '@/components/EssayAnnotator';
+import { PaperViewer } from '@/components/PaperEditor';
+import { examApi } from '@/lib/api/exam';
 import { studentApi } from '@/lib/api/student';
-import { ApiError } from '@/lib/apiError';
 import { resultPath } from '@/lib/constants';
+import type { CitationStyle } from '@/lib/types/assignment';
+import type { ExamSession } from '@/lib/types/exam';
+import type { CslItem } from '@/lib/types/paper';
 import type { StudentInlineComment, StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
-import { useOnlineStatus } from '@/lib/utils/hooks';
 import { countWords } from '@/lib/utils/wordCount';
-import { useAuthStore } from '@/stores/useAuthStore';
 
-import { AutosaveIndicator } from './AutosaveIndicator';
 import { isWritable } from './const';
-import { DraftConflictModal } from './DraftConflictModal';
+import { EditMode } from './EditMode';
 import { EssayEditor } from './EssayEditor';
-import { PromptPanel } from './PromptPanel';
-import { useDraftAutosave } from './useDraftAutosave';
+import { ExamStartCard } from './ExamStartCard';
+import { Layout } from './Layout';
+import { PaperEditMode } from './PaperEditMode';
 import type { DraftInit } from './useDraftAutosave';
 import { WordCounter } from './WordCounter';
 
 // ─── Một phần đang làm: đề bài (trái 40%) + ô soạn (phải 60%) ─────────────────
 // Còn soạn được (theo `canSubmit` của server) → EditMode có tự lưu + nộp; ngược lại → ViewMode chỉ đọc
 // bản nộp gần nhất. Nộp xong / server báo không soạn được nữa → `onChanged` để trang tải lại trạng thái.
-
-/** Lỗi nộp nghĩa là trạng thái trên trang đã cũ → tải lại. */
-const RELOAD_CODES = new Set(['VERSION_CONFLICT', 'ALREADY_SUBMITTED', 'DEADLINE_PASSED', 'INVALID_STATE']);
-
-function Layout({
-  part,
-  toolbar,
-  children
-}: {
-  part: StudentPartDetail;
-  toolbar: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-      <aside className="hidden border-r border-neutral-100 bg-neutral-0 lg:block">
-        <div className="sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto p-6">
-          <h2 className="mb-3 text-h2 font-semibold text-neutral-900">{part.title}</h2>
-          <PromptPanel part={part} />
-        </div>
-      </aside>
-      <section className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6 lg:py-6">
-        <Collapse
-          className="bg-neutral-0 lg:hidden"
-          items={[{ key: 'prompt', label: 'Xem đề bài', children: <PromptPanel part={part} /> }]}
-        />
-        {toolbar}
-        {children}
-      </section>
-    </div>
-  );
-}
-
-// ─── Đang soạn ────────────────────────────────────────────────────────────────
-
-function EditMode({ part, init, onChanged }: { part: StudentPartDetail; init: DraftInit; onChanged: () => void }) {
-  const { modal, message } = App.useApp();
-  // Layout (main) chỉ render khi đã đăng nhập nên luôn có user; 0 chỉ để thoả kiểu.
-  const userId = useAuthStore((s) => s.user?.id ?? 0);
-  const online = useOnlineStatus();
-  const draft = useDraftAutosave(userId, part.partId, init, onChanged);
-  const [submitting, setSubmitting] = useState(false);
-  const words = useMemo(() => countWords(draft.content), [draft.content]);
-  const blank = words === 0;
-  const canSend = online && draft.state !== 'OFFLINE';
-  const short = part.minWords !== null && words < part.minWords;
-
-  const doSubmit = async () => {
-    setSubmitting(true);
-    await draft.pause();
-    try {
-      const res = await studentApi.submit(part.partId, draft.content, part.currentVersion);
-      draft.stop();
-      message.success(`Đã nộp ${part.title} lúc ${formatDateTime(res.submittedAt)}${res.late ? ' (nộp muộn)' : ''}`);
-      onChanged();
-    } catch (err) {
-      // axiosClient đã toast lý do; trạng thái cũ thì tải lại
-      if (err instanceof ApiError && err.code && RELOAD_CODES.has(err.code)) onChanged();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const confirmSubmit = () =>
-    modal.confirm({
-      title: `Nộp ${part.title}?`,
-      content: short
-        ? `Bài có ${words} từ, ít hơn yêu cầu ${part.minWords} từ.`
-        : 'Sau khi nộp sẽ không sửa được nữa, trừ khi giáo viên yêu cầu sửa.',
-      okText: short ? 'Vẫn nộp' : 'Nộp bài',
-      cancelText: 'Viết tiếp',
-      onOk: doSubmit
-    });
-
-  const submitButton = (block: boolean) => (
-    <Tooltip
-      title={
-        !canSend
-          ? 'Cần có mạng để nộp bài'
-          : blank
-            ? 'Bài đang trống'
-            : draft.conflict
-              ? 'Chọn bản nháp trước khi nộp'
-              : undefined
-      }
-    >
-      <Button
-        type="primary"
-        size="large"
-        block={block}
-        icon={<Send size={16} />}
-        loading={submitting}
-        disabled={!canSend || blank || draft.conflict !== null}
-        onClick={confirmSubmit}
-      >
-        {part.status === 'REVISION_REQUESTED' ? 'Nộp bản sửa' : 'Nộp phần này'}
-      </Button>
-    </Tooltip>
-  );
-
-  const indicator = (
-    <AutosaveIndicator
-      state={draft.state}
-      savedAt={draft.savedAt}
-      error={draft.error}
-      onRetry={() => void draft.save()}
-    />
-  );
-
-  const toolbar = (
-    <div className="flex flex-col gap-3">
-      {part.status === 'REVISION_REQUESTED' && (
-        <Alert
-          type="error"
-          showIcon
-          title={`Giáo viên yêu cầu sửa bài${part.revisionDueAt ? ` · Hạn sửa ${formatDateTime(part.revisionDueAt)}` : ''}`}
-          description={part.revisionNote ? `Lời nhắn: ${part.revisionNote}` : undefined}
-        />
-      )}
-      <div className="mx-auto flex w-full max-w-180 flex-wrap items-center justify-between gap-3">
-        <span className="flex flex-wrap items-center gap-3">
-          {part.effectiveDueAt && <CountdownTimer dueAt={part.effectiveDueAt} />}
-          {indicator}
-        </span>
-        <span className="hidden lg:inline-flex">{submitButton(false)}</span>
-      </div>
-    </div>
-  );
-
-  return (
-    <Layout part={part} toolbar={toolbar}>
-      <EssayEditor
-        value={draft.content}
-        onChange={draft.setContent}
-        footer={
-          <>
-            <WordCounter count={words} minWords={part.minWords} />
-            {indicator}
-          </>
-        }
-      />
-      {/* Điện thoại: thanh dưới cố định với số từ + nút nộp */}
-      <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-neutral-100 bg-neutral-0 px-4 py-3 sm:-mx-6 sm:px-6 lg:hidden">
-        <WordCounter count={words} minWords={part.minWords} />
-        <span className="ml-auto">{submitButton(false)}</span>
-      </div>
-      <DraftConflictModal conflict={draft.conflict} localContent={draft.content} onResolve={draft.resolveConflict} />
-    </Layout>
-  );
-}
+// Phần ở chế độ thi mà chưa bắt đầu → thẻ "Bắt đầu làm bài" thay cho ô soạn (BR-23).
+// Bài PAPER còn soạn được → trình soạn tài liệu nhóm (PaperEditMode) thay cho ô soạn chữ thuần.
 
 // ─── Chỉ đọc: đã nộp / quá hạn / bài đóng ─────────────────────────────────────
 
@@ -193,16 +45,25 @@ function AnnotatedEssay({ content, inline }: { content: string; inline: StudentI
   );
 }
 
-type Submitted = { content: string; submittedAt: string; late: boolean; inline: StudentInlineComment[] | null };
+type Submitted = {
+  content: string;
+  submittedAt: string;
+  late: boolean;
+  inline: StudentInlineComment[] | null;
+  /** Bài PAPER: tài liệu có định dạng + tài liệu được trích lúc nộp (B25a). */
+  paper: { contentJson: Record<string, unknown>; references: { id: number; csl: CslItem }[]; wordCount: number } | null;
+};
 
 function ViewMode({
   assignmentId,
   assignmentClosed,
+  citationStyle,
   part,
   submitted
 }: {
   assignmentId: number;
   assignmentClosed: boolean;
+  citationStyle: CitationStyle;
   part: StudentPartDetail;
   submitted: Submitted | null;
 }) {
@@ -239,7 +100,14 @@ function ViewMode({
 
   return (
     <Layout part={part} toolbar={toolbar}>
-      {submitted?.inline ? (
+      {submitted?.paper ? (
+        <PaperViewer
+          contentJson={submitted.paper.contentJson}
+          references={submitted.paper.references}
+          style={citationStyle}
+          footer={<span className="text-caption text-neutral-500">{submitted.paper.wordCount} từ</span>}
+        />
+      ) : submitted?.inline ? (
         <AnnotatedEssay content={submitted.content} inline={submitted.inline} />
       ) : submitted ? (
         <EssayEditor
@@ -256,16 +124,25 @@ function ViewMode({
 
 // ─── Nạp dữ liệu theo chế độ ──────────────────────────────────────────────────
 
-type Loaded = { mode: 'edit'; init: DraftInit } | { mode: 'view'; submitted: Submitted | null };
+type Loaded =
+  | { mode: 'edit'; init: DraftInit; exam: ExamSession | null }
+  | { mode: 'paper' }
+  | { mode: 'view'; submitted: Submitted | null };
 
 export function WritingPanel({
   assignmentId,
   assignmentClosed,
+  paper,
+  citationStyle,
   part,
   onChanged
 }: {
   assignmentId: number;
   assignmentClosed: boolean;
+  /** Bài PAPER (viết theo nhóm). */
+  paper: boolean;
+  /** Kiểu trích dẫn của bài PAPER (IEEE / APA). */
+  citationStyle: CitationStyle | null;
   part: StudentPartDetail;
   onChanged: () => void;
 }) {
@@ -275,9 +152,17 @@ export function WritingPanel({
   useEffect(() => {
     let cancelled = false;
     const load = async (): Promise<Loaded> => {
+      if (writable && paper) return { mode: 'paper' };
       if (writable) {
-        const d = await studentApi.draft(part.partId);
-        return { mode: 'edit', init: { content: d.content, draftVersion: d.draftVersion, savedAt: d.savedAt } };
+        const [d, exam] = await Promise.all([
+          studentApi.draft(part.partId),
+          part.examMode ? examApi.current(part.partId) : Promise.resolve(null)
+        ]);
+        return {
+          mode: 'edit',
+          init: { content: d.content, draftVersion: d.draftVersion, savedAt: d.savedAt, submissionId: d.submissionId },
+          exam
+        };
       }
       if (part.currentVersion === 0) return { mode: 'view', submitted: null };
       const v = await studentApi.version(part.partId, part.currentVersion);
@@ -287,7 +172,10 @@ export function WritingPanel({
           content: v.content,
           submittedAt: v.submittedAt,
           late: v.late,
-          inline: v.result?.inlineComments ?? null
+          inline: v.result?.inlineComments ?? null,
+          paper: v.contentJson
+            ? { contentJson: v.contentJson, references: v.references ?? [], wordCount: v.wordCount }
+            : null
         }
       };
     };
@@ -302,7 +190,7 @@ export function WritingPanel({
     return () => {
       cancelled = true;
     };
-  }, [part.partId, part.currentVersion, writable]);
+  }, [part.partId, part.currentVersion, part.examMode, writable, paper]);
 
   if (!loaded) {
     return (
@@ -311,12 +199,31 @@ export function WritingPanel({
       </div>
     );
   }
+  if (loaded.mode === 'edit' && part.examMode && !loaded.exam) {
+    const init = loaded.init;
+    return (
+      <Layout part={part} toolbar={null}>
+        <ExamStartCard part={part} onStarted={(exam) => setLoaded({ mode: 'edit', init, exam })} />
+      </Layout>
+    );
+  }
+  if (loaded.mode === 'paper') {
+    return (
+      <PaperEditMode
+        assignmentId={assignmentId}
+        citationStyle={citationStyle ?? 'IEEE'}
+        part={part}
+        onChanged={onChanged}
+      />
+    );
+  }
   return loaded.mode === 'edit' ? (
-    <EditMode part={part} init={loaded.init} onChanged={onChanged} />
+    <EditMode part={part} init={loaded.init} exam={loaded.exam} onChanged={onChanged} />
   ) : (
     <ViewMode
       assignmentId={assignmentId}
       assignmentClosed={assignmentClosed}
+      citationStyle={citationStyle ?? 'IEEE'}
       part={part}
       submitted={loaded.submitted}
     />

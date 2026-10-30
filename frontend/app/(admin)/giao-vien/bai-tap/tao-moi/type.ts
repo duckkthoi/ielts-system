@@ -1,6 +1,6 @@
 import type { Dayjs } from 'dayjs';
 
-import type { ChecklistKind, CriterionCode, TaskType } from '@/lib/types/assignment';
+import type { AssignmentKind, ChecklistKind, CitationStyle, CriterionCode, TaskType } from '@/lib/types/assignment';
 
 // ─── Giá trị form của trình soạn (một Form chung cho mọi bước) ────────────────
 // Ngày giờ là Dayjs, đề bài là văn bản thường; đổi sang AssignmentRequest khi lưu (convert.ts).
@@ -19,6 +19,24 @@ export interface CriterionForm {
   step: number;
   weight: number;
   checklist: ChecklistItemForm[];
+  /** Mức đạt — chỉ bài Paper (BR-31). */
+  levels?: LevelForm[];
+}
+
+export interface LevelForm {
+  label: string;
+  minScore: number | null;
+  maxScore: number | null;
+  descriptor?: string | null;
+}
+
+/** Một mục trong khung của giai đoạn bài PAPER (BR-29). */
+export interface SectionForm {
+  sectionKey?: string | null;
+  title: string;
+  required: boolean;
+  minWords?: number | null;
+  maxWords?: number | null;
 }
 
 export interface PartForm {
@@ -32,6 +50,9 @@ export interface PartForm {
   partDueAt?: Dayjs | null;
   weight?: number | null;
   criteria: CriterionForm[];
+  examMode?: boolean;
+  examDurationMinutes?: number | null;
+  sections?: SectionForm[];
 }
 
 export interface AssignmentForm {
@@ -43,4 +64,9 @@ export interface AssignmentForm {
   maxRevisions: number;
   showSuggestionsOnRevision: boolean;
   parts: PartForm[];
+  /** Mức 4: bài luận IELTS hay paper theo nhóm. */
+  kind: AssignmentKind;
+  citationStyle?: CitationStyle | null;
+  maxGroupSize?: number | null;
+  groupLockAt?: Dayjs | null;
 }

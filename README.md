@@ -1,6 +1,6 @@
-# Hệ thống giao bài & chấm bài IELTS Writing trực tuyến
+# AcaWrite — giao bài & chấm bài IELTS Writing và paper học thuật trực tuyến
 
-Đồ án môn **Lập trình mạng**. Giáo viên tạo bài tập IELTS Writing nhiều phần, giao theo lớp hoặc từng sinh viên, chấm theo rubric IELTS (checklist, mã lỗi, nhận xét gắn vào đoạn văn) và theo dõi tiến độ. Sinh viên làm bài trên web, tự lưu nháp, nộp từng phần và xem kết quả.
+Đồ án môn **Lập trình mạng**. **AcaWrite** (Academic Writing) là nơi luyện viết học thuật: bài luận IELTS Writing cá nhân và paper ngành IT viết theo nhóm. Giáo viên tạo bài tập IELTS Writing nhiều phần, giao theo lớp hoặc từng sinh viên, chấm theo rubric IELTS (checklist, mã lỗi, nhận xét gắn vào đoạn văn) và theo dõi tiến độ. Sinh viên làm bài trên web, tự lưu nháp, nộp từng phần và xem kết quả.
 
 Phần mạng là trọng tâm: **REST qua HTTPS**, **WebSocket STOMP qua WSS** (thông báo realtime, ai đang online, tiến độ live, chat, một tài khoản một phiên), một **server TCP tự viết** để import sinh viên bằng client dòng lệnh `admin-cli`, rate limit, nhật ký hệ thống, Docker + nginx, và **kiểm thử tải bằng k6**.
 
@@ -124,7 +124,7 @@ Bộ ảnh này cho thấy vì sao phải dùng HTTPS: qua HTTP, mật khẩu hi
 | Tài liệu | Nội dung |
 |---|---|
 | [01 Tổng quan](docs/01-tong-quan.md) | Yêu cầu chức năng (FR), phi chức năng (NFR), quy tắc nghiệp vụ BR-01 → BR-22, kiến trúc |
-| [02 Use case](docs/02-use-case.md) · [03 Sequence](docs/03-sequence.md) | 32 use case, sơ đồ tuần tự SD-01 → SD-14 |
+| [02 Use case](docs/02-use-case.md) · [03 Sequence](docs/03-sequence.md) | 32 use case, sơ đồ tuần tự SD-01 → SD-13 |
 | [04 ERD](docs/04-erd.md) · [05 API](docs/05-api.md) · [06 Trạng thái](docs/06-trang-thai.md) | Bảng và migration; REST, WebSocket, giao thức TCP, mã lỗi; vòng đời đối tượng |
 | [07 Design system](docs/07-design-system.md) · [08 Nghiệp vụ chấm IELTS](docs/08-nghiep-vu-cham-ielts.md) | Giao diện; cách chấm và tính band |
 | [09 Kiểm thử tải](docs/09-kiem-thu-tai.md) | Môi trường, kịch bản và kết quả k6 |

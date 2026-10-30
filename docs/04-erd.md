@@ -36,8 +36,16 @@
 | `V11__direct_student_chat.sql` | Mức 2 mở rộng | `direct_chat_channels`, thêm kênh `DIRECT` cho chat riêng giáo viên–học sinh | ✅ đã viết |
 | `V12__direct_chat_message_type.sql` | Mức 2 sửa lỗi | Nới CHECK của `chat_messages.channel_type` để lưu tin nhắn `DIRECT` | ✅ đã viết |
 | `V13__question_bank.sql` | Mức 3 / bước 17 | `question_bank_items`, `question_bank_tags`; mỗi đề tham chiếu một rubric riêng của giáo viên | ✅ đã viết |
-| `V14__student_activity_events.sql` | FR-54 | Nhật ký vào/rời màn làm bài và chuyển tab | ✅ |
-| `V15__…` trở đi | Mức 3 | Chế độ thi (`assignment_parts.exam_mode`, `exam_sessions`…), đạo văn, gợi ý AI | ⬜ |
+| `V14__exam_mode.sql` | Mức 3 / bước 15a | `assignment_parts.exam_mode`, `exam_duration_minutes` (CK: bật thi thì phải có thời lượng); `exam_sessions`, `exam_events` | ✅ đã viết |
+| `V15__exam_window_events.sql` | Mức 3 / bước 15e | `exam_events.type` thêm `WINDOW_BLUR`, `WINDOW_FOCUS`; cột `reported_late`; index `occurred_at DESC` cho bảng tin giám sát | ✅ đã viết |
+| `V16__paper_assignments.sql` | Mức 4 / bước 21a | `assignments.kind`, `citation_style`, `max_group_size`, `group_lock_at` (CK: chỉ PAPER mới có, PAPER bắt buộc kiểu trích dẫn + cỡ nhóm); `paper_sections`, `paper_groups`, `paper_group_members` | ✅ đã viết |
+| `V17__paper_group_submissions.sql` | Mức 4 / bước 21b | `submissions.group_id`; bỏ UK `(part_id, student_id)`, thay bằng 2 UK một phần: `(part_id, student_id)` khi `group_id IS NULL`, `(part_id, group_id)` khi có nhóm; view `submission_members`; `assignments.group_lock_notified_at` | ✅ đã viết |
+| `V18__paper_documents.sql` | Mức 4 / bước 22 | `paper_documents` (snapshot Yjs + JSON + chữ thuần, `last_seq`), `paper_doc_updates` (log update Yjs, `payload` NULL khi đã gộp) | ✅ đã viết |
+| `V19__paper_references.sql` | Mức 4 / bước 24a | `paper_references`: thư viện trích dẫn CSL-JSON của nhóm, UK một phần `(group_id, doi)` khi có DOI | ✅ đã viết |
+| `V20__paper_submission_content.sql` | Mức 4 / bước 25a | `submission_versions.content_json`, `references_json` (bài PAPER: tài liệu có định dạng + tài liệu được trích lúc nộp; CK cả hai cùng có hoặc cùng NULL) | ✅ đã viết |
+| `V21__paper_analytic_rubric.sql` | Mức 4 / bước 25b | Nới `rubric_criteria.step`, `grade_criterion_scores.score`, `checklist_items.max_band` sang 2 chữ số thập phân (bước 0,25 của bài PAPER trước đó bị làm tròn thành 0,3) + `max_band` ≤ 10; `rubric_levels` (mức đạt); `grade_criterion_scores.level_id`; `grade_member_adjustments` | ✅ đã viết |
+| `V22__paper_live_comments.sql` | Mức 1 mở rộng | `paper_live_comments`: nhận xét tạm thời của giáo viên trên đoạn văn Paper đang viết | ✅ đã viết |
+| `V22__…` trở đi | Mức 3 – 4 | Đạo văn, gợi ý AI | ⬜ |
 
 > V6–V8 phục vụ Mức 2; V9–V10 phục vụ đánh dấu bài; V11–V12 mở rộng và sửa kênh chat riêng. Mức 3 bắt đầu từ V13. Mô tả cột chi tiết ở mục 4 sẽ được bổ sung khi viết từng migration.
 
@@ -213,6 +221,8 @@ erDiagram
         int word_count
         timestamptz submitted_at
         boolean is_late
+        jsonb content_json "bài PAPER"
+        jsonb references_json "bài PAPER"
     }
     grades {
         bigint id PK
@@ -284,8 +294,6 @@ erDiagram
     direct_chat_channels |o--o{ chat_messages : "kênh riêng"
     users ||--o{ chat_read_markers : "đã đọc tới"
     users |o--o{ audit_logs : "thực hiện"
-    assignments ||--o{ student_activity_events : "ghi hoạt động"
-    users ||--o{ student_activity_events : "tạo hoạt động"
 
     notifications {
         bigint id PK
@@ -336,13 +344,6 @@ erDiagram
         jsonb detail
         timestamptz created_at
     }
-    student_activity_events {
-        bigint id PK
-        bigint assignment_id FK
-        bigint student_id FK
-        varchar event_type "PAGE_ENTERED | PAGE_LEFT | TAB_HIDDEN | TAB_VISIBLE"
-        timestamptz occurred_at
-    }
 ```
 
 ### 3.5 Mở rộng (Mức 3)
@@ -365,15 +366,16 @@ erDiagram
         bigint student_id FK
         timestamptz started_at
         timestamptz ends_at
-        timestamptz finished_at
-        varchar finish_reason "SUBMITTED | TIMEOUT"
+        timestamptz finished_at "lần nộp đầu"
+        timestamptz overtime_notified_at
     }
     exam_events {
         bigint id PK
         bigint exam_session_id FK
-        varchar type "TAB_HIDDEN | TAB_VISIBLE | PASTE | DISCONNECT | RECONNECT"
+        varchar type "STARTED | TAB_HIDDEN | TAB_VISIBLE | WINDOW_BLUR | WINDOW_FOCUS | PASTE | DISCONNECT | RECONNECT | OVERTIME | SUBMITTED"
+        int paste_chars
         timestamptz occurred_at
-        varchar ip
+        boolean reported_late
     }
     similarity_reports {
         bigint id PK
@@ -486,11 +488,16 @@ Một sinh viên có thể thuộc nhiều lớp. Xoá lớp không xoá tài kh
 | max_revisions | INT | NN, DF 2, CK ≥ 0 | Số lần tối đa được yêu cầu sửa (BR-10) |
 | published_at | TIMESTAMPTZ | | |
 | open_notified_at | TIMESTAMPTZ | (V4) | Đã gửi thông báo "bài mới" cho trường hợp `open_at` ở tương lai (SD-05) |
+| kind | VARCHAR(10) | (V16) NN, CK, DF `ESSAY` | `ESSAY` (bài luận IELTS) \| `PAPER` (paper theo nhóm). Thang điểm suy ra từ loại: band IELTS / thang 10 |
+| citation_style | VARCHAR(10) | (V16) CK | `IEEE` \| `APA`; chỉ PAPER, bắt buộc với PAPER (BR-30) |
+| max_group_size | INT | (V16) CK 1–10 | Cỡ nhóm tối đa; chỉ PAPER, bắt buộc với PAPER (BR-27) |
+| group_lock_at | TIMESTAMPTZ | (V16) | Hạn chốt nhóm; NULL = tới hạn nộp. Chỉ PAPER |
+| group_lock_notified_at | TIMESTAMPTZ | (V17) | Job đã báo giáo viên lúc tới hạn chốt nhóm (chống báo trùng, BR-27) |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
 Index: `teacher_id`, `(status, due_at)`.
 
-#### `assignment_parts` — các phần của bài (V1, V4, V13+)
+#### `assignment_parts` — các phần của bài (V1, V4, V14)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
 |---|---|---|---|
 | id | BIGINT | PK | |
@@ -503,8 +510,8 @@ Index: `teacher_id`, `(status, due_at)`.
 | min_words | INT | CK ≥ 0 | 150 / 250 theo IELTS |
 | suggested_minutes | INT | CK > 0 | 20 / 40 theo IELTS |
 | part_due_at | TIMESTAMPTZ | | NULL = dùng `assignments.due_at` (BR-07) |
-| exam_mode | BOOLEAN | (V13+, Mức 3) DF false | Bật chế độ thi |
-| exam_duration_minutes | INT | (V10+, Mức 3) | Thời gian làm bài của chế độ thi |
+| exam_mode | BOOLEAN | (V14) NN, DF false | Bật chế độ thi (BR-23) |
+| exam_duration_minutes | INT | (V14) CK 1–300; CK bắt buộc khi `exam_mode` | Thời gian làm bài của chế độ thi (phút). Không nhập thì lấy `suggested_minutes` |
 | created_at, updated_at | TIMESTAMPTZ | NN | |
 
 #### `rubric_criteria` — tiêu chí chấm của một phần (V1)
@@ -515,9 +522,21 @@ Index: `teacher_id`, `(status, due_at)`.
 | name | VARCHAR(150) | NN | Ví dụ "Task Response" |
 | description | TEXT | | |
 | max_score | NUMERIC(4,1) | NN, DF 9 | |
-| step | NUMERIC(3,1) | NN, DF 0.5 | Bước điểm |
+| step | NUMERIC(4,2) (V21; V1 là 3,1) | NN, DF 0.5 | Bước điểm: bài luận 1 / 0,5; bài PAPER thêm 0,25 |
 | weight | NUMERIC(5,2) | NN, DF 1 | Trọng số khi tính band (BR-12) |
 | order_no | INT | NN, UK cùng part_id | |
+
+#### `rubric_levels` — mức đạt của tiêu chí (V21, chỉ bài PAPER — BR-31)
+| Cột | Kiểu | Ràng buộc | Ý nghĩa |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| criterion_id | BIGINT | FK `rubric_criteria` (cascade), NN | |
+| label | VARCHAR(50) | NN | "Xuất sắc", "Tốt"… |
+| min_score, max_score | NUMERIC(4,2) | NN, CK `0 ≤ min ≤ max` | Khoảng điểm của mức; ứng dụng kiểm tra ≤ điểm tối đa, bội số của bước, các mức không chồng khoảng |
+| descriptor | TEXT | | Bài ở mức này trông như thế nào |
+| order_no | INT | NN, UK cùng criterion_id | |
+
+Sống chết theo tiêu chí (aggregate bài tập → phần → tiêu chí → mức). Nhân bản bài tập chép cả mức.
 
 #### `checklist_items` — mục checklist của một tiêu chí (V1)
 | Cột | Kiểu | Ràng buộc | Ý nghĩa |
@@ -585,6 +604,10 @@ Dòng `submissions` được tạo khi sinh viên **lưu nháp lần đầu**. M
 | word_count | INT | NN | Do **server** đếm |
 | submitted_at | TIMESTAMPTZ | NN | Giờ server |
 | is_late | BOOLEAN | NN | Nộp sau hạn áp dụng (BR-08) |
+| content_json | JSONB | NULL (V20) | Bài PAPER: JSON trình soạn lúc nộp (lấy từ snapshot tài liệu nhóm). Bài luận: NULL |
+| references_json | JSONB | NULL (V20), CK cùng có / cùng NULL với `content_json` | Bài PAPER: các tài liệu được trích lúc nộp `[{id, csl}]` theo thứ tự xuất hiện — danh mục không đổi khi nhóm sửa thư viện sau đó |
+
+Bài PAPER: `content` = chữ thuần (tiêu đề mục + nội dung) client gửi kèm snapshot; `word_count` = số từ phần thân các mục (không tính tiêu đề mục, công thức).
 
 **Bất biến (NFR-11):** ứng dụng chỉ `INSERT`, không bao giờ `UPDATE` hay `DELETE` bảng này. Entity JPA đánh dấu `@Immutable`.
 
@@ -606,7 +629,10 @@ Dòng `submissions` được tạo khi sinh viên **lưu nháp lần đầu**. M
 `overall_score` ở V1 là `NUMERIC(3,1)`, sẽ làm mất phần lẻ (6.25 thành 6.3), trái với quy tắc "chỉ làm tròn khi hiển thị". V5 đổi sang 6 chữ số thập phân.
 
 #### `grade_criterion_scores` — điểm từng tiêu chí (V1)
-PK `(grade_id, criterion_id)`; cột `score NUMERIC(3,1)`, `comment TEXT`. Ứng dụng kiểm tra `0 ≤ score ≤ max_score` và `score` chia hết cho `step`.
+PK `(grade_id, criterion_id)`; cột `score NUMERIC(4,2)` (V21; V1 là 3,1), `comment TEXT`, `level_id` (V21, FK `rubric_levels` SET NULL — mức đạt đã chọn khi chấm bài PAPER). Ứng dụng kiểm tra `0 ≤ score ≤ max_score`, `score` chia hết cho `step`, và nằm trong khoảng của mức đã chọn (BR-31).
+
+#### `grade_member_adjustments` — cộng / trừ riêng thành viên nhóm (V21, bài PAPER)
+PK `(grade_id, student_id)` (cả hai FK cascade); `delta NUMERIC(3,2)` (CK khác 0, trong [-2, 2]; ứng dụng kiểm tra bước 0,25), `reason TEXT NN`. Điểm của thành viên = điểm cả bài (làm tròn 2 chữ số) + `delta`, kẹp trong [0, 10]. Sống chết theo kết quả chấm.
 
 #### `grade_checklist_marks` — tick checklist (V1)
 PK `(grade_id, checklist_item_id)`; cột `checked BOOLEAN`.
@@ -709,27 +735,24 @@ PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp, 
 
 Index: `(created_at DESC)`, `(actor_id, created_at DESC)`. Ghi cùng transaction với thao tác (rollback thì không có dòng "ma"); riêng đăng nhập sai / bị chặn và import TCP ghi transaction riêng để không mất khi request lỗi.
 
-#### `student_activity_events` (V14, FR-54)
-
-| Cột | Kiểu | Ràng buộc | Ý nghĩa |
-|---|---|---|---|
-| id | BIGINT | PK | |
-| assignment_id | BIGINT | FK → assignments (cascade), NN | Bài làm |
-| student_id | BIGINT | FK → users (cascade), NN | Sinh viên |
-| event_type | VARCHAR(20) | NN, CK | `PAGE_ENTERED`, `PAGE_LEFT`, `TAB_HIDDEN`, `TAB_VISIBLE` |
-| occurred_at | TIMESTAMPTZ | NN | Thời điểm do server ghi |
-
-Index `(assignment_id, occurred_at DESC, id DESC)` để tải lịch sử bài; `(student_id, assignment_id, occurred_at DESC, id DESC)` để truy vấn theo sinh viên. Không lưu URL ngoài hoặc nội dung trang được mở.
-
-### 4.7 Nhóm mở rộng (V13, V15 trở đi, Mức 3)
+### 4.7 Nhóm mở rộng (V13 trở đi, Mức 3)
 | Bảng | Mô tả |
 |---|---|
-| `exam_sessions` | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần. `ends_at` cố định từ lúc bắt đầu. `finish_reason` là `SUBMITTED` hoặc `TIMEOUT`. |
-| `exam_events` | Các sự kiện trong phiên thi: chuyển tab, dán, mất kết nối, kết nối lại, kèm IP. |
+| `exam_sessions` (V14) | Phiên thi của một sinh viên cho một phần. UK `(part_id, student_id)`: mỗi người thi một lần, tạo bằng `INSERT … ON CONFLICT DO NOTHING`. `ends_at` cố định từ lúc bắt đầu (CK `ends_at > started_at`). `finished_at` = lần nộp đầu tiên (nộp sau `ends_at` = quá thời gian, BR-24). `overtime_notified_at` = job đã báo quá giờ (chống báo trùng). Index một phần trên `ends_at` cho phiên chưa nộp, chưa báo. |
+| `exam_events` (V14, V15) | Sự kiện trong phiên thi (BR-25): `STARTED`, `TAB_HIDDEN`, `TAB_VISIBLE`, `WINDOW_BLUR` / `WINDOW_FOCUS` (rời / quay lại cửa sổ mà tab vẫn hiện), `PASTE` (kèm `paste_chars`, không lưu nội dung dán), `DISCONNECT`, `RECONNECT`, `OVERTIME`, `SUBMITTED`. `occurred_at` là giờ server lúc nhận; sự kiện gửi bù (`reported_late = true`) thì là giờ client báo, kẹp trong `[started_at, lúc nhận]`. Index `(exam_session_id, occurred_at)`, `(occurred_at DESC)`. |
 | `similarity_reports` | Cặp version cùng phần có độ giống cao, `score` từ 0 tới 1. Lưu `version_a_id < version_b_id` để không trùng cặp. |
 | `question_bank_items` (V13) | Ngân hàng đề riêng của giáo viên: loại Task, đề HTML đã lọc, ảnh, số từ, thời gian gợi ý; `rubric_template_id` NN, UK trỏ tới rubric riêng của cùng giáo viên. Index `(teacher_id, updated_at DESC)` và `(teacher_id, task_type)`. |
 | `question_bank_tags` (V13) | Tag đã chuẩn hoá chữ thường; PK `(item_id, tag)`, xoá theo đề. |
 | `ai_suggestions` | Kết quả gợi ý của AI cho một version, dạng JSONB, chỉ giáo viên xem được. |
+| `paper_sections` (V16) | Khung mục của một giai đoạn bài PAPER (BR-29): `part_id` (FK cascade), `section_key` (mã ổn định cho trình soạn, UK trong phần), `title`, `required`, `min_words`, `max_words` (CK min ≤ max), `order_no` (UK trong phần). Sống chết theo phần bài (aggregate). |
+| `paper_groups` (V16) | Nhóm trong một bài PAPER: `assignment_id` (FK cascade), `name` (UK trong bài), `created_by` (giáo viên hoặc sinh viên tự lập; SET NULL khi xoá tài khoản), `created_at`. UK `(id, assignment_id)` cho khoá ngoại kép. |
+| `submissions.group_id` (V17) | Bài làm của bài PAPER thuộc nhóm (BR-28): UK một phần `(part_id, group_id)`; bài luận giữ UK một phần `(part_id, student_id)` khi `group_id IS NULL`. FK không xoá theo (nhóm có bài làm không xoá được). `student_id` của bài nhóm = người tạo / người nộp gần nhất |
+| view `submission_members` (V17) | Bài làm thuộc về ai: bài luận → `student_id` của dòng; bài PAPER → mọi thành viên **hiện tại** của nhóm. Các truy vấn "bài của tôi", quyền kênh chat bài nộp, ma trận tiến độ, nhắc hạn, số người nộp đủ đều join qua view này |
+| `paper_documents` (V18) | Tài liệu của (giai đoạn, nhóm), UK `(part_id, group_id)`, tạo bằng `INSERT … ON CONFLICT`. `snapshot` (bytea, trạng thái Yjs đã gộp tới `snapshot_seq`), `last_seq` (số thứ tự update lớn nhất đã cấp — chỉ tăng khi đã khoá dòng; CK `snapshot_seq ≤ last_seq`), `content_json` (jsonb) + `content_text` do client gửi kèm snapshot để server đếm từ / nộp / xuất file. Server không đọc nội dung Yjs |
+| `paper_doc_updates` (V18) | Log update Yjs: PK `(document_id, seq)`, `payload` (bytea; **NULL = đã gộp vào snapshot**, dòng vẫn giữ), `author_id` (SET NULL), `chars_added` / `chars_removed` (client tính, cho thống kê đóng góp — BR-32), `created_at`. Chỉ INSERT |
+| `paper_live_comments` (V22) | Nhận xét trực tiếp của giáo viên trên tài liệu Paper: `document_id`, `author_id`, đoạn chọn bằng `start_offset` / `end_offset`, `quote` bất biến và `comment`; xoá theo tài liệu. Đây là phản hồi hướng dẫn trong lúc viết, không phải điểm chấm bản nộp. |
+| `paper_references` (V19) | Thư viện trích dẫn của nhóm (BR-30): `group_id` (FK cascade), `csl` (jsonb, CK là object — bản ghi CSL-JSON đã lọc trường ở server), `doi` (đã chuẩn hoá chữ thường, CK `doi = lower(doi)`; **UK một phần `(group_id, doi)` khi có DOI**), `created_by` (SET NULL), `created_at`, `updated_at`. Index `(group_id, id)`. Nhóm có mục trong thư viện tính là "đã có bài làm" (không xoá nhóm / không tự rời) |
+| `paper_group_members` (V16) | Thành viên nhóm: PK `(group_id, student_id)`; `assignment_id` lặp lại với FK kép `(group_id, assignment_id)` → `paper_groups` và **UK `(assignment_id, student_id)`** — DB chặn một sinh viên ở hai nhóm của cùng bài (BR-27). |
 
 ---
 
@@ -739,6 +762,7 @@ Index `(assignment_id, occurred_at DESC, id DESC)` để tải lịch sử bài;
 |---|---|---|
 | Mật khẩu tạm sau khi import | Bộ nhớ backend, tự huỷ sau 15 phút hoặc sau lần tải đầu tiên | Không bao giờ lưu mật khẩu dạng rõ (SD-03) |
 | Ai đang online, đang mở bài nào | `ConcurrentHashMap` trong backend | Dữ liệu tạm, mất khi khởi động lại cũng không sao (monolith) |
+| Nội dung sinh viên đang gõ (xem trực tiếp, BR-26) | `ConcurrentHashMap` trong backend (`realtime/LiveDraftService`), xoá khi nộp | Cập nhật ~1 lần / giây, không đáng ghi DB; mất khi khởi động lại thì màn xem trực tiếp dùng bản nháp đã lưu |
 | Số lần đăng nhập sai theo IP / tài khoản | Bộ nhớ backend, cửa sổ 5 phút | Rate limit (NFR-09) |
 | Ảnh đề bài | Thư mục `uploads/` (volume Docker) | DB chỉ lưu đường dẫn |
 | Bản nháp khi mất mạng | IndexedDB của trình duyệt | Đồng bộ lên `submissions.draft_content` khi có mạng (SD-06) |

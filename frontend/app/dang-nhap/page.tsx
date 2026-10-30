@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 import LoginPage from './index';
 
-export const metadata: Metadata = { title: 'Đăng nhập — IELTS Writing' };
+export const metadata: Metadata = { title: 'Đăng nhập — AcaWrite' };
 
 export default function Page() {
   return (

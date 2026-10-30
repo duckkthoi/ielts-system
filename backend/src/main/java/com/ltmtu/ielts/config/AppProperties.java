@@ -24,7 +24,10 @@ public record AppProperties(
 		Tcp tcp,
 		RateLimit rateLimit,
 		Session session,
-		Demo demo) {
+		Demo demo,
+		Exam exam,
+		Live live,
+		Paper paper) {
 
 	/**
 	 * @param refreshReuseGrace refresh token cũ dùng lại trong khoảng này sau khi xoay vòng (vd 2 tab refresh cùng
@@ -93,6 +96,42 @@ public record AppProperties(
 	 * @param loadStudents số sinh viên của lớp kiểm thử tải {@code <prefix>-LOAD} ({@code <prefix>-T0001}…); 0 = không tạo
 	 */
 	public record Demo(String prefix, String password, int studentsPerClass, int loadStudents) {
+	}
+
+	/**
+	 * Chế độ thi (Mức 3, bước 15).
+	 *
+	 * @param overtimeCheck     chu kỳ job tìm phiên thi đã hết giờ mà chưa nộp để báo "quá thời gian"
+	 * @param alertWindow       mỗi phiên thi chỉ báo giáo viên chuyển tab / dán tối đa một lần trong khoảng này (sự
+	 *                          kiện vẫn được ghi và đẩy lên màn giám sát đầy đủ)
+	 * @param maxEventsPerMinute số sự kiện tối đa một phiên thi gửi được mỗi phút; quá thì bỏ (chống client gửi dồn)
+	 */
+	public record Exam(Duration overtimeCheck, Duration alertWindow, int maxEventsPerMinute) {
+	}
+
+	/**
+	 * Xem trực tiếp bài đang gõ (Mức 3, B15b).
+	 *
+	 * @param maxUpdatesPerMinute số lần cập nhật nội dung tối đa mỗi phút cho mỗi (phần, sinh viên); quá thì bỏ
+	 */
+	public record Live(int maxUpdatesPerMinute) {
+	}
+
+	/**
+	 * Tài liệu paper cùng sửa (Mức 4, B22).
+	 *
+	 * @param maxUpdateBytes      kích thước tối đa một gói cập nhật Yjs (base64 phải lọt khung STOMP 64 KB)
+	 * @param maxSnapshotBytes    kích thước tối đa snapshot Yjs gửi qua REST
+	 * @param maxTextChars        số ký tự tối đa của chữ thuần đi kèm snapshot
+	 * @param maxUpdatesPerMinute số update tối đa mỗi phút của một người trên một tài liệu
+	 * @param maxReferences       số tài liệu tham khảo tối đa trong thư viện của một nhóm (B24)
+	 * @param maxCslBytes         kích thước tối đa một bản ghi CSL-JSON sau khi lọc
+	 * @param doiBaseUrl          dịch vụ phân giải DOI trả CSL-JSON ({@code https://doi.org}; test trỏ về máy giả)
+	 * @param doiTimeout          thời gian chờ tối đa khi tra DOI
+	 * @param doiLookupsPerMinute số lần tra DOI tối đa mỗi phút của một người
+	 */
+	public record Paper(int maxUpdateBytes, int maxSnapshotBytes, int maxTextChars, int maxUpdatesPerMinute,
+			int maxReferences, int maxCslBytes, String doiBaseUrl, Duration doiTimeout, int doiLookupsPerMinute) {
 	}
 
 	/** Giới hạn số mã lỗi riêng và số nhận xét trong ngân hàng của mỗi giáo viên (BR-22). */

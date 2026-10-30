@@ -29,8 +29,8 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'IELTS Writing — Giao bài & chấm bài',
-  description: 'Hệ thống giao bài và chấm bài IELTS Writing trực tuyến'
+  title: 'AcaWrite — Viết IELTS & paper học thuật',
+  description: 'Hệ thống giao bài và chấm bài IELTS Writing và paper học thuật trực tuyến'
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

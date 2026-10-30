@@ -1,9 +1,11 @@
 // ─── Trạng thái → nhãn + màu ─────────────────────────────────────────────────
 // Nguồn: docs/07-design-system.md mục 2.4 – 2.6. Mọi tag / ô / biểu đồ lấy màu qua đây.
 
+import type { ExamEventType, ExamStatus } from '@/lib/types/exam';
 import type { NotificationType } from '@/lib/types/notification';
+import type { WordHint } from '@/lib/utils/paperDoc';
 
-import { BRAND, SEMANTIC } from './tokens';
+import { BRAND, NEUTRAL, SEMANTIC } from './tokens';
 import type { ColorSet, SolidColorSet } from './tokens';
 
 // ─── Bài nộp ──────────────────────────────────────────────────────────────────
@@ -102,5 +104,49 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, ColorSet & { label
   GRADE_RETURNED: { label: 'Đã có kết quả', ...SEMANTIC.success },
   REVISION_REQUESTED: { label: 'Cần sửa bài', ...SEMANTIC.error },
   DEADLINE_REMINDER: { label: 'Sắp đến hạn', ...SEMANTIC.warning },
-  MANUAL_REMINDER: { label: 'Nhắc nhở', ...SEMANTIC.warning }
+  MANUAL_REMINDER: { label: 'Nhắc nhở', ...SEMANTIC.warning },
+  EXAM_ALERT: { label: 'Cảnh báo khi thi', ...SEMANTIC.warning },
+  EXAM_OVERTIME: { label: 'Quá thời gian thi', ...SEMANTIC.error },
+  PAPER_GROUP_LOCK: { label: 'Chốt nhóm', ...SEMANTIC.warning }
 };
+
+// ─── Chế độ thi (docs/06 mục 8) ───────────────────────────────────────────────
+
+export const EXAM_STATUS_META: Record<ExamStatus, ColorSet & { label: string }> = {
+  IN_PROGRESS: { label: 'Đang thi', ...SEMANTIC.info },
+  OVERTIME: { label: 'Quá thời gian', ...SEMANTIC.error },
+  FINISHED: { label: 'Đã nộp', ...SEMANTIC.success },
+  FINISHED_OVERTIME: { label: 'Nộp quá giờ', ...SEMANTIC.warning }
+};
+
+/** Nhãn sự kiện trong dòng thời gian / bảng tin giám sát; `alert` = loại bị báo giáo viên (BR-25). */
+export const EXAM_EVENT_META: Record<ExamEventType, { label: string; alert: boolean }> = {
+  STARTED: { label: 'Bắt đầu làm bài', alert: false },
+  TAB_HIDDEN: { label: 'Rời khỏi trang làm bài', alert: true },
+  TAB_VISIBLE: { label: 'Quay lại trang làm bài', alert: false },
+  WINDOW_BLUR: { label: 'Rời khỏi cửa sổ làm bài', alert: true },
+  WINDOW_FOCUS: { label: 'Quay lại cửa sổ làm bài', alert: false },
+  PASTE: { label: 'Dán văn bản', alert: true },
+  DISCONNECT: { label: 'Mất kết nối', alert: false },
+  RECONNECT: { label: 'Kết nối lại', alert: false },
+  OVERTIME: { label: 'Hết giờ mà chưa nộp', alert: true },
+  SUBMITTED: { label: 'Nộp bài', alert: false }
+};
+
+// ─── Số từ của một mục paper (docs/12, BR-29: chỉ nhắc, không chặn nộp) ──────
+// Mục trống tách hai loại: bắt buộc (đỏ — server sẽ chặn nộp ở B25) và không bắt buộc (xám).
+
+export type PaperWordHint = Exclude<WordHint, 'empty'> | 'empty-required' | 'empty-optional';
+
+export const PAPER_WORD_HINT_META: Record<PaperWordHint, ColorSet & { label: string }> = {
+  'empty-required': { label: 'Chưa viết · bắt buộc', ...SEMANTIC.error },
+  'empty-optional': { label: 'Chưa viết', text: NEUTRAL[500], bg: NEUTRAL[50], border: NEUTRAL[100] },
+  short: { label: 'Còn thiếu từ', ...SEMANTIC.warning },
+  long: { label: 'Vượt giới hạn', ...SEMANTIC.warning },
+  ok: { label: 'Đạt', ...SEMANTIC.success }
+};
+
+export function getPaperWordHint(hint: WordHint, required: boolean): PaperWordHint {
+  if (hint !== 'empty') return hint;
+  return required ? 'empty-required' : 'empty-optional';
+}

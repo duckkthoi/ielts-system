@@ -37,6 +37,8 @@ import com.ltmtu.ielts.submission.SubmissionStatus;
 import com.ltmtu.ielts.submission.SubmissionVersion;
 
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Sinh viên xem lịch sử nộp và kết quả chấm (UC-26, docs/08 mục 4.5). Chỉ kết quả đã trả mới hiển thị (BR-13); gợi ý
@@ -53,6 +55,7 @@ public class StudentResultService {
 	private final StudentSubmissionAccess submissions;
 	private final GradeRepository gradeRepository;
 	private final ErrorCodeRepository errorCodeRepository;
+	private final ObjectMapper json;
 
 	/** Lịch sử nộp, mới nhất trước; có band ở các version đã được trả bài. */
 	@Transactional(readOnly = true)
@@ -77,7 +80,7 @@ public class StudentResultService {
 		SubmissionVersion v = submissions.requireVersion(s, versionNo);
 		Grade g = gradeRepository.findByVersionId(v.getId()).filter(Grade::isReturned).orElse(null);
 		return new VersionDetail(v.getVersionNo(), v.getSubmittedAt(), v.getWordCount(), v.isLate(), v.getContent(),
-				g == null ? null : toResult(g, s, v));
+				readJson(v.getContentJson()), readJson(v.getReferencesJson()), g == null ? null : toResult(g, s, v));
 	}
 
 	/**
@@ -122,7 +125,7 @@ public class StudentResultService {
 				.collect(Collectors.toMap(m -> m.getItem().getId(), GradeChecklistMark::isChecked));
 		List<CriterionResult> criterionResults = criteria.stream().map(c -> {
 			GradeCriterionScore sc = scores.get(c.getId());
-			ScoreCap cap = GradeUpdater.capOf(c, checked, v.getWordCount());
+			ScoreCap cap = GradeUpdater.capOf(c, checked, v.getWordCount(), s.getPart().getAssignment().isPaper());
 			return new CriterionResult(c.getId(), c.getCode(), c.getName(), c.getMaxScore(),
 					sc == null ? null : sc.getScore(), sc == null ? null : sc.getComment(),
 					cap.limited() ? cap.max() : null, cap.reason(),
@@ -192,5 +195,9 @@ public class StudentResultService {
 	private Map<Long, Grade> returnedByVersionId(List<Long> submissionIds) {
 		return gradeRepository.findBySubmissionIds(submissionIds, GradeStatus.RETURNED).stream()
 				.collect(Collectors.toMap(g -> g.getVersion().getId(), Function.identity()));
+	}
+
+	private JsonNode readJson(String raw) {
+		return raw == null ? null : json.readTree(raw);
 	}
 }

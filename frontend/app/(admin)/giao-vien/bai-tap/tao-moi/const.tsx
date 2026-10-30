@@ -53,7 +53,11 @@ export const EMPTY_FORM: AssignmentForm = {
   allowLate: true,
   maxRevisions: 2,
   showSuggestionsOnRevision: false,
-  parts: [newPart('WRITING_TASK1'), newPart('WRITING_TASK2')]
+  parts: [newPart('WRITING_TASK1'), newPart('WRITING_TASK2')],
+  kind: 'ESSAY',
+  citationStyle: 'IEEE',
+  maxGroupSize: 4,
+  groupLockAt: null
 };
 
 export const TASK_TYPE_OPTIONS: { value: TaskType; label: string }[] = [

@@ -11,14 +11,15 @@ import { assignmentApi } from '@/lib/api/assignment';
 import type { AssignmentDetail, Targets } from '@/lib/types/assignment';
 
 // ─── Khung chung của trang Tiến độ / Thống kê một bài (Prompt 5) ──────────────
-// Link quay lại + chuyển nhanh Chi tiết · Tiến độ · Thống kê. Hook tải bài + danh sách đã giao
+// Link quay lại + chuyển nhanh Chi tiết · Tiến độ · Giám sát · Thống kê. Hook tải bài + danh sách đã giao
 // (để lọc theo lớp); bài nháp chưa có tiến độ nên coi như không tìm thấy.
 
-export type AssignmentView = 'chi-tiet' | 'tien-do' | 'thong-ke';
+export type AssignmentView = 'chi-tiet' | 'nhom' | 'tien-do' | 'giam-sat' | 'thong-ke';
 
 const VIEW_OPTIONS: { value: AssignmentView; label: string }[] = [
   { value: 'chi-tiet', label: 'Chi tiết' },
   { value: 'tien-do', label: 'Tiến độ' },
+  { value: 'giam-sat', label: 'Giám sát' },
   { value: 'thong-ke', label: 'Thống kê' }
 ];
 
@@ -49,8 +50,12 @@ export function useAssignmentHeader(id: number) {
   return { assignment: state?.assignment ?? null, targets: state?.targets ?? null, notFound };
 }
 
-export function AssignmentSubNav({ id, view }: { id: number; view: AssignmentView }) {
+/** `paper`: bài Paper có thêm trang "Nhóm" (Mức 4). */
+export function AssignmentSubNav({ id, view, paper = false }: { id: number; view: AssignmentView; paper?: boolean }) {
   const router = useRouter();
+  const options = paper
+    ? [VIEW_OPTIONS[0], { value: 'nhom' as AssignmentView, label: 'Nhóm' }, ...VIEW_OPTIONS.slice(1)]
+    : VIEW_OPTIONS;
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <Link
@@ -61,26 +66,28 @@ export function AssignmentSubNav({ id, view }: { id: number; view: AssignmentVie
       </Link>
       <Segmented<AssignmentView>
         value={view}
-        options={VIEW_OPTIONS}
+        options={options}
         onChange={(next) => router.push(assignmentViewPath(id, next))}
       />
     </div>
   );
 }
 
-/** Trạng thái chờ / không tìm thấy dùng chung cho hai trang. */
+/** Trạng thái chờ / không tìm thấy dùng chung cho các trang con. */
 export function AssignmentHeaderFallback({
   id,
   view,
-  notFound
+  notFound,
+  paper = false
 }: {
   id: number;
   view: AssignmentView;
   notFound: boolean;
+  paper?: boolean;
 }) {
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <AssignmentSubNav id={id} view={view} />
+      <AssignmentSubNav id={id} view={view} paper={paper} />
       {notFound ? (
         <Result
           status="404"

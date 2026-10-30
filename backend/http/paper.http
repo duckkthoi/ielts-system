@@ -1,0 +1,116 @@
+### Paper theo nhóm (Mức 4, docs/12 + docs/05 A.10)
+
+@baseUrl = http://localhost:8080
+
+# @name teacher
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "gv.demo", "password": "Demo@2026" }
+
+### Tạo bài PAPER: 2 giai đoạn, khung mục, tiêu chí thang 10 (mặc định IEEE, nhóm 4 người)
+# @name paper
+POST {{baseUrl}}/api/teacher/assignments
+Content-Type: application/json
+Authorization: Bearer {{teacher.response.body.data.accessToken}}
+
+{
+  "title": "Paper nhóm — Hệ thống gợi ý khoá học",
+  "kind": "PAPER",
+  "citationStyle": "IEEE",
+  "maxGroupSize": 3,
+  "dueAt": "2026-12-20T16:59:00Z",
+  "groupLockAt": "2026-11-15T16:59:00Z",
+  "parts": [
+    {
+      "title": "Đề cương",
+      "taskType": "CUSTOM",
+      "prompt": "<p>Nêu vấn đề, đóng góp dự kiến và phương pháp.</p>",
+      "sections": [
+        { "title": "Introduction", "required": true, "maxWords": 600 },
+        { "title": "Method", "required": true },
+        { "title": "Kế hoạch", "required": false }
+      ],
+      "criteria": [{ "name": "Vấn đề & đóng góp", "checklist": [] }, { "name": "Phương pháp", "checklist": [] }]
+    }
+  ]
+}
+
+### Phát hành cho cả lớp demo (đổi classIds cho đúng)
+POST {{baseUrl}}/api/teacher/assignments/{{paper.response.body.data.id}}/publish
+Content-Type: application/json
+Authorization: Bearer {{teacher.response.body.data.accessToken}}
+
+{ "classIds": [1] }
+
+### Chia ngẫu nhiên người chưa có nhóm
+POST {{baseUrl}}/api/teacher/assignments/{{paper.response.body.data.id}}/groups/auto
+Content-Type: application/json
+Authorization: Bearer {{teacher.response.body.data.accessToken}}
+
+{}
+
+### Xem màn chia nhóm
+GET {{baseUrl}}/api/teacher/assignments/{{paper.response.body.data.id}}/groups
+Authorization: Bearer {{teacher.response.body.data.accessToken}}
+
+###
+# @name student
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "DEMO001", "password": "Demo@2026" }
+
+### Sinh viên xem nhóm / rời nhóm / tự lập nhóm
+GET {{baseUrl}}/api/student/assignments/{{paper.response.body.data.id}}/groups
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+###
+DELETE {{baseUrl}}/api/student/assignments/{{paper.response.body.data.id}}/groups/mine
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+###
+POST {{baseUrl}}/api/student/assignments/{{paper.response.body.data.id}}/groups
+Content-Type: application/json
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+{ "name": "Nhóm tự lập" }
+
+### ─── Thư viện trích dẫn của nhóm (B24a) — groupId: lấy myGroupId ở "Sinh viên xem nhóm" ───
+@groupId = 1
+
+### Tra DOI (chưa lưu) — nhận cả https://doi.org/… hoặc doi:…
+GET {{baseUrl}}/api/papers/doi?value=10.1145/3368089.3409731
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+### Thêm một tài liệu (CSL-JSON)
+POST {{baseUrl}}/api/papers/groups/{{groupId}}/references
+Content-Type: application/json
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+{
+  "csl": {
+    "type": "article-journal",
+    "title": "Attention is all you need",
+    "author": [{ "given": "Ashish", "family": "Vaswani" }],
+    "issued": { "date-parts": [[2017]] },
+    "container-title": "Advances in Neural Information Processing Systems",
+    "DOI": "10.48550/arXiv.1706.03762"
+  }
+}
+
+### Nhập nhiều mục (DOI đã có / lặp lại bị bỏ qua)
+POST {{baseUrl}}/api/papers/groups/{{groupId}}/references/batch
+Content-Type: application/json
+Authorization: Bearer {{student.response.body.data.accessToken}}
+
+{
+  "items": [
+    { "type": "book", "title": "Clean Code", "author": [{ "given": "Robert C.", "family": "Martin" }], "issued": { "date-parts": [[2008]] }, "publisher": "Prentice Hall" },
+    { "title": "Thiếu tác giả và năm" }
+  ]
+}
+
+### Thư viện của nhóm (giáo viên chủ bài cũng xem được)
+GET {{baseUrl}}/api/papers/groups/{{groupId}}/references
+Authorization: Bearer {{student.response.body.data.accessToken}}

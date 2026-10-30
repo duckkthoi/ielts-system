@@ -17,6 +17,10 @@ app:
   session:
     single-login: false
   # Cổng ngẫu nhiên; ít luồng và timeout ngắn để test được "pool đầy" và "quá thời gian chờ".
+  # Tra DOI trỏ về máy chủ giả do PaperReferenceIntegrationTest bật (không gọi ra internet khi test).
+  paper:
+    doi-base-url: http://127.0.0.1:18089
+    doi-timeout: 2s
   tcp:
     port: 0
     threads: 3

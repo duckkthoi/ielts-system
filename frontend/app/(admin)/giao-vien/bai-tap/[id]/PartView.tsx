@@ -7,7 +7,7 @@ import { fileUrl, TASK_TYPE_LABEL } from '@/lib/constants';
 import type { PartDto } from '@/lib/types/assignment';
 import { formatDateTime } from '@/lib/utils/date';
 
-// ─── Một phần của bài: đề, ảnh, yêu cầu, rubric (tiêu chí + checklist Đạt / Giới hạn điểm) ─
+// ─── Một phần của bài: đề, ảnh, yêu cầu, rubric (tiêu chí, checklist Đạt / Giới hạn điểm, mức đạt bài Paper)
 // `prompt` là HTML đã được server lọc — trường duy nhất được render bằng dangerouslySetInnerHTML.
 
 const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
@@ -17,6 +17,7 @@ export function PartView({ part }: { part: PartDto }) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap gap-2 text-small">
         <Tag color="blue">{TASK_TYPE_LABEL[part.taskType]}</Tag>
+        {part.examMode && <Tag color="red">Chế độ thi · {part.examDurationMinutes} phút</Tag>}
         {part.minWords ? (
           <span className="inline-flex items-center gap-1 text-neutral-500">
             <FileText size={14} /> Tối thiểu {part.minWords} từ
@@ -94,6 +95,24 @@ export function PartView({ part }: { part: PartDto }) {
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {c.levels.length > 0 && (
+                    <div className="mt-1 overflow-x-auto">
+                      <p className="mb-1 text-small font-semibold text-neutral-700">Mức đạt</p>
+                      <table className="w-full border-collapse text-small">
+                        <tbody>
+                          {c.levels.map((l) => (
+                            <tr key={l.id} className="border-t border-neutral-100 align-top">
+                              <td className="py-1.5 pr-3 font-medium whitespace-nowrap text-neutral-900">{l.label}</td>
+                              <td className="py-1.5 pr-3 whitespace-nowrap text-neutral-500">
+                                {formatScore(l.minScore)}–{formatScore(l.maxScore)}
+                              </td>
+                              <td className="py-1.5 text-neutral-700">{l.descriptor}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               )

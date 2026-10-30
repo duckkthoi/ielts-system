@@ -19,8 +19,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Bài làm của một sinh viên cho một phần (UNIQUE part + student). Được tạo ở lần lưu nháp hoặc nộp đầu tiên;
- * chưa có dòng nghĩa là {@code NOT_STARTED}. Mỗi lần nộp tạo một {@link SubmissionVersion} bất biến.
+ * Bài làm cho một phần. Bài luận: của một sinh viên (UNIQUE part + student khi {@code group_id} NULL). Bài PAPER:
+ * của một <b>nhóm</b> (UNIQUE part + group, BR-28), {@code student} = người tạo / người nộp gần nhất. Được tạo ở lần
+ * lưu nháp hoặc nộp đầu tiên; chưa có dòng nghĩa là {@code NOT_STARTED}. Mỗi lần nộp tạo một
+ * {@link SubmissionVersion} bất biến. Ai thuộc bài làm: view {@code submission_members} (V17).
  */
 @Getter
 @Setter
@@ -36,6 +38,10 @@ public class Submission extends BaseEntity {
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "student_id")
 	private User student;
+
+	/** Bài PAPER: nhóm sở hữu bài làm. Giữ dạng id để module bài nộp không phụ thuộc module paper. */
+	@Column(name = "group_id")
+	private Long groupId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)

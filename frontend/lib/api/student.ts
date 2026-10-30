@@ -77,7 +77,7 @@ export async function draft(partId: number): Promise<DraftResponse> {
 }
 
 /** Tự lưu chạy nền: trạng thái hiện ở AutosaveIndicator, 409 DRAFT_CONFLICT mở hộp thoại → tắt toast. */
-export async function saveDraft(partId: number, content: string, draftVersion: number): Promise<SaveDraftResponse> {
+export async function saveDraft(partId: number, content: string, draftVersion: number | null): Promise<SaveDraftResponse> {
   const res = (await axiosClient.put(
     formatUrl(URL.draft, { partId }),
     { content, draftVersion },
@@ -86,12 +86,21 @@ export async function saveDraft(partId: number, content: string, draftVersion: n
   return res.data;
 }
 
-/** `expectedVersion` = `currentVersion` vừa đọc: chống nộp trùng (409 VERSION_CONFLICT). */
-export async function submit(partId: number, content: string, expectedVersion: number): Promise<SubmitResponse> {
-  const res = (await axiosClient.post(formatUrl(URL.submit, { partId }), {
-    content,
-    expectedVersion
-  })) as unknown as ApiResponse<SubmitResponse>;
+/**
+ * `expectedVersion` = `currentVersion` vừa đọc: chống nộp trùng (409 VERSION_CONFLICT). Bài PAPER gửi `content = null`
+ * — server nộp snapshot tài liệu nhóm (B25a); `toastError = false` để màn hình tự xử lý `SNAPSHOT_STALE`.
+ */
+export async function submit(
+  partId: number,
+  content: string | null,
+  expectedVersion: number,
+  toastError = true
+): Promise<SubmitResponse> {
+  const res = (await axiosClient.post(
+    formatUrl(URL.submit, { partId }),
+    { content, expectedVersion },
+    { toastError }
+  )) as unknown as ApiResponse<SubmitResponse>;
   return res.data;
 }
 

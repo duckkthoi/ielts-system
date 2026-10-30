@@ -159,7 +159,7 @@ class NotificationIntegrationTest extends IntegrationTest {
 
 		// Trả bài: gửi thẳng sự kiện như GradingService (vòng sửa bài đầy đủ đã có ở GradingFlowIntegrationTest).
 		tx.executeWithoutResult(s -> events.publishEvent(new GradingEvents.Returned(submissionId, a.get("id").asLong(),
-				partId, student.getId(), 1, new BigDecimal("6.5"), "Bài chấm", "Task 2")));
+				partId, student.getId(), 1, new BigDecimal("6.5"), "Bài chấm", "Task 2", List.of(student.getId()), false)));
 		n = notifications(studentToken).get(0);
 		assertThat(n.get("type").asString()).isEqualTo("GRADE_RETURNED");
 		assertThat(n.get("title").asString()).isEqualTo("Đã có kết quả: Bài chấm – Task 2");
@@ -171,7 +171,8 @@ class NotificationIntegrationTest extends IntegrationTest {
 	void rollbackLeavesNoNotification() throws Exception {
 		try {
 			tx.executeWithoutResult(s -> {
-				events.publishEvent(new GradingEvents.Returned(1L, 1L, 1L, student.getId(), 1, BigDecimal.ONE, "X", "Y"));
+				events.publishEvent(new GradingEvents.Returned(1L, 1L, 1L, student.getId(), 1, BigDecimal.ONE, "X", "Y",
+						List.of(student.getId()), false));
 				throw new IllegalStateException("nghiệp vụ lỗi sau khi phát sự kiện");
 			});
 		} catch (IllegalStateException expected) {

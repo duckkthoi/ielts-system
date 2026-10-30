@@ -74,6 +74,10 @@ public class Grade extends BaseEntity {
 	@OrderBy("startOffset")
 	private List<InlineComment> inlineComments = new ArrayList<>();
 
+	/** Bài PAPER: điểm cộng / trừ riêng của thành viên nhóm (B25b). */
+	@OneToMany(mappedBy = "grade", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<GradeMemberAdjustment> adjustments = new ArrayList<>();
+
 	public static Grade start(SubmissionVersion version, User grader) {
 		Grade g = new Grade();
 		g.version = version;

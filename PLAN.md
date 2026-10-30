@@ -1,4 +1,4 @@
-# Kế hoạch dự án — Website giao bài & chấm bài IELTS Writing
+# Kế hoạch dự án — AcaWrite: giao bài & chấm bài IELTS Writing và paper học thuật
 
 > Đồ án môn **Lập trình mạng** (LTMTU). File này nói **làm gì, theo thứ tự nào, xong thì kiểm tra ra sao**.
 > Chi tiết kỹ thuật (bảng, API, trạng thái, quy tắc nghiệp vụ) nằm trong [`docs/`](docs/) — **`docs/` là bản chuẩn**, chỗ nào lệch thì theo `docs/`.
@@ -113,12 +113,22 @@ Phần backend của Mức 2 làm được trước khi có Figma; phần giao d
 | **14** Load test ✅ | k6: 200 sinh viên nộp trong 5 phút cuối + 500 kết nối WebSocket | p95 < 500 ms, lỗi < 1%; kết quả ghi vào `docs/` — đã đạt: p95 9,9 ms, 0% lỗi; 500 / 500 kết nối, thông báo p95 228 ms ([docs/09](docs/09-kiem-thu-tai.md)) |
 
 ### Mức 3 — Mở rộng (mỗi mục độc lập, migration từ V13)
-15. Chế độ thi tính giờ: `exam_sessions`, tự nộp khi hết giờ, ghi sự kiện chuyển tab / dán / mất kết nối.
+15. Chế độ thi tính giờ: `exam_sessions`, hết giờ **không tự nộp** mà gắn "Quá thời gian" + báo GV / SV (người dùng chốt 28/10), ghi sự kiện chuyển tab / dán / mất kết nối lên màn giám sát theo lớp + thông báo GV; giáo viên xem trực tiếp bài đang gõ và bình luận trực tiếp. Tách B15a (backend thi) → B15b (backend xem / bình luận trực tiếp) → B15c (FE sinh viên) → B15d (FE màn giám sát).
 16. Kiểm tra đạo văn nội bộ (n-gram + Jaccard), cảnh báo cho giáo viên.
 17. Ngân hàng đề + tag dạng đề. **B17a backend ✅** (V13, CRUD/tìm kiếm/lọc, rubric riêng, phân quyền theo giáo viên) · **B17b trình soạn ✅** (lưu/nạp đề + rubric, giữ hạn riêng/trọng số) · còn B17c giao diện `/giao-vien/ngan-hang-de`.
 18. Gợi ý chấm bằng AI (Claude API, chỉ khi có `ANTHROPIC_API_KEY`; chỉ gợi ý, giáo viên quyết định).
 19. TCP qua TLS (`SSLServerSocket`) + bản NIO (`Selector`) để so sánh hiệu năng.
 20. ✅ README, profile `demo` (1 giáo viên, 2 lớp, 20 sinh viên, 2 bài), hướng dẫn chụp ảnh Wireshark, tài liệu báo cáo (`docs/09` + file Word gộp). Ảnh Wireshark do người dùng tự chụp. *(Làm trước Mức 3 vì cần cho nộp đồ án.)*
+
+### Mức 4 — Viết paper học thuật theo nhóm (duyệt 29/10 — thiết kế: [docs/12](docs/12-viet-paper.md))
+21. Backend nền: **B21a ✅** loại bài `PAPER`, thang điểm 10, khung mục, nhóm (V16) · **B21b ✅** bài làm theo nhóm (V17).
+22. ✅ Lưu tài liệu Yjs (log update + snapshot) qua STOMP, không cần server riêng (V18).
+23. Frontend: **B23a ✅** soạn bài loại Paper (giai đoạn, khung mục, rubric mẫu paper IT) + màn chia nhóm + nhóm phía sinh viên · B23b trình soạn TipTap + Yjs: khung mục, bảng, hình, code, công thức, đếm từ theo mục.
+24. Trích dẫn: thư viện nhóm, tra DOI, BibTeX, danh mục IEEE / APA.
+25. Nộp + chấm paper (thang 10, nhận xét theo khối).
+26. Cùng sửa realtime, thống kê đóng góp, giáo viên xem trực tiếp.
+27. Xuất DOCX / LaTeX (IEEEtran) / PDF.
+28. Đạo văn + gợi ý AI cho paper (sau bước 16, 18).
 
 **Thứ tự đề xuất (người dùng chốt 22/10: hoàn thiện backend trước, frontend để sau):** B8 → phần backend của 11, 12, 9, 10 → 13 → 14 → 20 (đã xong 23/10) → frontend F1–F6 khi có Figma → Mức 3 (15–19) nếu còn thời gian.
 

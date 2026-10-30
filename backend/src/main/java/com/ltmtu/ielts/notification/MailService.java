@@ -89,11 +89,11 @@ public class MailService {
 		SimpleMailMessage msg = new SimpleMailMessage();
 		msg.setFrom(props.mail().from());
 		msg.setTo(a.email());
-		msg.setSubject("Tài khoản hệ thống IELTS Writing");
+		msg.setSubject("Tài khoản hệ thống AcaWrite");
 		msg.setText("""
 				Chào %s,
 
-				Bạn đã được thêm vào lớp "%s" trên hệ thống giao bài và chấm bài IELTS Writing.
+				Bạn đã được thêm vào lớp "%s" trên AcaWrite — hệ thống giao bài và chấm bài IELTS Writing, paper học thuật.
 
 				Tên đăng nhập: %s
 				Mật khẩu tạm:  %s

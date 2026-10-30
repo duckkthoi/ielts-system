@@ -8,7 +8,7 @@
 
 ## 1. Bối cảnh
 
-- Hệ thống giao bài / chấm bài IELTS Writing, đồ án môn Lập trình mạng. **Monolith**: một ứng dụng Spring Boot chứa REST, WebSocket STOMP, server TCP, job định kỳ. KHÔNG tách microservice, KHÔNG dùng Redis hay broker ngoài.
+- AcaWrite — hệ thống giao bài / chấm bài IELTS Writing và paper học thuật, đồ án môn Lập trình mạng. **Monolith**: một ứng dụng Spring Boot chứa REST, WebSocket STOMP, server TCP, job định kỳ. KHÔNG tách microservice, KHÔNG dùng Redis hay broker ngoài.
 - **`docs/` là bản chuẩn.** Code PHẢI khớp tài liệu; đổi một bên thì đổi bên kia trong cùng bước.
 
 | Cần gì | Xem |
@@ -54,15 +54,16 @@ com.ltmtu.ielts
 ├─ chat/         chat theo bài nộp / lớp (Mức 2)
 ├─ demo/        dữ liệu mẫu khi bật profile demo (bước 20, lớp kiểm thử tải bước 14) — tầng trên cùng
 ├─ exam/ · plagiarism/ (Mức 3)
+├─ paper/        nhóm viết paper; sau này: tài liệu cùng sửa, trích dẫn, xuất file (Mức 4)
 ```
 
 **Hướng phụ thuộc — PHẢI giữ một chiều, KHÔNG được vòng:**
 ```
 common, audit  ←  (mọi module đều dùng được)
 user ← classroom ← assignment ← submission ← grading ← notification
-                                                  ↖ stats (chỉ đọc), tcpgateway, realtime, chat
+                                                  ↖ stats (chỉ đọc), tcpgateway, realtime, chat, exam, paper
 ```
-Module bên phải được dùng module bên trái; module bên trái KHÔNG import module bên phải. Cần báo ngược lại thì **phát sự kiện** (mục 10). `demo` nằm trên tất cả: chỉ gọi service "cửa" / service nghiệp vụ (tạo lớp, tạo bài, phát hành, nộp bài) để dữ liệu mẫu đi qua đúng các kiểm tra; tài khoản mẫu (mật khẩu biết trước, không bắt đổi) tạo qua `user/DemoAccountService`. KHÔNG module nào gọi vào `demo`.
+Module bên phải được dùng module bên trái; module bên trái KHÔNG import module bên phải. Cần báo ngược lại thì **phát sự kiện** (mục 10). Cần **lấy dữ liệu** từ module bên phải ngay trong transaction của mình (không phải báo) thì khai báo interface ở module bên trái, module bên phải cài đặt — như `security.StompAccessRule`, `submission.PaperContentSource` (nộp bài PAPER lấy snapshot tài liệu của module `paper`). `demo` nằm trên tất cả: chỉ gọi service "cửa" / service nghiệp vụ (tạo lớp, tạo bài, phát hành, nộp bài) để dữ liệu mẫu đi qua đúng các kiểm tra; tài khoản mẫu (mật khẩu biết trước, không bắt đổi) tạo qua `user/DemoAccountService`. KHÔNG module nào gọi vào `demo`.
 
 **Gọi sang module khác — chỉ qua service "cửa", KHÔNG gọi repository của module khác:**
 
@@ -239,6 +240,9 @@ Ném `ApiException` (hàm static `badRequest`, `forbidden`, `notFound`, `conflic
 | Kết quả chấm phía sinh viên đặt ở module bài nộp sẽ gây phụ thuộc vòng | Đặt ở module chấm bài, giữ đường dẫn API cũ (mục 3) |
 | Ghi thông báo sau commit có thể mất thông báo | Lưu `BEFORE_COMMIT`, đẩy `afterCommit` (mục 10) |
 | Đọc trạng thái rồi mới khoá → đọc phải dữ liệu cũ | Khoá trước rồi mới đọc (mục 10) |
+| Kiểm quyền nạp entity trước, rồi `SELECT … FOR UPDATE` cùng dòng → JPA trả lại bản đã nạp (không đọc lại) → hai update tài liệu paper nhận trùng `seq` | Gọi khoá **trước** mọi lần nạp entity đó trong transaction (`PaperDocumentService.lockFirst`) |
+| Entity có khoá chính do server cấp + `save()` → Spring Data coi là đã có và `merge` → ghi đè dòng trùng khoá thay vì báo lỗi | Bảng chỉ INSERT với khoá tự cấp: cài `Persistable.isNew() = true` (`PaperDocUpdate`) |
+| Khung WebSocket > 8 KB làm Tomcat đóng kết nối | Nâng bộ đệm lên 64 KB bằng tham số khởi tạo Tomcat (`WebSocketConfig.webSocketBufferCustomizer`). KHÔNG dùng bean `ServletServerContainerFactoryBean`: test MockMvc không có WebSocket container nên mọi context test hỏng |
 
 ---
 

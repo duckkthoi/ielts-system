@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Alert, Button, Card, Descriptions, Result, Skeleton, Tabs } from 'antd';
 import { ArrowLeft } from 'lucide-react';
@@ -18,6 +18,7 @@ import type { AssignmentResult, StudentAssignmentDetail, StudentPartDetail } fro
 import { formatDateTime } from '@/lib/utils/date';
 import { nextStudentAction } from '@/lib/utils/studentAction';
 
+import { GroupPanel } from './GroupPanel';
 import { StudentPartView } from './StudentPartView';
 import { VersionHistoryDrawer } from './VersionHistoryDrawer';
 
@@ -33,6 +34,9 @@ export default function StudentAssignmentDetailPage() {
   const [loaded, setLoaded] = useState<{ detail: StudentAssignmentDetail; result: AssignmentResult } | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [historyPart, setHistoryPart] = useState<StudentPartDetail | null>(null);
+  // Đổi nhóm (bài Paper) → tải lại trạng thái các phần (bài làm thuộc nhóm — BR-28).
+  const [version, setVersion] = useState(0);
+  const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +52,7 @@ export default function StudentAssignmentDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, version]);
 
   const back = (
     <Link
@@ -162,6 +166,7 @@ export default function StudentAssignmentDetailPage() {
         </Card>
 
         <div className="flex flex-col gap-4">
+          {detail.kind === 'PAPER' && <GroupPanel assignmentId={detail.id} onChanged={reload} />}
           <Card title="Kết quả">
             {!hasBand ? (
               <p className="text-small text-neutral-500">Chưa có kết quả. Giáo viên trả bài thì band hiện ở đây.</p>
