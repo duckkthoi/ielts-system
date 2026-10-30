@@ -2,13 +2,12 @@ import { Tooltip } from 'antd';
 import clsx from 'clsx';
 import { Lock } from 'lucide-react';
 
-import { scoreOptions } from '@/lib/utils/grading';
+import { formatScore as fmt, scoreOptions } from '@/lib/utils/grading';
 
 // ─── Chọn điểm một tiêu chí (docs/07 mục 7.2, Prompt 6b ý 1) ──────────────────
 // Dải nút 0 → maxScore theo bước của tiêu chí (BR-11). Mức lớn hơn giới hạn (BR-17, BR-18) bị mờ + ổ khoá,
 // tooltip ghi lý do. Bấm lại mức đang chọn để bỏ chọn (chưa chấm). Phím ← → để đổi mức.
-
-const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+// Bài PAPER đã chọn mức đạt: chỉ hiện các điểm trong khoảng [range.min, range.max] của mức (BR-31).
 
 export function ScorePicker({
   value,
@@ -16,6 +15,7 @@ export function ScorePicker({
   step,
   cap,
   capReason,
+  range,
   disabled = false,
   onChange,
   label
@@ -25,11 +25,14 @@ export function ScorePicker({
   step: number;
   cap: number;
   capReason: string | null;
+  range?: { min: number; max: number } | null;
   disabled?: boolean;
   onChange: (score: number | null) => void;
   label: string;
 }) {
-  const options = scoreOptions(maxScore, step);
+  const options = scoreOptions(maxScore, step).filter(
+    (o) => !range || (o >= range.min - 1e-9 && o <= range.max + 1e-9)
+  );
   const allowed = options.filter((o) => o <= cap);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -51,7 +54,7 @@ export function ScorePicker({
             type="button"
             role="radio"
             aria-checked={selected}
-            tabIndex={selected || (value === null && o === 0) ? 0 : -1}
+            tabIndex={selected || (value === null && o === options[0]) ? 0 : -1}
             disabled={disabled || locked}
             onClick={() => onChange(selected ? null : o)}
             className={clsx(

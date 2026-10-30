@@ -51,6 +51,8 @@ import com.ltmtu.ielts.user.UserQueryService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /** Chấm bài (UC-17), trả bài / yêu cầu sửa (UC-18) — SD-08. Chỉ giáo viên tạo bài tập mới chấm được (BR-15). */
 @Slf4j
@@ -67,6 +69,7 @@ public class GradingService {
 	private final ApplicationEventPublisher events;
 	private final Clock clock;
 	private final AuditService audit;
+	private final ObjectMapper json;
 
 	/** Hàng đợi chấm, mặc định các bài "Đã nộp – chờ chấm", bài nộp trước xếp trước. */
 	@Transactional(readOnly = true)
@@ -262,10 +265,11 @@ public class GradingService {
 						new StudentInfo(student.getId(), student.getStudentCode(), student.getFullName()),
 						s.getRevisionNote(), s.getRevisionDueAt()),
 				new AssignmentInfo(a.getId(), a.getTitle(), a.getStatus(), a.getMaxRevisions(),
-						a.isShowSuggestionsOnRevision(), a.getKind()),
+						a.isShowSuggestionsOnRevision(), a.getKind(), a.getCitationStyle()),
 				new PartInfo(part.getId(), part.getOrderNo(), part.getTitle(), part.getTaskType(), part.getPrompt(),
 						part.getImageUrl(), part.getMinWords(), part.getWeight()),
-				new VersionInfo(v.getVersionNo(), v.getContent(), v.getWordCount(), v.getSubmittedAt(), v.isLate()),
+				new VersionInfo(v.getVersionNo(), v.getContent(), v.getWordCount(), v.getSubmittedAt(), v.isLate(),
+						readJson(v.getContentJson()), readJson(v.getReferencesJson())),
 				warnings(v.getWordCount(), part.getMinWords(), paper),
 				GradeMapper.criteria(criteria),
 				grade == null ? null : GradeMapper.toDto(grade, criteria, v.getWordCount(), paper),
@@ -304,5 +308,9 @@ public class GradingService {
 		}
 		return gradeRepository.findByVersionIdIn(versionIds).stream()
 				.collect(Collectors.toMap(g -> g.getVersion().getId(), Function.identity()));
+	}
+
+	private JsonNode readJson(String raw) {
+		return raw == null ? null : json.readTree(raw);
 	}
 }
