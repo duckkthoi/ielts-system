@@ -8,6 +8,7 @@ import { gradingPath } from '@/lib/constants';
 import { getSubmissionDisplayStatus, SUBMISSION_STATUS_META } from '@/lib/theme/status';
 import type { QueueParams, QueueRow, QueueStatus } from '@/lib/types/grading';
 import { formatDateTime } from '@/lib/utils/date';
+import { formatScore } from '@/lib/utils/grading';
 
 export const PAGE_SIZE = 20;
 
@@ -23,14 +24,21 @@ export const isQueueStatus = (v: string | null): v is QueueStatus => STATUS_OPTI
 export function buildColumns(filter: QueueParams): ColumnsType<QueueRow> {
   return [
     {
-      title: 'Sinh viên',
+      // Bài PAPER: tên nhóm, dòng dưới là người nộp gần nhất (B25c-3).
+      title: 'Sinh viên / Nhóm',
       key: 'student',
-      render: (_, row) => (
-        <span className="flex flex-col">
-          <span className="font-semibold text-neutral-900">{row.student.fullName}</span>
-          <span className="font-mono text-small text-neutral-500">{row.student.studentCode}</span>
-        </span>
-      )
+      render: (_, row) =>
+        row.groupName ? (
+          <span className="flex flex-col">
+            <span className="font-semibold text-neutral-900">{row.groupName}</span>
+            <span className="text-small text-neutral-500">Nộp bởi {row.student.fullName}</span>
+          </span>
+        ) : (
+          <span className="flex flex-col">
+            <span className="font-semibold text-neutral-900">{row.student.fullName}</span>
+            <span className="font-mono text-small text-neutral-500">{row.student.studentCode}</span>
+          </span>
+        )
     },
     {
       title: 'Bài tập / Phần',
@@ -86,12 +94,21 @@ export function buildColumns(filter: QueueParams): ColumnsType<QueueRow> {
       )
     },
     {
-      title: 'Band',
+      title: 'Điểm',
       dataIndex: 'band',
-      width: 70,
+      width: 80,
       align: 'center',
       responsive: ['lg'],
-      render: (band: number | null) => <BandBadge band={band} size="sm" />
+      // Bài PAPER: thang 10 (BR-31); bài luận: band IELTS.
+      render: (band: number | null, row) =>
+        row.kind === 'PAPER' ? (
+          <span className="font-semibold text-neutral-900 tabular-nums">
+            {band === null ? '—' : formatScore(band)}
+            <span className="text-caption font-normal text-neutral-500"> / 10</span>
+          </span>
+        ) : (
+          <BandBadge band={band} size="sm" />
+        )
     },
     {
       title: '',

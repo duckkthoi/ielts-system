@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,6 +52,8 @@ public class StudentResultService {
 	static final String ESTIMATE_NOTE = "Band tổng được ước lượng theo quy ước Task 2 gấp đôi Task 1; "
 			+ "IELTS không công bố công thức chính xác.";
 	static final String INCOMPLETE_NOTE = "Chưa đủ phần: band tổng chỉ có khi mọi phần đã được trả bài.";
+	static final String PAPER_NOTE = "Điểm thang 10: trung bình có trọng số các phần, đã gồm điểm cộng / trừ riêng của bạn.";
+	static final String PAPER_INCOMPLETE_NOTE = "Chưa đủ phần: điểm tổng chỉ có khi mọi phần đã được trả bài.";
 
 	private final StudentSubmissionAccess submissions;
 	private final GradeRepository gradeRepository;
@@ -68,7 +71,7 @@ public class StudentResultService {
 		return submissions.versions(s).stream().map(v -> {
 			Grade g = returned.get(v.getId());
 			return new VersionSummary(v.getVersionNo(), v.getSubmittedAt(), v.getWordCount(), v.isLate(), g != null,
-					g == null ? null : BandCalculator.display(g.getOverallScore()), g == null ? null : g.getReturnedAt());
+					g == null ? null : shown(g, studentId), g == null ? null : g.getReturnedAt());
 		}).toList();
 	}
 
@@ -80,7 +83,8 @@ public class StudentResultService {
 		SubmissionVersion v = submissions.requireVersion(s, versionNo);
 		Grade g = gradeRepository.findByVersionId(v.getId()).filter(Grade::isReturned).orElse(null);
 		return new VersionDetail(v.getVersionNo(), v.getSubmittedAt(), v.getWordCount(), v.isLate(), v.getContent(),
-				readJson(v.getContentJson()), readJson(v.getReferencesJson()), g == null ? null : toResult(g, s, v));
+				readJson(v.getContentJson()), readJson(v.getReferencesJson()),
+				g == null ? null : toResult(g, s, v, studentId));
 	}
 
 	/**
@@ -104,19 +108,37 @@ public class StudentResultService {
 		List<Weighted> weighted = new ArrayList<>();
 		for (AssignmentPart p : a.getParts()) {
 			Grade g = latestByPart.get(p.getId());
+			BigDecimal shown = g == null ? null : shown(g, studentId);
 			parts.add(new PartResult(p.getId(), p.getOrderNo(), p.getTitle(), p.getTaskType(), p.getWeight(),
-					g == null ? null : g.getVersion().getVersionNo(),
-					g == null ? null : BandCalculator.display(g.getOverallScore())));
-			weighted.add(new Weighted(g == null ? null : g.getOverallScore(), p.getWeight()));
+					g == null ? null : g.getVersion().getVersionNo(), shown));
+			// Bài PAPER: tổng theo điểm riêng của sinh viên (đã cộng / trừ); bài luận theo band chưa làm tròn.
+			weighted.add(new Weighted(g == null ? null : a.isPaper() ? shown : g.getOverallScore(), p.getWeight()));
 		}
 		BigDecimal raw = BandCalculator.assignmentBand(weighted);
+		if (a.isPaper()) {
+			return new AssignmentResult(a.getId(), a.getTitle(), parts, raw != null,
+					PaperScoreRules.display(raw, true), raw != null ? PAPER_NOTE : PAPER_INCOMPLETE_NOTE);
+		}
 		return new AssignmentResult(a.getId(), a.getTitle(), parts, raw != null, BandCalculator.display(raw),
 				raw != null ? ESTIMATE_NOTE : INCOMPLETE_NOTE);
 	}
 
 	// ─── Nội bộ ──────────────────────────────────────────────────────────────
 
-	private Result toResult(Grade g, Submission s, SubmissionVersion v) {
+	/** Điểm hiển thị cho sinh viên: bài luận band IELTS (BR-12); bài PAPER điểm riêng = điểm nhóm + cộng / trừ (BR-31). */
+	private BigDecimal shown(Grade g, Long studentId) {
+		if (!g.getVersion().getSubmission().getPart().getAssignment().isPaper()) {
+			return BandCalculator.display(g.getOverallScore());
+		}
+		return PaperScoreRules.memberScore(g.getOverallScore(), adjustmentOf(g, studentId)
+				.map(GradeMemberAdjustment::getDelta).orElse(null));
+	}
+
+	private static Optional<GradeMemberAdjustment> adjustmentOf(Grade g, Long studentId) {
+		return g.getAdjustments().stream().filter(x -> x.getStudent().getId().equals(studentId)).findFirst();
+	}
+
+	private Result toResult(Grade g, Submission s, SubmissionVersion v, Long studentId) {
 		AssignmentPart part = s.getPart();
 		List<RubricCriterion> criteria = part.getCriteria();
 		Map<Long, GradeCriterionScore> scores = g.getScores().stream()
@@ -143,9 +165,13 @@ public class StudentResultService {
 				.sorted(Comparator.comparingInt(InlineComment::getStartOffset))
 				.map(ic -> new ResolvedComment(ic, ic.getErrorCode() == null ? null : codes.get(ic.getErrorCode())))
 				.toList();
-		return new Result(BandCalculator.display(g.getOverallScore()), g.getZeroReason(), g.getGeneralComment(),
-				g.getGrader().getFullName(), g.getReturnedAt(), hideSuggestions, criterionResults,
-				inline.stream().map(x -> x.toDto(hideSuggestions)).toList(), errorSummary(inline));
+		boolean paper = part.getAssignment().isPaper();
+		GradeMemberAdjustment mine = paper ? adjustmentOf(g, studentId).orElse(null) : null;
+		return new Result(PaperScoreRules.display(g.getOverallScore(), paper), g.getZeroReason(),
+				g.getGeneralComment(), g.getGrader().getFullName(), g.getReturnedAt(), hideSuggestions,
+				criterionResults, inline.stream().map(x -> x.toDto(hideSuggestions)).toList(), errorSummary(inline),
+				paper ? shown(g, studentId) : null, mine == null ? null : mine.getDelta(),
+				mine == null ? null : mine.getReason());
 	}
 
 	/** Nhận xét inline kèm mã lỗi tra được (null nếu không có mã, hoặc mã riêng đã bị xoá). */

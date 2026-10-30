@@ -125,7 +125,7 @@ export default function GradingQueuePage() {
             <Input.Search
               allowClear
               defaultValue={filter.keyword}
-              placeholder="Mã SV hoặc họ tên"
+              placeholder="Mã SV, họ tên hoặc tên nhóm"
               onSearch={(v) => update({ keyword: v.trim() || undefined })}
             />
           </div>

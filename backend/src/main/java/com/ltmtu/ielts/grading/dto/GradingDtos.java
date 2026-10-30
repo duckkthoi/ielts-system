@@ -32,11 +32,14 @@ public final class GradingDtos {
 
 	// ─── Hàng đợi chấm ───────────────────────────────────────────────────────
 
-	/** {@code band}: band phần đã làm tròn để hiển thị; null khi chưa chấm hoặc chưa đủ tiêu chí. */
+	/**
+	 * {@code band}: điểm phần đã làm tròn để hiển thị (bài luận band IELTS, bài PAPER thang 10 — 2 chữ số); null khi
+	 * chưa chấm hoặc chưa đủ tiêu chí. {@code groupName}: bài PAPER — tên nhóm; bài luận null.
+	 */
 	public record QueueRow(Long submissionId, SubmissionStatus status, int currentVersion, StudentInfo student,
 			Long assignmentId, String assignmentTitle, Long partId, String partTitle, int partOrderNo,
 			TaskType taskType, Instant submittedAt, boolean late, int wordCount, GradeStatus gradeStatus,
-			BigDecimal band) {
+			BigDecimal band, AssignmentKind kind, String groupName) {
 	}
 
 	// ─── Màn chấm ────────────────────────────────────────────────────────────

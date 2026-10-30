@@ -11,12 +11,11 @@ import { fileUrl, resultPath, TASK_TYPE_LABEL, writingPath } from '@/lib/constan
 import { getSubmissionDisplayStatus, SUBMISSION_STATUS_META } from '@/lib/theme/status';
 import type { StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
+import { formatScore } from '@/lib/utils/grading';
 
 // ─── Một phần bài phía sinh viên: trạng thái, hạn, nút làm bài, đề, tiêu chí chấm ─
 // `prompt` là HTML đã được server lọc — trường duy nhất được render bằng dangerouslySetInnerHTML.
 // Được nộp hay không theo `canSubmit` của server, không tự so giờ.
-
-const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 function writeLabel(part: StudentPartDetail): string {
   if (part.status === 'REVISION_REQUESTED') return 'Sửa bài';
@@ -28,6 +27,7 @@ export function StudentPartView({
   assignmentClosed,
   part,
   band,
+  paper = false,
   onHistory
 }: {
   assignmentId: number;
@@ -35,6 +35,8 @@ export function StudentPartView({
   part: StudentPartDetail;
   /** Band của lần nộp gần nhất đã được trả; null = chưa có. */
   band: number | null;
+  /** Bài PAPER: `band` là điểm riêng thang 10. */
+  paper?: boolean;
   onHistory: () => void;
 }) {
   const pending = part.status === 'NOT_STARTED' || part.status === 'DRAFT' || part.status === 'REVISION_REQUESTED';
@@ -69,7 +71,15 @@ export function StudentPartView({
         <div className="flex flex-wrap items-center gap-2">
           {band !== null && (
             <span className="inline-flex items-center gap-2 text-small text-neutral-500">
-              Band <BandBadge band={band} />
+              {paper ? (
+                <>
+                  Điểm <span className="font-semibold text-neutral-900 tabular-nums">{formatScore(band)} / 10</span>
+                </>
+              ) : (
+                <>
+                  Band <BandBadge band={band} />
+                </>
+              )}
             </span>
           )}
           {band !== null && (

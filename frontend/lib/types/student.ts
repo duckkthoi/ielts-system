@@ -219,6 +219,10 @@ export interface VersionResult {
   criteria: ResultCriterion[];
   inlineComments: StudentInlineComment[];
   errorSummary: ErrorCount[];
+  /** Bài PAPER (B25e): điểm riêng của bạn = điểm nhóm (`band`, thang 10) + cộng / trừ; bài luận null. */
+  myScore: number | null;
+  myAdjustment: number | null;
+  myAdjustmentReason: string | null;
 }
 
 export interface VersionDetail {
