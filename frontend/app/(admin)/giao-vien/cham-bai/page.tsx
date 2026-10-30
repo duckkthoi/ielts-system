@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 import GradingQueuePage from './index';
 
-export const metadata: Metadata = { title: 'Chấm bài — IELTS Writing' };
+export const metadata: Metadata = { title: 'Chấm bài — AcaWrite' };
 
 export default function Page() {
   return (

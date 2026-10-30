@@ -80,7 +80,7 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   mail:
-    from: ${MAIL_FROM:IELTS Writing <no-reply@ielts.local>}
+    from: ${MAIL_FROM:AcaWrite <no-reply@ielts.local>}
     login-url: ${APP_LOGIN_URL:http://localhost:3000/dang-nhap}
     app-url: ${APP_URL:http://localhost:3000}
   upload-dir: ${UPLOAD_DIR:./uploads}

@@ -2,6 +2,7 @@ import { Alert, Collapse, Image } from 'antd';
 
 import { EssayAnnotator } from '@/components/EssayAnnotator';
 import type { AnnotateAction, AnnotationView } from '@/components/EssayAnnotator';
+import { PaperViewer } from '@/components/PaperEditor';
 import { fileUrl } from '@/lib/constants';
 import type { GradingScreen } from '@/lib/types/grading';
 import { formatDateTime } from '@/lib/utils/date';
@@ -9,6 +10,7 @@ import { formatDateTime } from '@/lib/utils/date';
 // ─── Bài làm bên trái màn chấm: cảnh báo số từ, đề bài (thu gọn được), bài viết ─
 // `prompt` là HTML đã được server lọc — trường duy nhất được render bằng dangerouslySetInnerHTML.
 // Bài làm vẽ bằng EssayAnnotator: đánh dấu kiểu "Word đã chấm", bôi đen để thêm (chỉ khi còn chấm được).
+// Bài PAPER (B25c-2): hiện bản nộp có định dạng bằng PaperViewer (chỉ đọc); nhận xét theo khối làm ở B25d.
 
 export function EssayPanel({
   screen,
@@ -63,22 +65,33 @@ export function EssayPanel({
           }
         ]}
       />
-      {screen.editable && (
-        <p className="text-caption text-neutral-500">
-          Bôi đen chữ trong bài để đánh dấu lỗi, tô màu, sửa hoặc nhận xét.
-        </p>
+      {version.contentJson ? (
+        <PaperViewer
+          contentJson={version.contentJson}
+          references={version.references ?? []}
+          style={screen.assignment.citationStyle ?? 'IEEE'}
+          footer={<span className="text-caption text-neutral-500">{version.wordCount} từ</span>}
+        />
+      ) : (
+        <>
+          {screen.editable && (
+            <p className="text-caption text-neutral-500">
+              Bôi đen chữ trong bài để đánh dấu lỗi, tô màu, sửa hoặc nhận xét.
+            </p>
+          )}
+          <EssayAnnotator
+            content={version.content}
+            annotations={annotations}
+            readOnly={!screen.editable}
+            selectedKey={selectedKey}
+            scrollNonce={scrollNonce}
+            onSelect={onSelect}
+            onAction={onAction}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        </>
       )}
-      <EssayAnnotator
-        content={version.content}
-        annotations={annotations}
-        readOnly={!screen.editable}
-        selectedKey={selectedKey}
-        scrollNonce={scrollNonce}
-        onSelect={onSelect}
-        onAction={onAction}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
     </div>
   );
 }

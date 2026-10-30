@@ -210,7 +210,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       MAIL_SMTP_AUTH: "true"
       MAIL_STARTTLS: "true"
-      MAIL_FROM: "IELTS Writing <${MAIL_USERNAME}>"
+      MAIL_FROM: "AcaWrite <${MAIL_USERNAME}>"
 ```
 
 và thêm `MAIL_USERNAME=…`, `MAIL_PASSWORD=…` vào `.env` (không ghi mật khẩu SMTP thẳng vào file yml).

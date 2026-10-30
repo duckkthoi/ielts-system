@@ -9,12 +9,14 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { BandBadge } from '@/components/BandBadge';
 import { EssayAnnotator, studentAnnotationViews } from '@/components/EssayAnnotator';
+import { PaperViewer } from '@/components/PaperEditor';
 import { PageHeader } from '@/components/PageHeader';
 import { resultPath, studentAssignmentPath, writingPath } from '@/lib/constants';
 import { studentApi } from '@/lib/api/student';
 import { getBandLevel } from '@/lib/theme/status';
 import type { StudentAssignmentDetail, VersionDetail, VersionSummary } from '@/lib/types/student';
 import { formatDate, formatDateTime } from '@/lib/utils/date';
+import { formatScore } from '@/lib/utils/grading';
 
 import { CriteriaResult } from './CriteriaResult';
 import { StudentCompare } from './StudentCompare';
@@ -22,6 +24,7 @@ import { StudentCompare } from './StudentCompare';
 // ─── Sinh viên: kết quả một phần (UC-23, Prompt 7 D, E) ───────────────────────
 // /sinh-vien/bai-tap/{id}/ket-qua?phan={partId}&lan={versionNo}; bỏ trống `lan` = lần gần nhất đã trả bài.
 // Kết quả chỉ có khi lần nộp đã được trả (BR-13); đang "Cần sửa" thì server đã ẩn gợi ý sửa (BR-21).
+// Bài PAPER (B25e): bản nộp có định dạng, điểm thang 10 — điểm riêng của mình (đã cộng / trừ) và điểm nhóm.
 
 type Loaded = { detail: StudentAssignmentDetail; versions: VersionSummary[]; version: VersionDetail | null };
 
@@ -100,6 +103,8 @@ export default function StudentResultPage() {
   const part = detail.parts.find((p) => p.partId === partId)!;
   const result = version?.result ?? null;
   const band = result?.band ?? null;
+  const paper = detail.kind === 'PAPER';
+  const myScore = result?.myScore ?? null;
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
@@ -115,7 +120,15 @@ export default function StudentResultPage() {
         }
         extra={
           <span className="flex flex-wrap items-center gap-3">
-            {band !== null && (
+            {paper && myScore !== null && (
+              <span className="inline-flex items-baseline gap-2">
+                <span className="text-h2 font-semibold text-brand-600 tabular-nums">{formatScore(myScore)}</span>
+                <span className="text-small text-neutral-500">
+                  / 10{band !== null && myScore !== band ? ` · điểm nhóm ${formatScore(band)}` : ''}
+                </span>
+              </span>
+            )}
+            {!paper && band !== null && (
               <span className="inline-flex items-center gap-2">
                 <BandBadge band={band} size="lg" />
                 <span className="font-semibold text-neutral-900">{getBandLevel(band).label}</span>
@@ -131,7 +144,15 @@ export default function StudentResultPage() {
                   label: (
                     <span className="inline-flex items-center gap-2">
                       Lần {v.versionNo} · {formatDate(v.submittedAt)}
-                      {v.returned ? <BandBadge band={v.band} size="sm" /> : ' · chờ kết quả'}
+                      {!v.returned ? (
+                        ' · chờ kết quả'
+                      ) : paper ? (
+                        <span className="font-semibold tabular-nums">
+                          {v.band === null ? '—' : formatScore(v.band)} / 10
+                        </span>
+                      ) : (
+                        <BandBadge band={v.band} size="sm" />
+                      )}
                     </span>
                   )
                 }))}
@@ -159,6 +180,15 @@ export default function StudentResultPage() {
           }
         />
       )}
+      {result?.myAdjustment != null && (
+        <Alert
+          type={result.myAdjustment > 0 ? 'success' : 'warning'}
+          showIcon
+          className="mb-4"
+          title={`Giáo viên ${result.myAdjustment > 0 ? 'cộng' : 'trừ'} ${formatScore(Math.abs(result.myAdjustment))} điểm riêng cho bạn`}
+          description={result.myAdjustmentReason ? `Lý do: ${result.myAdjustmentReason}` : undefined}
+        />
+      )}
       {result?.suggestionsHidden && (
         <Alert
           type="info"
@@ -180,30 +210,41 @@ export default function StudentResultPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="flex min-w-0 flex-col gap-4">
-            <EssayAnnotator
-              content={version.content}
-              annotations={views}
-              readOnly
-              selectedKey={selected}
-              onSelect={setSelected}
-            />
-            <Card size="small" title="Lỗi trong bài">
-              {result.errorSummary.length === 0 ? (
-                <p className="text-small text-neutral-500">Giáo viên không gắn mã lỗi nào.</p>
-              ) : (
-                <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-small">
-                  {result.errorSummary.map((e) => (
-                    <li key={`${e.criterionCode}-${e.errorCode}`} className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 truncate">
-                        <span className="font-mono font-semibold text-neutral-900">{e.errorCode}</span> {e.errorName}
-                        {e.criterionCode && <span className="text-neutral-500"> · {e.criterionCode}</span>}
-                      </span>
-                      <strong className="shrink-0 tabular-nums">×{e.count}</strong>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+            {paper && version.contentJson ? (
+              <PaperViewer
+                contentJson={version.contentJson}
+                references={version.references ?? []}
+                style={detail.citationStyle ?? 'IEEE'}
+                footer={<span className="text-caption text-neutral-500">{version.wordCount} từ</span>}
+              />
+            ) : (
+              <EssayAnnotator
+                content={version.content}
+                annotations={views}
+                readOnly
+                selectedKey={selected}
+                onSelect={setSelected}
+              />
+            )}
+            {!paper && (
+              <Card size="small" title="Lỗi trong bài">
+                {result.errorSummary.length === 0 ? (
+                  <p className="text-small text-neutral-500">Giáo viên không gắn mã lỗi nào.</p>
+                ) : (
+                  <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-small">
+                    {result.errorSummary.map((e) => (
+                      <li key={`${e.criterionCode}-${e.errorCode}`} className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate">
+                          <span className="font-mono font-semibold text-neutral-900">{e.errorCode}</span> {e.errorName}
+                          {e.criterionCode && <span className="text-neutral-500"> · {e.criterionCode}</span>}
+                        </span>
+                        <strong className="shrink-0 tabular-nums">×{e.count}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            )}
           </div>
           <CriteriaResult result={result} />
         </div>

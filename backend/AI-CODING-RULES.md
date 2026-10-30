@@ -8,7 +8,7 @@
 
 ## 1. Bối cảnh
 
-- Hệ thống giao bài / chấm bài IELTS Writing, đồ án môn Lập trình mạng. **Monolith**: một ứng dụng Spring Boot chứa REST, WebSocket STOMP, server TCP, job định kỳ. KHÔNG tách microservice, KHÔNG dùng Redis hay broker ngoài.
+- AcaWrite — hệ thống giao bài / chấm bài IELTS Writing và paper học thuật, đồ án môn Lập trình mạng. **Monolith**: một ứng dụng Spring Boot chứa REST, WebSocket STOMP, server TCP, job định kỳ. KHÔNG tách microservice, KHÔNG dùng Redis hay broker ngoài.
 - **`docs/` là bản chuẩn.** Code PHẢI khớp tài liệu; đổi một bên thì đổi bên kia trong cùng bước.
 
 | Cần gì | Xem |

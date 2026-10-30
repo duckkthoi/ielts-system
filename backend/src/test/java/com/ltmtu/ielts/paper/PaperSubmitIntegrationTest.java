@@ -94,7 +94,7 @@ class PaperSubmitIntegrationTest extends PaperTestSupport {
 	}
 
 	@Test
-	@DisplayName("BR-28 / BR-30: bản nộp giữ JSON + chữ thuần + tài liệu được trích (theo thứ tự, bỏ mục đã xoá); sau khi nộp tài liệu chỉ đọc")
+	@DisplayName("BR-28 / BR-30: bản nộp giữ JSON + chữ thuần + tài liệu được trích (theo thứ tự, bỏ mục đã xoá), màn chấm cũng nhận; sau khi nộp tài liệu chỉ đọc")
 	void versionKeepsContent() throws Exception {
 		long r1 = addReference(a, "First paper");
 		long r2 = addReference(b, "Second paper");
@@ -118,6 +118,15 @@ class PaperSubmitIntegrationTest extends PaperTestSupport {
 		assertThat(refs.get(0).get("id").asLong()).isEqualTo(r2);
 		assertThat(refs.get(0).get("csl").get("title").asString()).isEqualTo("Second paper");
 		assertThat(refs.get(1).get("id").asLong()).isEqualTo(r1);
+
+		// B25c-2: màn chấm của giáo viên nhận cùng JSON + tài liệu được trích để hiện bài có định dạng
+		long submissionId = data(call(get("/api/teacher/submissions").param("assignmentId",
+				String.valueOf(assignmentId)), teacher)).get(0).get("submissionId").asLong();
+		JsonNode screen = data(call(get("/api/teacher/submissions/" + submissionId), teacher));
+		assertThat(screen.get("assignment").get("citationStyle").asString()).isNotBlank();
+		JsonNode tv = screen.get("version");
+		assertThat(tv.get("contentJson")).isEqualTo(v.get("contentJson"));
+		assertThat(tv.get("references")).isEqualTo(refs);
 
 		assertThat(data(call(get("/api/student/parts/" + partId + "/document"), accessToken(a))).get("editable")
 				.asBoolean()).isFalse();

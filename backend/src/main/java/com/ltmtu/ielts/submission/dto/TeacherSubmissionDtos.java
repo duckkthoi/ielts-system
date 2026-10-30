@@ -2,6 +2,7 @@ package com.ltmtu.ielts.submission.dto;
 
 import java.time.Instant;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
 import com.ltmtu.ielts.submission.SubmissionStatus;
 
@@ -11,10 +12,10 @@ public final class TeacherSubmissionDtos {
 	private TeacherSubmissionDtos() {
 	}
 
-	/** Một dòng hàng đợi chấm: bài nộp + version mới nhất. */
+	/** Một dòng hàng đợi chấm: bài nộp + version mới nhất. {@code groupName}: bài PAPER — tên nhóm, bài luận null. */
 	public record QueueItem(Long submissionId, SubmissionStatus status, int currentVersion, Long studentId,
 			String studentCode, String studentName, Long assignmentId, String assignmentTitle, Long partId,
 			String partTitle, int partOrderNo, TaskType taskType, Long versionId, Instant submittedAt, boolean late,
-			int wordCount) {
+			int wordCount, AssignmentKind kind, String groupName) {
 	}
 }

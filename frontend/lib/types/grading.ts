@@ -1,5 +1,13 @@
 import type { AssignmentStatus, SubmissionStatus } from '@/lib/theme/status';
-import type { ChecklistKind, CriterionCode, TaskType } from '@/lib/types/assignment';
+import type {
+  AssignmentKind,
+  ChecklistKind,
+  CitationStyle,
+  CriterionCode,
+  LevelDto,
+  TaskType
+} from '@/lib/types/assignment';
+import type { CslItem } from '@/lib/types/paper';
 
 // ─── Giáo viên chấm bài (docs/05 mục A.7) ─────────────────────────────────────
 // Điểm / band là BigDecimal phía server → `number`.
@@ -40,8 +48,11 @@ export interface QueueRow {
   late: boolean;
   wordCount: number;
   gradeStatus: GradeStatus | null;
-  /** Band phần đã làm tròn; null khi chưa chấm đủ. */
+  /** Điểm phần đã làm tròn (bài luận band IELTS, bài PAPER thang 10); null khi chưa chấm đủ. */
   band: number | null;
+  kind: AssignmentKind;
+  /** Bài PAPER: tên nhóm; `student` là người nộp gần nhất. Bài luận null. */
+  groupName: string | null;
 }
 
 export interface QueueParams {
@@ -71,6 +82,8 @@ export interface GradingCriterion {
   step: number;
   weight: number;
   checklist: GradingChecklistItem[];
+  /** Mức đạt (chỉ bài PAPER — BR-31); rỗng = chấm điểm trực tiếp. */
+  levels: LevelDto[];
 }
 
 export interface ScoreDto {
@@ -80,6 +93,17 @@ export interface ScoreDto {
   /** Giới hạn điểm hiện tại (BR-17, BR-18) do server tính. */
   maxAllowed: number;
   limitReason: string | null;
+  /** Bài PAPER: mức đạt đã chọn; null = chấm điểm trực tiếp. */
+  levelId: number | null;
+}
+
+/** Cộng / trừ riêng một thành viên nhóm (bài PAPER): `score` = điểm cả bài + delta, kẹp [0, 10]. */
+export interface AdjustmentDto {
+  studentId: number;
+  studentName: string;
+  delta: number;
+  reason: string;
+  score: number | null;
 }
 
 export interface InlineCommentDto {
@@ -113,6 +137,8 @@ export interface GradeDto {
   scores: ScoreDto[];
   checklist: { checklistItemId: number; checked: boolean }[];
   inlineComments: InlineCommentDto[];
+  /** Chỉ bài PAPER. */
+  adjustments: AdjustmentDto[];
 }
 
 export interface GradingVersionSummary {
@@ -141,6 +167,10 @@ export interface GradingScreen {
     status: AssignmentStatus;
     maxRevisions: number;
     showSuggestionsOnRevision: boolean;
+    /** PAPER: chấm thang 10 theo mức đạt (BR-31), không áp quy tắc riêng của IELTS. */
+    kind: AssignmentKind;
+    /** Kiểu trích dẫn để dựng bài nộp có định dạng; bài luận null. */
+    citationStyle: CitationStyle | null;
   };
   part: {
     id: number;
@@ -153,7 +183,16 @@ export interface GradingScreen {
     minWords: number | null;
     weight: number | null;
   };
-  version: { versionNo: number; content: string; wordCount: number; submittedAt: string; late: boolean };
+  version: {
+    versionNo: number;
+    content: string;
+    wordCount: number;
+    submittedAt: string;
+    late: boolean;
+    /** Bài PAPER (B25c-2): JSON trình soạn + tài liệu được trích lúc nộp; bài luận null. */
+    contentJson: Record<string, unknown> | null;
+    references: { id: number; csl: CslItem }[] | null;
+  };
   /** SHORT_ESSAY (≤ 20 từ, BR-18) · UNDER_MIN_WORDS. */
   warnings: { code: string; message: string }[];
   criteria: GradingCriterion[];
@@ -164,6 +203,8 @@ export interface GradingScreen {
   editable: boolean;
   canReturn: boolean;
   canRequestRevision: boolean;
+  /** Bài PAPER: thành viên hiện tại của nhóm (để cộng / trừ riêng); bài luận rỗng. */
+  members: StudentInfo[];
 }
 
 export interface InlineCommentRequest {
@@ -204,9 +245,11 @@ export interface CommentBankDto {
 /** PUT …/grade thay toàn bộ kết quả chấm của version (tiêu chí / mục / nhận xét không gửi = chưa chấm / bỏ). */
 export interface SaveGradeRequest {
   versionNo: number;
-  scores: { criterionId: number; score: number | null; comment: string | null }[];
+  scores: { criterionId: number; score: number | null; comment: string | null; levelId?: number | null }[];
   checklist: { checklistItemId: number; checked: boolean }[];
   inlineComments: InlineCommentRequest[];
   generalComment: string | null;
   zeroReason: ZeroReason | null;
+  /** Chỉ bài PAPER (PUT = thay toàn bộ): -2…+2, bước 0,25, bắt buộc lý do. */
+  memberAdjustments?: { studentId: number; delta: number; reason: string }[];
 }

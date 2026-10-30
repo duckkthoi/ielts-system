@@ -85,7 +85,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
               className="hidden lg:inline-flex"
             />
             <div className={clsx('min-w-0 leading-tight', !pageTitle && 'hidden')}>
-              <p className="text-caption text-neutral-500">IELTS Writing</p>
+              <p className="text-caption text-neutral-500">AcaWrite</p>
               <p className="truncate font-semibold text-neutral-900">{pageTitle}</p>
             </div>
           </div>

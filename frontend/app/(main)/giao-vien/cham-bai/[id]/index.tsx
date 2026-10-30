@@ -16,6 +16,7 @@ import { gradingPath, queueQueryString } from '@/lib/constants';
 import { getSubmissionDisplayStatus, SUBMISSION_STATUS_META } from '@/lib/theme/status';
 import type { ErrorCodeDto, GradingScreen, QueueParams, QueueStatus, ZeroReason } from '@/lib/types/grading';
 import { formatDate } from '@/lib/utils/date';
+import { formatScore } from '@/lib/utils/grading';
 
 import { AnnotationFormModal } from './AnnotationFormModal';
 import type { AnnotationFormTarget } from './AnnotationFormModal';
@@ -60,7 +61,9 @@ function Workspace({
   const [formTarget, setFormTarget] = useState<AnnotationFormTarget | null>(null);
   const [leftMode, setLeftMode] = useState<'essay' | 'compare'>('essay');
   const content = screen.version.content;
-  const hasOlder = screen.versions.some((v) => v.versionNo < screen.version.versionNo);
+  // Bài PAPER: đánh dấu theo khối và so sánh lần nộp làm ở B25d — tạm ẩn.
+  const paper = screen.assignment.kind === 'PAPER';
+  const hasOlder = !paper && screen.versions.some((v) => v.versionNo < screen.version.versionNo);
 
   useEffect(() => {
     feedbackApi
@@ -179,18 +182,20 @@ function Workspace({
         <aside
           className={`min-h-0 overflow-y-auto border-l border-neutral-100 bg-neutral-25 ${tab === 'grade' ? '' : 'hidden lg:block'}`}
         >
-          <div className="sticky top-0 z-10 border-b border-neutral-100 bg-neutral-25 px-4 pt-3 pb-2 sm:px-5">
-            <Segmented
-              block
-              value={rightTab}
-              onChange={(v) => setRightTab(v as 'grade' | 'marks')}
-              options={[
-                { value: 'grade', label: 'Chấm điểm' },
-                { value: 'marks', label: `Đánh dấu (${views.length})` }
-              ]}
-            />
-          </div>
-          {rightTab === 'grade' ? (
+          {!paper && (
+            <div className="sticky top-0 z-10 border-b border-neutral-100 bg-neutral-25 px-4 pt-3 pb-2 sm:px-5">
+              <Segmented
+                block
+                value={rightTab}
+                onChange={(v) => setRightTab(v as 'grade' | 'marks')}
+                options={[
+                  { value: 'grade', label: 'Chấm điểm' },
+                  { value: 'marks', label: `Đánh dấu (${views.length})` }
+                ]}
+              />
+            </div>
+          )}
+          {paper || rightTab === 'grade' ? (
             <GradingPanel
               screen={screen}
               g={g}
@@ -339,7 +344,12 @@ export default function GradingPage() {
                 <span className="inline-flex items-center gap-2">
                   Lần {v.versionNo}
                   {v.versionNo === screen.submission.currentVersion && ' (mới nhất)'} · {formatDate(v.submittedAt)}
-                  {v.band !== null && <BandBadge band={v.band} size="sm" />}
+                  {v.band !== null &&
+                    (screen.assignment.kind === 'PAPER' ? (
+                      <span className="font-semibold tabular-nums">{formatScore(v.band)} / 10</span>
+                    ) : (
+                      <BandBadge band={v.band} size="sm" />
+                    ))}
                 </span>
               )
             }))}

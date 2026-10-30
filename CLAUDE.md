@@ -1,4 +1,4 @@
-# Hướng dẫn cho AI agent — dự án IELTS Writing (LTMTU)
+# Hướng dẫn cho AI agent — dự án AcaWrite (LTMTU)
 
 > Đọc file này **trước tiên**, rồi đọc quy tắc của phần mình sửa:
 > - sửa `backend/` → [`backend/AI-CODING-RULES.md`](backend/AI-CODING-RULES.md)

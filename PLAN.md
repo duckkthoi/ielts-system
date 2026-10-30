@@ -1,4 +1,4 @@
-# Kế hoạch dự án — Website giao bài & chấm bài IELTS Writing
+# Kế hoạch dự án — AcaWrite: giao bài & chấm bài IELTS Writing và paper học thuật
 
 > Đồ án môn **Lập trình mạng** (LTMTU). File này nói **làm gì, theo thứ tự nào, xong thì kiểm tra ra sao**.
 > Chi tiết kỹ thuật (bảng, API, trạng thái, quy tắc nghiệp vụ) nằm trong [`docs/`](docs/) — **`docs/` là bản chuẩn**, chỗ nào lệch thì theo `docs/`.

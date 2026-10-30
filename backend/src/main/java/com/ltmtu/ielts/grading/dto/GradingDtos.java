@@ -7,6 +7,7 @@ import java.util.List;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentEnums.ChecklistKind;
+import com.ltmtu.ielts.assignment.AssignmentEnums.CitationStyle;
 import com.ltmtu.ielts.assignment.AssignmentEnums.CriterionCode;
 import com.ltmtu.ielts.assignment.AssignmentEnums.TaskType;
 import com.ltmtu.ielts.assignment.dto.AssignmentDtos.LevelDto;
@@ -21,6 +22,7 @@ import com.ltmtu.ielts.submission.SubmissionStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import tools.jackson.databind.JsonNode;
 
 /** Chấm bài phía giáo viên — docs/05-api.md mục A.7 (UC-17, UC-18; SD-08). */
 public final class GradingDtos {
@@ -30,11 +32,14 @@ public final class GradingDtos {
 
 	// ─── Hàng đợi chấm ───────────────────────────────────────────────────────
 
-	/** {@code band}: band phần đã làm tròn để hiển thị; null khi chưa chấm hoặc chưa đủ tiêu chí. */
+	/**
+	 * {@code band}: điểm phần đã làm tròn để hiển thị (bài luận band IELTS, bài PAPER thang 10 — 2 chữ số); null khi
+	 * chưa chấm hoặc chưa đủ tiêu chí. {@code groupName}: bài PAPER — tên nhóm; bài luận null.
+	 */
 	public record QueueRow(Long submissionId, SubmissionStatus status, int currentVersion, StudentInfo student,
 			Long assignmentId, String assignmentTitle, Long partId, String partTitle, int partOrderNo,
 			TaskType taskType, Instant submittedAt, boolean late, int wordCount, GradeStatus gradeStatus,
-			BigDecimal band) {
+			BigDecimal band, AssignmentKind kind, String groupName) {
 	}
 
 	// ─── Màn chấm ────────────────────────────────────────────────────────────
@@ -47,16 +52,24 @@ public final class GradingDtos {
 			StudentInfo student, String revisionNote, Instant revisionDueAt) {
 	}
 
-	/** {@code kind = PAPER}: chấm thang 10 theo mức đạt (BR-31), không áp quy tắc riêng của IELTS. */
+	/**
+	 * {@code kind = PAPER}: chấm thang 10 theo mức đạt (BR-31), không áp quy tắc riêng của IELTS;
+	 * {@code citationStyle}: kiểu trích dẫn để dựng bài nộp có định dạng (bài luận null).
+	 */
 	public record AssignmentInfo(Long id, String title, AssignmentStatus status, int maxRevisions,
-			boolean showSuggestionsOnRevision, AssignmentKind kind) {
+			boolean showSuggestionsOnRevision, AssignmentKind kind, CitationStyle citationStyle) {
 	}
 
 	public record PartInfo(Long id, int orderNo, String title, TaskType taskType, String prompt, String imageUrl,
 			Integer minWords, BigDecimal weight) {
 	}
 
-	public record VersionInfo(int versionNo, String content, int wordCount, Instant submittedAt, boolean late) {
+	/**
+	 * {@code contentJson} / {@code references}: bài PAPER (B25c-2) — JSON trình soạn và tài liệu được trích lúc nộp
+	 * ({@code [{id, csl}]}); bài luận để null.
+	 */
+	public record VersionInfo(int versionNo, String content, int wordCount, Instant submittedAt, boolean late,
+			JsonNode contentJson, JsonNode references) {
 	}
 
 	/** Cảnh báo trên màn chấm: {@code SHORT_ESSAY} (≤ 20 từ, BR-18), {@code UNDER_MIN_WORDS}. */

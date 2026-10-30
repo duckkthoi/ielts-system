@@ -82,12 +82,14 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
 	/**
 	 * Hàng đợi chấm (UC-17): bài nộp của các bài tập do giáo viên tạo, ở một trạng thái, kèm version mới nhất.
-	 * Sắp theo thời điểm nộp — bài nộp trước được chấm trước.
+	 * Sắp theo thời điểm nộp — bài nộp trước được chấm trước. Bài PAPER kèm tên nhóm (đọc bảng {@code paper_groups},
+	 * chỉ đọc).
 	 */
 	@Query(value = """
 			SELECT new com.ltmtu.ielts.submission.dto.TeacherSubmissionDtos$QueueItem(
 				s.id, s.status, s.currentVersion, u.id, u.studentCode, u.fullName, a.id, a.title, p.id, p.title,
-				p.orderNo, p.taskType, v.id, v.submittedAt, v.late, v.wordCount)
+				p.orderNo, p.taskType, v.id, v.submittedAt, v.late, v.wordCount, a.kind,
+				(SELECT g.name FROM PaperGroup g WHERE g.id = s.groupId))
 			FROM SubmissionVersion v JOIN v.submission s JOIN s.part p JOIN p.assignment a JOIN s.student u
 			WHERE v.versionNo = s.currentVersion AND a.teacher.id = :teacherId AND s.status = :status
 			  AND (:assignmentId IS NULL OR a.id = :assignmentId)
@@ -95,7 +97,8 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 			  AND (:classId IS NULL OR EXISTS (
 			      SELECT 1 FROM ClassMember m WHERE m.classroom.id = :classId AND m.student = u))
 			  AND (:keyword IS NULL OR lower(u.studentCode) LIKE :keyword ESCAPE '!'
-			       OR lower(u.fullName) LIKE :keyword ESCAPE '!')
+			       OR lower(u.fullName) LIKE :keyword ESCAPE '!'
+			       OR EXISTS (SELECT 1 FROM PaperGroup g WHERE g.id = s.groupId AND lower(g.name) LIKE :keyword ESCAPE '!'))
 			ORDER BY v.submittedAt ASC, s.id""",
 			countQuery = """
 					SELECT count(s) FROM Submission s JOIN s.part p JOIN p.assignment a JOIN s.student u
@@ -105,7 +108,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 					  AND (:classId IS NULL OR EXISTS (
 					      SELECT 1 FROM ClassMember m WHERE m.classroom.id = :classId AND m.student = u))
 					  AND (:keyword IS NULL OR lower(u.studentCode) LIKE :keyword ESCAPE '!'
-					       OR lower(u.fullName) LIKE :keyword ESCAPE '!')""")
+					       OR lower(u.fullName) LIKE :keyword ESCAPE '!'
+					       OR EXISTS (SELECT 1 FROM PaperGroup g
+					           WHERE g.id = s.groupId AND lower(g.name) LIKE :keyword ESCAPE '!'))""")
 	Page<QueueItem> gradingQueue(@Param("teacherId") Long teacherId, @Param("status") SubmissionStatus status,
 			@Param("assignmentId") Long assignmentId, @Param("partId") Long partId, @Param("classId") Long classId,
 			@Param("keyword") String keyword, Pageable pageable);

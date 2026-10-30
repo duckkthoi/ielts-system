@@ -5,10 +5,9 @@ import { Check } from 'lucide-react';
 import { BandBadge } from '@/components/BandBadge';
 import { ZERO_REASON_LABEL } from '@/lib/constants';
 import type { VersionResult } from '@/lib/types/student';
+import { formatScore } from '@/lib/utils/grading';
 
 // ─── Cột phải màn kết quả: điểm từng tiêu chí, checklist (đạt / chưa đạt), giới hạn điểm, nhận xét chung ─
-
-const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 export function CriteriaResult({ result }: { result: VersionResult }) {
   return (
