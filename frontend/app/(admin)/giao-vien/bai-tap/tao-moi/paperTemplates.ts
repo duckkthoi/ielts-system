@@ -48,8 +48,8 @@ export function defaultPaperStages(): PartForm[] {
     newPaperStage(
       'Đề cương',
       [
-        section('Introduction', true, 800),
-        section('Related Work', true, 1000),
+        section('Giới thiệu', true, 800),
+        section('Nghiên cứu liên quan', true, 1000),
         section('Phương pháp dự kiến'),
         section('Kế hoạch thực hiện', false, 400)
       ],
@@ -58,13 +58,13 @@ export function defaultPaperStages(): PartForm[] {
     newPaperStage(
       'Bản cuối',
       [
-        section('Abstract', true, 250),
-        section('Introduction'),
-        section('Related Work'),
-        section('Method'),
-        section('Experiments & Results'),
-        section('Discussion', false),
-        section('Conclusion')
+        section('Tóm tắt', true, 250),
+        section('Giới thiệu'),
+        section('Nghiên cứu liên quan'),
+        section('Phương pháp'),
+        section('Thực nghiệm và kết quả'),
+        section('Thảo luận', false),
+        section('Kết luận')
       ],
       'Bài hoàn chỉnh theo định dạng bài báo. Danh mục tài liệu tham khảo được hệ thống sinh tự động từ các trích dẫn.'
     )
@@ -98,7 +98,7 @@ export function paperCriteria(): CriterionForm[] {
     criterion(
       'Vấn đề & đóng góp',
       1.5,
-      'Vấn đề rõ, có động lực; đóng góp nêu cụ thể, đo được (Abstract, Introduction).',
+      'Vấn đề rõ, có động lực; đóng góp nêu cụ thể, đo được (Tóm tắt, Giới thiệu).',
       [
         'Vấn đề rõ, có động lực; đóng góp nêu cụ thể, đo được',
         'Vấn đề rõ, đóng góp còn chung chung',

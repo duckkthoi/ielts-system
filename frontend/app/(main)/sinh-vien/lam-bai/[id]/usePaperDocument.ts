@@ -27,7 +27,11 @@ function currentContent(sync: PaperSync) {
   return { json, text: docText(json) };
 }
 
-export function usePaperDocument(partId: number, sections: SectionDto[]) {
+export function usePaperDocument(
+  partId: number,
+  sections: SectionDto[],
+  onSnapshot?: (contentText: string) => void | Promise<void>
+) {
   const [sync, setSync] = useState<PaperSync | null>(null);
   const [status, setStatus] = useState<SyncStatus>('loading');
   const [editable, setEditable] = useState(false);
@@ -38,6 +42,11 @@ export function usePaperDocument(partId: number, sections: SectionDto[]) {
   const sectionsRef = useRef(sections);
   const connected = useRealtimeStore((s) => s.status) === 'CONNECTED';
   const wasConnected = useRef(connected);
+  const onSnapshotRef = useRef(onSnapshot);
+
+  useEffect(() => {
+    onSnapshotRef.current = onSnapshot;
+  }, [onSnapshot]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,10 +89,12 @@ export function usePaperDocument(partId: number, sections: SectionDto[]) {
 
   /** `force`: lưu cả khi máy này không sửa gì (trước khi nộp). */
   const snapshotNow = useCallback(
-    async (force = false) => {
-      if (!sync) return;
+    async (force = false): Promise<string | null> => {
+      if (!sync) return null;
       const { json, text } = currentContent(sync);
       await sync.snapshot(json, text, force);
+      if (text.trim()) await onSnapshotRef.current?.(text);
+      return text;
     },
     [sync]
   );

@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 import ClassStatsPage from './index';
 
-export const metadata: Metadata = { title: 'Thống kê lớp — IELTS Writing' };
+export const metadata: Metadata = { title: 'Thống kê lớp — AcaWrite' };
 
 export default function Page() {
   return (
