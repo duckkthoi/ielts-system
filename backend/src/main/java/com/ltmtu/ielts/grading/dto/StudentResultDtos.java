@@ -62,10 +62,13 @@ public final class StudentResultDtos {
 
 	/**
 	 * {@code suggestionsHidden}: gợi ý sửa đang bị ẩn vì bài đang "Cần sửa" (BR-21) — sinh viên tự sửa theo mã lỗi.
+	 * Bài PAPER (B25e): {@code band} = điểm nhóm thang 10; {@code myScore} = điểm riêng của sinh viên (đã cộng / trừ),
+	 * {@code myAdjustment} / {@code myAdjustmentReason} = mức và lý do cộng / trừ (null nếu không có); bài luận null.
 	 */
 	public record Result(BigDecimal band, ZeroReason zeroReason, String generalComment, String graderName,
 			Instant returnedAt, boolean suggestionsHidden, List<CriterionResult> criteria,
-			List<StudentInlineComment> inlineComments, List<ErrorCount> errorSummary) {
+			List<StudentInlineComment> inlineComments, List<ErrorCount> errorSummary, BigDecimal myScore,
+			BigDecimal myAdjustment, String myAdjustmentReason) {
 	}
 
 	/** {@code versionNo} / {@code band}: lần nộp gần nhất đã được trả bài của phần; null nếu chưa có. */
