@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ltmtu.ielts.assignment.Assignment;
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.assignment.AssignmentPart;
 import com.ltmtu.ielts.assignment.RubricCriterion;
@@ -87,7 +88,8 @@ public class GradingService {
 					new StudentInfo(i.studentId(), i.studentCode(), i.studentName()), i.assignmentId(),
 					i.assignmentTitle(), i.partId(), i.partTitle(), i.partOrderNo(), i.taskType(), i.submittedAt(),
 					i.late(), i.wordCount(), g == null ? null : g.getStatus(),
-					g == null ? null : BandCalculator.display(g.getOverallScore()));
+					g == null ? null : PaperScoreRules.display(g.getOverallScore(), i.kind() == AssignmentKind.PAPER),
+					i.kind(), i.groupName());
 		});
 	}
 

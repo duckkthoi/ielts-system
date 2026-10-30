@@ -48,8 +48,11 @@ export interface QueueRow {
   late: boolean;
   wordCount: number;
   gradeStatus: GradeStatus | null;
-  /** Band phần đã làm tròn; null khi chưa chấm đủ. */
+  /** Điểm phần đã làm tròn (bài luận band IELTS, bài PAPER thang 10); null khi chưa chấm đủ. */
   band: number | null;
+  kind: AssignmentKind;
+  /** Bài PAPER: tên nhóm; `student` là người nộp gần nhất. Bài luận null. */
+  groupName: string | null;
 }
 
 export interface QueueParams {
