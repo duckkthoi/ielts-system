@@ -2,7 +2,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { clampScore, partBandRaw, roundBand, scoreCap, scoreOptions } from './grading.ts';
+import {
+  adjustmentOptions,
+  clampScore,
+  formatScore,
+  levelOfScore,
+  memberScore,
+  paperScore,
+  partBandRaw,
+  roundBand,
+  scoreCap,
+  scoreForLevel,
+  scoreOptions
+} from './grading.ts';
 
 test('roundBand (BR-12): làm tròn .25 / .75 giống BandCalculator của server', () => {
   assert.equal(roundBand(6.125), 6);
@@ -65,4 +77,42 @@ test('clampScore: vượt giới hạn mới → hạ xuống mức tối đa; c
   assert.equal(clampScore(7, 5), 5);
   assert.equal(clampScore(4, 5), 4);
   assert.equal(clampScore(null, 5), null);
+});
+
+test('paperScore / formatScore (BR-31): thang 10 làm tròn 2 chữ số, không làm tròn kiểu IELTS', () => {
+  assert.equal(paperScore(7.666666), 7.67);
+  assert.equal(paperScore(6.125), 6.13);
+  assert.equal(paperScore(null), null);
+  assert.equal(formatScore(8.75), '8.75');
+  assert.equal(formatScore(7.5), '7.5');
+  assert.equal(formatScore(9), '9');
+});
+
+test('memberScore (BR-31): điểm cả bài + cộng / trừ, kẹp trong [0, 10]', () => {
+  assert.equal(memberScore(7.666666, 1), 8.67);
+  assert.equal(memberScore(9.5, 2), 10);
+  assert.equal(memberScore(1, -2), 0);
+  assert.equal(memberScore(null, 1), null);
+});
+
+test('adjustmentOptions: -2 … +2 bước 0,25, không có 0', () => {
+  const opts = adjustmentOptions();
+  assert.equal(opts.length, 16);
+  assert.equal(opts[0], -2);
+  assert.equal(opts[15], 2);
+  assert.ok(!opts.includes(0));
+});
+
+test('levelOfScore / scoreForLevel: mức chứa điểm; bấm mức giữ điểm nếu đã trong khoảng, nếu không lấy điểm cao nhất', () => {
+  const levels = [
+    { id: 1, minScore: 9, maxScore: 10 },
+    { id: 2, minScore: 7, maxScore: 8.75 },
+    { id: 3, minScore: 0, maxScore: 4.75 }
+  ];
+  assert.equal(levelOfScore(levels, 8)?.id, 2);
+  assert.equal(levelOfScore(levels, 6), null);
+  assert.equal(levelOfScore(levels, null), null);
+  assert.equal(scoreForLevel(levels[1], 7.5), 7.5);
+  assert.equal(scoreForLevel(levels[1], 9.5), 8.75);
+  assert.equal(scoreForLevel(levels[0], null), 10);
 });

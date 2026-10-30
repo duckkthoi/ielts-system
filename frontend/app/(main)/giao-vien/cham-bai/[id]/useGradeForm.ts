@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { gradingApi } from '@/lib/api/grading';
 import { getErrorMessage } from '@/lib/apiError';
+import type { LevelDto } from '@/lib/types/assignment';
 import type {
   EditOp,
   GradeDto,
@@ -13,12 +14,21 @@ import type {
   SaveGradeRequest,
   ZeroReason
 } from '@/lib/types/grading';
-import { clampScore, partBandRaw, roundBand, scoreCap } from '@/lib/utils/grading';
+import {
+  clampScore,
+  levelOfScore,
+  paperScore,
+  partBandRaw,
+  roundBand,
+  scoreCap,
+  scoreForLevel
+} from '@/lib/utils/grading';
 
 // ─── Form chấm một version (SD-08) ────────────────────────────────────────────
 // Giữ điểm / checklist / nhận xét trên client, tự lưu nháp sau 2 giây ngừng sửa (PUT …/grade thay toàn bộ).
 // Giới hạn điểm và band chỉ tính để XEM TRƯỚC (BR-12, BR-17, BR-18); server tính lại khi lưu.
 // Đánh dấu trên bài (F5b) cũng nằm trong form: thêm / sửa / xoá rồi tự lưu như điểm.
+// Bài PAPER (B25c-2, BR-31): thêm mức đạt từng tiêu chí và cộng / trừ riêng từng thành viên; điểm thang 10.
 
 export type GradeSaveState = 'SAVED' | 'DIRTY' | 'SAVING' | 'ERROR';
 
@@ -32,6 +42,10 @@ export interface GradeForm {
   zeroReason: ZeroReason | null;
   /** Đánh dấu trên bài; `key` ổn định phía client (id server đổi sau mỗi lần lưu vì PUT thay toàn bộ). */
   inline: LocalInline[];
+  /** Bài PAPER: mức đạt đã chọn theo tiêu chí. */
+  levels: Record<number, number | null>;
+  /** Bài PAPER: cộng / trừ theo thành viên; dòng chưa có lý do chưa được gửi (server bắt buộc lý do). */
+  adjustments: Record<number, { delta: number; reason: string }>;
 }
 
 export interface LocalInline {
@@ -48,6 +62,12 @@ export interface LocalInline {
 }
 
 export type InlineDraft = Omit<LocalInline, 'key'>;
+
+const isPaper = (screen: GradingScreen) => screen.assignment.kind === 'PAPER';
+
+/** Dòng cộng / trừ đủ điều kiện gửi: có delta và có lý do. */
+export const readyAdjustment = (a: { delta: number; reason: string } | undefined) =>
+  a !== undefined && a.delta !== 0 && a.reason.trim() !== '';
 
 function initForm(screen: GradingScreen): GradeForm {
   const g = screen.grade;
@@ -68,25 +88,32 @@ function initForm(screen: GradingScreen): GradeForm {
       comment: ic.comment,
       suggestion: ic.suggestion,
       edit: ic.edit
-    }))
+    })),
+    levels: {},
+    adjustments: Object.fromEntries(
+      (g?.adjustments ?? []).map((a) => [a.studentId, { delta: a.delta, reason: a.reason }])
+    )
   };
   for (const c of screen.criteria) {
     const s = g?.scores.find((x) => x.criterionId === c.id);
     form.scores[c.id] = s?.score ?? null;
     form.comments[c.id] = s?.comment ?? '';
+    form.levels[c.id] = s?.levelId ?? null;
   }
   for (const m of g?.checklist ?? []) form.checked[m.checklistItemId] = m.checked;
   return form;
 }
 
 function toRequest(screen: GradingScreen, form: GradeForm): SaveGradeRequest {
+  const paper = isPaper(screen);
   return {
     versionNo: screen.version.versionNo,
     // Chấm 0 (BR-19): server đặt mọi tiêu chí = 0, gửi điểm khác 0 sẽ bị từ chối.
     scores: screen.criteria.map((c) => ({
       criterionId: c.id,
       score: form.zeroReason ? 0 : form.scores[c.id],
-      comment: form.comments[c.id]?.trim() || null
+      comment: form.comments[c.id]?.trim() || null,
+      ...(paper ? { levelId: form.zeroReason ? null : form.levels[c.id] } : {})
     })),
     checklist: Object.entries(form.checked)
       .filter(([, checked]) => checked)
@@ -105,14 +132,36 @@ function toRequest(screen: GradingScreen, form: GradeForm): SaveGradeRequest {
         edit: ic.edit
       })),
     generalComment: form.generalComment.trim() || null,
-    zeroReason: form.zeroReason
+    zeroReason: form.zeroReason,
+    ...(paper
+      ? {
+          memberAdjustments: screen.members
+            .filter((m) => readyAdjustment(form.adjustments[m.id]))
+            .map((m) => ({
+              studentId: m.id,
+              delta: form.adjustments[m.id].delta,
+              reason: form.adjustments[m.id].reason.trim()
+            }))
+        }
+      : {})
   };
 }
 
-/** Giới hạn điểm hiện tại của một tiêu chí theo checklist "Giới hạn điểm" đang tick và số từ. */
-export function capOf(c: GradingCriterion, checked: Record<number, boolean>, wordCount: number) {
+/**
+ * Giới hạn điểm hiện tại của một tiêu chí theo checklist "Giới hạn điểm" đang tick và số từ. Bài PAPER không áp giới
+ * hạn bài ≤ 20 từ (BR-18).
+ */
+export function capOf(c: GradingCriterion, checked: Record<number, boolean>, wordCount: number, paper = false) {
   const limits = c.checklist.filter((i) => i.kind === 'LIMIT' && checked[i.id]);
-  return scoreCap(c.maxScore, limits, wordCount);
+  return scoreCap(c.maxScore, limits, paper ? Number.POSITIVE_INFINITY : wordCount);
+}
+
+/** Mức đang chọn vẫn chứa điểm thì giữ; không thì đổi sang mức chứa điểm (hoặc bỏ mức) — tránh lỗi LEVEL_MISMATCH. */
+function syncLevel(levels: LevelDto[], levelId: number | null, score: number | null): number | null {
+  if (score === null) return levelId;
+  const current = levels.find((l) => l.id === levelId);
+  if (current && levelOfScore([current], score)) return levelId;
+  return levelOfScore(levels, score)?.id ?? null;
 }
 
 export function useGradeForm(screen: GradingScreen) {
@@ -128,6 +177,7 @@ export function useGradeForm(screen: GradingScreen) {
   const saveRef = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
   const wordCount = screen.version.wordCount;
   const editable = screen.editable;
+  const paper = isPaper(screen);
 
   const save = useCallback(async (): Promise<boolean> => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -183,9 +233,29 @@ export function useGradeForm(screen: GradingScreen) {
   );
 
   const setScore = useCallback(
-    (criterionId: number, score: number | null) =>
-      change((f) => ({ ...f, scores: { ...f.scores, [criterionId]: score } })),
+    (criterion: GradingCriterion, score: number | null) =>
+      change((f) => ({
+        ...f,
+        scores: { ...f.scores, [criterion.id]: score },
+        levels: { ...f.levels, [criterion.id]: syncLevel(criterion.levels, f.levels[criterion.id], score) }
+      })),
     [change]
+  );
+
+  /** Bài PAPER: bấm một mức → điểm nhảy vào khoảng của mức (giữ điểm nếu đã nằm trong khoảng); bấm lại để bỏ. */
+  const setLevel = useCallback(
+    (criterion: GradingCriterion, level: LevelDto | null) =>
+      change((f) => {
+        if (!level) return { ...f, levels: { ...f.levels, [criterion.id]: null } };
+        const cap = capOf(criterion, f.checked, wordCount, true);
+        const score = clampScore(scoreForLevel(level, f.scores[criterion.id]), cap.max);
+        return {
+          ...f,
+          levels: { ...f.levels, [criterion.id]: syncLevel(criterion.levels, level.id, score) },
+          scores: { ...f.scores, [criterion.id]: score }
+        };
+      }),
+    [change, wordCount]
   );
 
   const setComment = useCallback(
@@ -199,10 +269,16 @@ export function useGradeForm(screen: GradingScreen) {
     (criterion: GradingCriterion, itemId: number, value: boolean) =>
       change((f) => {
         const checked = { ...f.checked, [itemId]: value };
-        const cap = capOf(criterion, checked, wordCount);
-        return { ...f, checked, scores: { ...f.scores, [criterion.id]: clampScore(f.scores[criterion.id], cap.max) } };
+        const cap = capOf(criterion, checked, wordCount, paper);
+        const score = clampScore(f.scores[criterion.id], cap.max);
+        return {
+          ...f,
+          checked,
+          scores: { ...f.scores, [criterion.id]: score },
+          levels: { ...f.levels, [criterion.id]: syncLevel(criterion.levels, f.levels[criterion.id], score) }
+        };
       }),
-    [change, wordCount]
+    [change, wordCount, paper]
   );
 
   const keySeq = useRef(0);
@@ -232,6 +308,28 @@ export function useGradeForm(screen: GradingScreen) {
   const setGeneralComment = useCallback((v: string) => change((f) => ({ ...f, generalComment: v })), [change]);
   const setZeroReason = useCallback((r: ZeroReason | null) => change((f) => ({ ...f, zeroReason: r })), [change]);
 
+  /** Bài PAPER: đặt / bỏ (`delta = null`) cộng / trừ của một thành viên; giữ lý do đã gõ khi đổi mức. */
+  const setAdjustment = useCallback(
+    (studentId: number, delta: number | null) =>
+      change((f) => {
+        const adjustments = { ...f.adjustments };
+        if (delta === null) delete adjustments[studentId];
+        else adjustments[studentId] = { delta, reason: f.adjustments[studentId]?.reason ?? '' };
+        return { ...f, adjustments };
+      }),
+    [change]
+  );
+
+  const setAdjustmentReason = useCallback(
+    (studentId: number, reason: string) =>
+      change((f) =>
+        f.adjustments[studentId]
+          ? { ...f, adjustments: { ...f.adjustments, [studentId]: { ...f.adjustments[studentId], reason } } }
+          : f
+      ),
+    [change]
+  );
+
   /** Lưu ngay những gì chưa lưu (trước khi trả bài / yêu cầu sửa / rời màn). */
   const flush = useCallback(() => save(), [save]);
 
@@ -253,8 +351,9 @@ export function useGradeForm(screen: GradingScreen) {
   const allScored = form.zeroReason !== null || screen.criteria.every((c) => form.scores[c.id] !== null);
   const bandPreview = useMemo(() => {
     if (form.zeroReason) return 0;
-    return roundBand(partBandRaw(screen.criteria.map((c) => ({ score: form.scores[c.id], weight: c.weight }))));
-  }, [form, screen.criteria]);
+    const raw = partBandRaw(screen.criteria.map((c) => ({ score: form.scores[c.id], weight: c.weight })));
+    return paper ? paperScore(raw) : roundBand(raw);
+  }, [form, screen.criteria, paper]);
 
   return {
     form,
@@ -263,11 +362,15 @@ export function useGradeForm(screen: GradingScreen) {
     error,
     allScored,
     bandPreview,
+    paper,
     setScore,
+    setLevel,
     setComment,
     toggleItem,
     setGeneralComment,
     setZeroReason,
+    setAdjustment,
+    setAdjustmentReason,
     addInline,
     updateInline,
     removeInline,

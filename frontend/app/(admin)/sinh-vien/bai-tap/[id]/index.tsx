@@ -158,6 +158,7 @@ export default function StudentAssignmentDetailPage() {
                   assignmentClosed={closed}
                   part={part}
                   band={bandOf(part.partId)}
+                  paper={detail.kind === 'PAPER'}
                   onHistory={() => setHistoryPart(part)}
                 />
               )

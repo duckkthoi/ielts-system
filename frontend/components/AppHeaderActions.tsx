@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { Avatar, Button, Dropdown } from 'antd';
+import { Avatar, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { ChevronDown, KeyRound, LogOut, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -61,14 +61,18 @@ export function AppHeaderActions() {
       <ConnectionStatus />
       <NotificationBell />
       <Dropdown menu={menu} trigger={['click']} placement="bottomRight">
-        <Button type="text" className="h-13 gap-2.5 px-2">
+        <button
+          type="button"
+          aria-label="Tài khoản người dùng"
+          className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-neutral-50 focus:outline-none"
+        >
           <Avatar className="bg-brand-50 font-medium text-brand-700">{getInitial(user.fullName)}</Avatar>
           <span className="hidden text-left leading-[18px] sm:grid">
             <span className="font-semibold text-neutral-900">{user.fullName}</span>
             <span className="text-caption text-neutral-500">{ROLE_LABEL[user.role]}</span>
           </span>
           <ChevronDown size={14} className="text-neutral-400" />
-        </Button>
+        </button>
       </Dropdown>
     </div>
   );

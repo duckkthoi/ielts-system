@@ -150,7 +150,7 @@ class PaperGradingIntegrationTest extends PaperTestSupport {
 	}
 
 	@Test
-	@DisplayName("BR-31: chọn mức → điểm phải trong khoảng (422 LEVEL_MISMATCH); điểm cả bài là trung bình có trọng số, không làm tròn kiểu IELTS, không giới hạn ≤ 20 từ")
+	@DisplayName("BR-31: chọn mức → điểm phải trong khoảng (422 LEVEL_MISMATCH); điểm cả bài là trung bình có trọng số, không làm tròn kiểu IELTS, không giới hạn ≤ 20 từ; hàng đợi ghi tên nhóm")
 	void gradeWithLevels() throws Exception {
 		saveGrade(List.of(score(method, "9", levelId(method, "Tốt"))), null).andExpect(apiStatus(422))
 				.andExpect(jsonPath("$.errorCode").value("LEVEL_MISMATCH"));
@@ -171,6 +171,14 @@ class PaperGradingIntegrationTest extends PaperTestSupport {
 		assertThat(screen.get("members")).hasSize(2);
 		// Đọc lại từ DB: 7.25 không bị làm tròn
 		assertThat(screen.get("grade").get("scores").get(0).get("score").decimalValue()).isEqualByComparingTo("7.25");
+
+		// B25c-3: hàng đợi ghi tên nhóm + điểm thang 10 (không làm tròn kiểu IELTS); tìm được theo tên nhóm
+		JsonNode row = data(call(get("/api/teacher/submissions").param("status", "GRADED").param("keyword", "nhóm ab"),
+				teacher)).get(0);
+		assertThat(row.get("submissionId").asLong()).isEqualTo(submissionId);
+		assertThat(row.get("kind").asString()).isEqualTo("PAPER");
+		assertThat(row.get("groupName").asString()).isEqualTo("Nhóm AB");
+		assertThat(row.get("band").decimalValue()).isEqualByComparingTo("7.67");
 	}
 
 	@Test
@@ -207,5 +215,30 @@ class PaperGradingIntegrationTest extends PaperTestSupport {
 			assertThat(n.get("type").asString()).isEqualTo("GRADE_RETURNED");
 			assertThat(n.get("body").asString()).isEqualTo("Điểm: 7.67 / 10");
 		}
+	}
+
+	@Test
+	@DisplayName("B25e / BR-31: sinh viên thấy điểm nhóm thang 10 và điểm riêng của mình (đã cộng / trừ, kèm lý do); tổng bài theo điểm riêng")
+	void studentSeesOwnScore() throws Exception {
+		saveGrade(List.of(score(method, "7.25", null), score(style, "8.5", null)),
+				List.of(Map.of("studentId", b.getId(), "delta", "-1", "reason", "Ít tham gia"))).andExpect(apiStatus(200));
+		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(apiStatus(200));
+		long partId = data(call(get("/api/teacher/assignments/" + assignmentId), teacher)).get("parts").get(0).get("id")
+				.asLong();
+
+		JsonNode ra = data(call(get("/api/student/parts/" + partId + "/versions/1"), accessToken(a))).get("result");
+		assertThat(ra.get("band").decimalValue()).isEqualByComparingTo("7.67");
+		assertThat(ra.get("myScore").decimalValue()).isEqualByComparingTo("7.67");
+		assertThat(ra.get("myAdjustment").isNull()).isTrue();
+
+		JsonNode rb = data(call(get("/api/student/parts/" + partId + "/versions/1"), accessToken(b))).get("result");
+		assertThat(rb.get("band").decimalValue()).isEqualByComparingTo("7.67");
+		assertThat(rb.get("myScore").decimalValue()).isEqualByComparingTo("6.67");
+		assertThat(rb.get("myAdjustment").decimalValue()).isEqualByComparingTo("-1");
+		assertThat(rb.get("myAdjustmentReason").asString()).isEqualTo("Ít tham gia");
+
+		JsonNode total = data(call(get("/api/student/assignments/" + assignmentId + "/result"), accessToken(b)));
+		assertThat(total.get("parts").get(0).get("band").decimalValue()).isEqualByComparingTo("6.67");
+		assertThat(total.get("band").decimalValue()).isEqualByComparingTo("6.67");
 	}
 }
