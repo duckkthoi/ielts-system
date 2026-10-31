@@ -15,6 +15,8 @@ import type { AnnotateAction, AnnotationView } from './type';
 
 export { studentAnnotationViews } from './studentViews';
 export type { AnnotateAction, AnnotationView } from './type';
+export { AnnotationCard } from './AnnotationCard';
+export { TOOLBAR_ACTIONS, WAVY_CLASS } from './const';
 
 // ─── Bài viết kèm đánh dấu kiểu "Word đã chấm" (F5b) ──────────────────────────
 // Tách bài thành đoạn theo offset (lib/utils/annotations.ts) rồi vẽ bằng span — KHÔNG dùng innerHTML, chữ gốc

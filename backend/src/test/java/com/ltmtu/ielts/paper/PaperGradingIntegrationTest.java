@@ -271,4 +271,37 @@ class PaperGradingIntegrationTest extends PaperTestSupport {
 		JsonNode ofA = data(call(get("/api/teacher/stats/students/" + a.getId()), teacher));
 		assertThat(ofA.get("parts").get(0).get("band").decimalValue()).isEqualByComparingTo("7.67");
 	}
+
+	@Test
+	@DisplayName("B25d / BR-21: nhận xét inline bài PAPER neo theo offset trên chữ thuần của lần nộp; trích dẫn sai → 400; mọi thành viên thấy sau khi trả")
+	void inlineCommentsAnchorOnPlainText() throws Exception {
+		long partId = data(call(get("/api/teacher/assignments/" + assignmentId), teacher)).get("parts").get(0).get("id")
+				.asLong();
+		String content = data(call(get("/api/teacher/submissions/" + submissionId), teacher)).get("version")
+				.get("content").asString();
+		int start = content.indexOf("Short");
+		assertThat(start).isPositive();
+
+		Map<String, Object> body = new HashMap<>();
+		body.put("versionNo", 1);
+		body.put("scores", List.of(score(method, "7.25", null), score(style, "8.5", null)));
+		Map<String, Object> wrong = new HashMap<>(Map.of("startOffset", start, "endOffset", start + 5, "quote", "Shirt",
+				"kind", "COMMENT", "comment", "Mở đầu cần dài hơn"));
+		body.put("inlineComments", List.of(wrong));
+		call(put("/api/teacher/submissions/" + submissionId + "/grade").contentType(MediaType.APPLICATION_JSON)
+				.content(json.writeValueAsString(body)), teacher).andExpect(apiStatus(400));
+
+		wrong.put("quote", "Short");
+		call(put("/api/teacher/submissions/" + submissionId + "/grade").contentType(MediaType.APPLICATION_JSON)
+				.content(json.writeValueAsString(body)), teacher).andExpect(apiStatus(200));
+		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(apiStatus(200));
+
+		for (User member : List.of(a, b)) {
+			JsonNode ic = data(call(get("/api/student/parts/" + partId + "/versions/1"), accessToken(member)))
+					.get("result").get("inlineComments").get(0);
+			assertThat(ic.get("startOffset").asInt()).isEqualTo(start);
+			assertThat(ic.get("quote").asString()).isEqualTo("Short");
+			assertThat(ic.get("comment").asString()).isEqualTo("Mở đầu cần dài hơn");
+		}
+	}
 }

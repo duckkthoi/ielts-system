@@ -10,7 +10,8 @@ import { formatDateTime } from '@/lib/utils/date';
 // ─── Bài làm bên trái màn chấm: cảnh báo số từ, đề bài (thu gọn được), bài viết ─
 // `prompt` là HTML đã được server lọc — trường duy nhất được render bằng dangerouslySetInnerHTML.
 // Bài làm vẽ bằng EssayAnnotator: đánh dấu kiểu "Word đã chấm", bôi đen để thêm (chỉ khi còn chấm được).
-// Bài PAPER (B25c-2): hiện bản nộp có định dạng bằng PaperViewer (chỉ đọc); nhận xét theo khối làm ở B25d.
+// Bài PAPER (B25c-2, B25d): bản nộp có định dạng bằng PaperViewer; đánh dấu neo theo offset trên `content` (chữ thuần
+// của lần nộp) nên dùng chung danh sách, form và lưu với bài luận — chỉ không có lớp "sửa chữ".
 
 export function EssayPanel({
   screen,
@@ -71,6 +72,16 @@ export function EssayPanel({
           references={version.references ?? []}
           style={screen.assignment.citationStyle ?? 'IEEE'}
           footer={<span className="text-caption text-neutral-500">{version.wordCount} từ</span>}
+          annotate={{
+            content: version.content,
+            annotations,
+            selectedKey,
+            scrollNonce,
+            onSelect,
+            onAction: screen.editable ? onAction : undefined,
+            onEdit,
+            onDelete
+          }}
         />
       ) : (
         <>

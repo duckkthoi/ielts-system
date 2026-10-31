@@ -86,6 +86,107 @@ export function docText(doc: DocNode): string {
     .trim();
 }
 
+/** Node ProseMirror tối thiểu để dò vị trí (đủ cho `editor.state.doc`; test dựng bằng object thường). */
+export interface PmNodeLike {
+  type: { name: string };
+  isText: boolean;
+  text?: string | null;
+  attrs: Record<string, unknown>;
+  childCount: number;
+  child(index: number): PmNodeLike;
+  nodeSize: number;
+}
+
+/** Chuỗi kèm vị trí ProseMirror của từng ký tự (-1 = ký tự dựng thêm: tiêu đề mục, xuống dòng giữa khối). */
+interface Positioned {
+  s: string;
+  p: number[];
+}
+
+const joinP = (parts: Positioned[], sep: string): Positioned => {
+  const out: Positioned = { s: '', p: [] };
+  parts.forEach((x, i) => {
+    if (i > 0) {
+      out.s += sep;
+      out.p.push(...Array.from(sep, () => -1));
+    }
+    out.s += x.s;
+    out.p.push(...x.p);
+  });
+  return out;
+};
+
+const trimP = (x: Positioned): Positioned => {
+  let a = 0;
+  let b = x.s.length;
+  while (a < b && /\s/.test(x.s[a])) a++;
+  while (b > a && /\s/.test(x.s[b - 1])) b--;
+  return { s: x.s.slice(a, b), p: x.p.slice(a, b) };
+};
+
+/** Cùng quy tắc với `textOf` nhưng giữ vị trí; `pos` = vị trí ngay trước node. */
+function textOfP(node: PmNodeLike, pos: number): Positioned {
+  const name = node.type.name;
+  if (node.isText) {
+    const t = node.text ?? '';
+    return { s: t, p: Array.from(t, (_, i) => pos + i) };
+  }
+  if (name === 'inlineMath' || name === 'blockMath') return { s: '', p: [] };
+  const inner: Positioned[] = [];
+  let cursor = pos + 1;
+  for (let i = 0; i < node.childCount; i++) {
+    const c = node.child(i);
+    inner.push(textOfP(c, cursor));
+    cursor += c.nodeSize;
+  }
+  const block = name !== 'hardBreak' && node.childCount > 0;
+  return joinP(inner, block && name !== 'paragraph' && name !== 'heading' ? '\n' : '');
+}
+
+/**
+ * Chữ thuần của tài liệu (giống hệt {@link docText}) kèm bảng vị trí — để neo nhận xét của bài PAPER theo offset
+ * trên `content` của lần nộp (B25d) mà vẫn tô được trên bản có định dạng.
+ */
+export function docTextPositions(doc: PmNodeLike): { text: string; positions: number[] } {
+  const sections: Positioned[] = [];
+  let cursor = 0;
+  for (let i = 0; i < doc.childCount; i++) {
+    const n = doc.child(i);
+    if (n.type.name === 'paperSection') {
+      const title = String(n.attrs.title ?? '') + '\n';
+      const body = trimP(textOfP(n, cursor));
+      sections.push({ s: title + body.s, p: [...Array.from(title, () => -1), ...body.p] });
+    }
+    cursor += n.nodeSize;
+  }
+  const all = trimP(joinP(sections, '\n\n'));
+  return { text: all.s, positions: all.p };
+}
+
+/** Offset [start, end) trên chữ thuần → khoảng ProseMirror; null nếu khoảng chỉ gồm ký tự dựng thêm. */
+export function offsetsToRange(positions: number[], start: number, end: number): { from: number; to: number } | null {
+  let from = -1;
+  let to = -1;
+  for (let i = Math.max(0, start); i < Math.min(end, positions.length); i++) {
+    if (positions[i] < 0) continue;
+    if (from < 0) from = positions[i];
+    to = positions[i] + 1;
+  }
+  return from < 0 ? null : { from, to };
+}
+
+/** Khoảng ProseMirror (vùng bôi đen) → offset [start, end) trên chữ thuần; null nếu không chứa chữ nào. */
+export function rangeToOffsets(positions: number[], from: number, to: number): { start: number; end: number } | null {
+  let start = -1;
+  let end = -1;
+  positions.forEach((p, i) => {
+    if (p < from || p >= to) return;
+    if (start < 0) start = i;
+    end = i + 1;
+  });
+  return start < 0 ? null : { start, end };
+}
+
 /** Nội dung khởi tạo: mỗi mục của khung một `paperSection` có một đoạn trống. */
 export function initialDoc(specs: SectionSpec[]): DocNode {
   return {

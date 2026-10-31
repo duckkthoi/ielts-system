@@ -523,6 +523,8 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 // → data: GradeDto (như "grade" ở trên)
 ```
 
+**Nhận xét inline bài PAPER (B25d):** cùng API, cùng quy tắc với bài luận — offset tính trên `version.content` là **chữ thuần** của lần nộp (tiêu đề mục + nội dung, do `docText` dựng từ `contentJson` lúc nộp). Màn chấm / màn kết quả dựng lại bảng vị trí từ `contentJson` để tô trên bản có định dạng; chữ dựng lại khác `content` thì chỉ hiện danh sách đánh dấu. Bài PAPER chỉ dùng `kind` ERROR / HIGHLIGHT / GOOD / COMMENT, không dùng `edit` (bản có định dạng không vẽ chữ thay thế). So sánh lần nộp và đánh giá "đã sửa" (BR-21) dùng chung với bài luận, trên `content`.
+
 ---
 
 ### A.8 Sinh viên — `/api/student`

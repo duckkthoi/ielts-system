@@ -61,9 +61,7 @@ function Workspace({
   const [formTarget, setFormTarget] = useState<AnnotationFormTarget | null>(null);
   const [leftMode, setLeftMode] = useState<'essay' | 'compare'>('essay');
   const content = screen.version.content;
-  // Bài PAPER: đánh dấu theo khối và so sánh lần nộp làm ở B25d — tạm ẩn.
-  const paper = screen.assignment.kind === 'PAPER';
-  const hasOlder = !paper && screen.versions.some((v) => v.versionNo < screen.version.versionNo);
+  const hasOlder = screen.versions.some((v) => v.versionNo < screen.version.versionNo);
 
   useEffect(() => {
     feedbackApi
@@ -182,20 +180,18 @@ function Workspace({
         <aside
           className={`min-h-0 overflow-y-auto border-l border-neutral-100 bg-neutral-25 ${tab === 'grade' ? '' : 'hidden lg:block'}`}
         >
-          {!paper && (
-            <div className="sticky top-0 z-10 border-b border-neutral-100 bg-neutral-25 px-4 pt-3 pb-2 sm:px-5">
-              <Segmented
-                block
-                value={rightTab}
-                onChange={(v) => setRightTab(v as 'grade' | 'marks')}
-                options={[
-                  { value: 'grade', label: 'Chấm điểm' },
-                  { value: 'marks', label: `Đánh dấu (${views.length})` }
-                ]}
-              />
-            </div>
-          )}
-          {paper || rightTab === 'grade' ? (
+          <div className="sticky top-0 z-10 border-b border-neutral-100 bg-neutral-25 px-4 pt-3 pb-2 sm:px-5">
+            <Segmented
+              block
+              value={rightTab}
+              onChange={(v) => setRightTab(v as 'grade' | 'marks')}
+              options={[
+                { value: 'grade', label: 'Chấm điểm' },
+                { value: 'marks', label: `Đánh dấu (${views.length})` }
+              ]}
+            />
+          </div>
+          {rightTab === 'grade' ? (
             <GradingPanel
               screen={screen}
               g={g}

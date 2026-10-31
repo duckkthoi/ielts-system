@@ -24,7 +24,8 @@ import { StudentCompare } from './StudentCompare';
 // ─── Sinh viên: kết quả một phần (UC-23, Prompt 7 D, E) ───────────────────────
 // /sinh-vien/bai-tap/{id}/ket-qua?phan={partId}&lan={versionNo}; bỏ trống `lan` = lần gần nhất đã trả bài.
 // Kết quả chỉ có khi lần nộp đã được trả (BR-13); đang "Cần sửa" thì server đã ẩn gợi ý sửa (BR-21).
-// Bài PAPER (B25e): bản nộp có định dạng, điểm thang 10 — điểm riêng của mình (đã cộng / trừ) và điểm nhóm.
+// Bài PAPER (B25e): bản nộp có định dạng, điểm thang 10 — điểm riêng của mình (đã cộng / trừ) và điểm nhóm;
+// đánh dấu của giáo viên tô trên bản có định dạng (B25d), bấm để xem nhận xét.
 
 type Loaded = { detail: StudentAssignmentDetail; versions: VersionSummary[]; version: VersionDetail | null };
 
@@ -216,6 +217,12 @@ export default function StudentResultPage() {
                 references={version.references ?? []}
                 style={detail.citationStyle ?? 'IEEE'}
                 footer={<span className="text-caption text-neutral-500">{version.wordCount} từ</span>}
+                annotate={{
+                  content: version.content,
+                  annotations: views,
+                  selectedKey: selected,
+                  onSelect: setSelected
+                }}
               />
             ) : (
               <EssayAnnotator

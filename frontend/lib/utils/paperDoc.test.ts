@@ -5,16 +5,19 @@ import { test } from 'node:test';
 import {
   citationSequence,
   docText,
+  docTextPositions,
   fromBase64,
   initialDoc,
+  offsetsToRange,
   parseRefIds,
+  rangeToOffsets,
   sectionWordCounts,
   syncDecision,
   toBase64,
   wordHint,
   wordLimitLabel
 } from './paperDoc.ts';
-import type { DocNode, SectionSpec } from './paperDoc.ts';
+import type { DocNode, PmNodeLike, SectionSpec } from './paperDoc.ts';
 
 const specs: SectionSpec[] = [
   { sectionKey: 'abstract', title: 'Abstract', required: true, minWords: 3, maxWords: 5 },
@@ -87,6 +90,59 @@ test('wordHint: trống / thiếu / vượt / đủ (chỉ nhắc, không chặn
 
 test('docText: tiêu đề mục + nội dung, các khối cách dòng', () => {
   assert.equal(docText(doc), 'Abstract\nWe propose a system.\n\nMethod\nTrain the model\n\nstep one');
+});
+
+const LEAVES = new Set(['blockMath', 'inlineMath', 'hardBreak', 'citation', 'image']);
+
+/** Dựng node kiểu ProseMirror từ JSON (kích thước: chữ = độ dài, lá = 1, còn lại = 2 + các con). */
+function pm(n: DocNode): PmNodeLike {
+  const kids = (n.content ?? []).map(pm);
+  const isText = n.type === 'text';
+  const leaf = LEAVES.has(n.type ?? '');
+  return {
+    type: { name: n.type ?? '' },
+    isText,
+    text: n.text,
+    attrs: n.attrs ?? {},
+    childCount: kids.length,
+    child: (i) => kids[i],
+    nodeSize: isText ? (n.text ?? '').length : leaf ? 1 : 2 + kids.reduce((sum, k) => sum + k.nodeSize, 0)
+  };
+}
+
+test('docTextPositions: chữ giống hệt docText; mỗi ký tự chữ có vị trí ProseMirror, tiêu đề / xuống dòng thì -1', () => {
+  const { text, positions } = docTextPositions(pm(doc));
+  assert.equal(text, docText(doc));
+  assert.equal(positions.length, text.length);
+  // doc(0) > section(1) > paragraph(2) > chữ bắt đầu ở 2
+  assert.equal(positions[text.indexOf('We')], 2);
+  assert.equal(positions[0], -1); // "Abstract" là tiêu đề (thuộc tính), không có vị trí
+  // mục 2: section mở ở 24 (= 0 + kích thước mục 1 = 24), đoạn ở 25, chữ ở 26
+  assert.equal(positions[text.indexOf('Train')], 26);
+  assert.equal(positions[text.indexOf('step one')] > positions[text.indexOf('model')], true);
+});
+
+test('docTextPositions: khoảng trắng đầu / cuối mục bị cắt như docText', () => {
+  const padded: DocNode = {
+    type: 'doc',
+    content: [{ type: 'paperSection', attrs: { title: 'A' }, content: [para('  hi  '), { type: 'paragraph' }] }]
+  };
+  const { text, positions } = docTextPositions(pm(padded));
+  assert.equal(text, docText(padded));
+  assert.equal(text, 'A\nhi');
+  assert.equal(positions[2], 4); // "h": section 0 → đoạn 1 → chữ 2, bỏ 2 dấu cách
+});
+
+test('offsetsToRange / rangeToOffsets: đi về giữ nguyên; khoảng chỉ có tiêu đề → null', () => {
+  const { text, positions } = docTextPositions(pm(doc));
+  const start = text.indexOf('propose');
+  const range = offsetsToRange(positions, start, start + 'propose'.length);
+  assert.deepEqual(range, { from: 5, to: 12 });
+  assert.deepEqual(rangeToOffsets(positions, range!.from, range!.to), { start, end: start + 7 });
+  assert.equal(offsetsToRange(positions, 0, 8), null);
+  // bôi đen qua hai mục: lấy từ chữ đầu tới chữ cuối nằm trong vùng
+  const across = rangeToOffsets(positions, 2, positions[text.indexOf('Train')] + 5);
+  assert.equal(text.slice(across!.start, across!.end), 'We propose a system.\n\nMethod\nTrain');
 });
 
 test('initialDoc: mỗi mục một paperSection có một đoạn trống, đúng thứ tự khung', () => {
