@@ -1,6 +1,8 @@
 // ─── Thống kê tổng hợp có bộ lọc (H5, docs/05 mục A.9b) ───────────────────────
 // Mọi tỉ lệ kèm tử số / mẫu số; `rate` null = mẫu số 0 (không đủ dữ liệu). "Ngày" tính theo `period.zone`.
 
+import type { ErrorStat } from '@/lib/types/stats';
+
 export type AnalyticsScope = 'admin' | 'teacher';
 
 export interface AnalyticsFilter {
@@ -72,7 +74,7 @@ export interface AnalyticsOverview {
   paperHistogram: { value: number; count: number }[];
   criteria: { kind: string; name: string; average: number; maxScore: number; count: number }[];
   heatmap: { dow: number; hour: number; count: number }[];
-  topErrors: { code: string; name: string | null; criterion: string | null; total: number; students: number }[];
+  topErrors: ErrorStat[];
   paper: {
     groups: number;
     studentsWithoutGroup: number;

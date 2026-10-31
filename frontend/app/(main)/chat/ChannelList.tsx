@@ -11,7 +11,7 @@ import { formatRelative } from '@/lib/utils/date';
 
 import { CHANNEL_GROUPS } from './const';
 
-// ─── Cột trái: một ô lọc cuộc trò chuyện và tìm học sinh để mở chat riêng ────
+// ─── Cột trái: một ô lọc cuộc trò chuyện và tìm sinh viên để mở chat riêng ────
 
 export function ChannelList({
   channels,
@@ -55,7 +55,7 @@ export function ChannelList({
             onSearchStudents('');
             onOpenStudent(option.studentId);
           }}
-          placeholder={canSearchStudents ? 'Tìm cuộc trò chuyện hoặc học sinh' : 'Tìm cuộc trò chuyện'}
+          placeholder={canSearchStudents ? 'Tìm cuộc trò chuyện hoặc sinh viên' : 'Tìm cuộc trò chuyện'}
           notFoundContent={null}
           allowClear
           prefix={<Search size={14} className="text-neutral-400" />}

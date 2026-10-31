@@ -1,5 +1,5 @@
 // ─── Tải file từ response blob ────────────────────────────────────────────────
-// `filenameFromDisposition` là hàm thuần (có test); `saveBlob` cần DOM.
+// `filenameFromDisposition`, `toCsv` là hàm thuần (có test); `saveBlob` cần DOM.
 
 /**
  * Tên file trong header Content-Disposition. Ưu tiên `filename*=UTF-8''…` (tên tiếng Việt),
@@ -29,4 +29,13 @@ export function saveBlob(blob: Blob, filename: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
+/** Nội dung CSV có BOM (Excel mở đúng tiếng Việt), CRLF; ô có dấu phẩy / ngoặc kép / xuống dòng được bọc ngoặc kép. */
+export function toCsv(rows: (string | number | null | undefined)[][]): string {
+  const cell = (v: string | number | null | undefined) => {
+    const s = v == null ? '' : String(v);
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return '﻿' + rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
 }

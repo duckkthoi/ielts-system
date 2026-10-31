@@ -14,14 +14,14 @@ import { PromptPanel } from './PromptPanel';
 // trình soạn — hai cột cùng mép trên, cùng container. Nhỏ hơn lg (máy tính bảng, điện thoại): mục lục thu vào drawer,
 // mở bằng nút ngay trên trình soạn. Không có thanh cuộn ngang.
 
-function Sidebar({ part, outline }: { part: StudentPartDetail; outline: React.ReactNode }) {
+function Sidebar({ part, outline }: { part: StudentPartDetail; outline?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="mb-2 text-h3 font-semibold text-neutral-900">{part.title}</h2>
         <PromptPanel part={part} />
       </div>
-      <div className="border-t border-neutral-100 pt-4">{outline}</div>
+      {outline && <div className="border-t border-neutral-100 pt-4">{outline}</div>}
     </div>
   );
 }
@@ -33,7 +33,8 @@ export function PaperLayout({
   children
 }: {
   part: StudentPartDetail;
-  outline: React.ReactNode;
+  /** Không có (bản nộp cũ chỉ có chữ thuần) → cột trái chỉ có đề. */
+  outline?: React.ReactNode;
   toolbar?: React.ReactNode;
   children: React.ReactNode;
 }) {

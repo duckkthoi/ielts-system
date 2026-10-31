@@ -88,7 +88,8 @@ export function AnalyticsDashboard({ scope }: { scope: AnalyticsScope }) {
           </p>
           <KpiRow o={o} />
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {/* Admin có 4 ô (thêm Người dùng, Phiên), giáo viên 2 ô → chia đôi cho kín hàng. */}
+          <div className={`grid gap-4 sm:grid-cols-2 ${o.users ? 'xl:grid-cols-4' : ''}`}>
             {o.users && (
               <Tile label="Người dùng">
                 {Object.entries(o.users.byRole)
@@ -125,7 +126,7 @@ export function AnalyticsDashboard({ scope }: { scope: AnalyticsScope }) {
             </Tile>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Card title="Lần nộp theo ngày">
               {o.kpis.submissions.current === 0 ? (
                 <NoData text="Chưa có lần nộp nào trong kỳ" />
@@ -145,7 +146,7 @@ export function AnalyticsDashboard({ scope }: { scope: AnalyticsScope }) {
             </Card>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <Card title="Phân bố band (bài luận)">
               <Summary s={o.bandSummary} scale="/ 9" />
               {o.bandHistogram.length === 0 ? (
@@ -187,7 +188,7 @@ export function AnalyticsDashboard({ scope }: { scope: AnalyticsScope }) {
             </Card>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Card title="Hoạt động theo giờ trong tuần">
               {o.heatmap.length === 0 ? (
                 <NoData text="Chưa có hoạt động trong kỳ" />
@@ -202,7 +203,7 @@ export function AnalyticsDashboard({ scope }: { scope: AnalyticsScope }) {
                 <ol className="m-0 flex list-decimal flex-col gap-1 pl-5 text-small text-neutral-700">
                   {o.topErrors.map((e) => (
                     <li key={e.code}>
-                      <span className="font-mono">{e.code}</span> {e.name ?? ''} — {e.total} lần · {e.students} sinh
+                      <span className="font-mono">{e.code}</span> {e.name ?? ''} — {e.count} lần · {e.studentCount} sinh
                       viên
                     </li>
                   ))}

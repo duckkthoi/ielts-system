@@ -113,8 +113,8 @@ export default function ClassStatsPage() {
         <Skeleton active paragraph={{ rows: 10 }} />
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card styles={{ body: { padding: 20 } }}>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <Card className="col-span-2 xl:col-span-1" styles={{ body: { padding: 20 } }}>
               <div className="flex items-center gap-4">
                 <BandBadge band={stats.averageBand} size="lg" />
                 <div className="min-w-0">

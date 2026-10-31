@@ -1,6 +1,7 @@
 import { Card } from 'antd';
 
 // ─── Thẻ số liệu dashboard (docs/07 mục 7.2): nhãn caption, số display, dòng phụ ─
+// Điện thoại (< sm) ẩn ô icon để xếp được 2 thẻ một hàng.
 
 export function StatCard({
   label,
@@ -23,7 +24,9 @@ export function StatCard({
           {hint && <p className="mt-1 text-small text-neutral-500">{hint}</p>}
         </div>
         {icon && (
-          <span className="grid size-10 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-600">{icon}</span>
+          <span className="hidden size-10 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-600 sm:grid">
+            {icon}
+          </span>
         )}
       </div>
     </Card>

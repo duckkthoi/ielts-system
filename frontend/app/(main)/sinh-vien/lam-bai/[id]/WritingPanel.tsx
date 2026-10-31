@@ -6,7 +6,7 @@ import { Alert, Button, Skeleton } from 'antd';
 import Link from 'next/link';
 
 import { EssayAnnotator, studentAnnotationViews } from '@/components/EssayAnnotator';
-import { PaperViewer } from '@/components/PaperEditor';
+import { PaperOutline, PaperViewer } from '@/components/PaperEditor';
 import { examApi } from '@/lib/api/exam';
 import { studentApi } from '@/lib/api/student';
 import { resultPath } from '@/lib/constants';
@@ -15,6 +15,7 @@ import type { ExamSession } from '@/lib/types/exam';
 import type { CslItem } from '@/lib/types/paper';
 import type { StudentInlineComment, StudentPartDetail } from '@/lib/types/student';
 import { formatDateTime } from '@/lib/utils/date';
+import { sectionWordCounts, type DocNode } from '@/lib/utils/paperDoc';
 import { countWords } from '@/lib/utils/wordCount';
 
 import { isWritable } from './const';
@@ -23,6 +24,7 @@ import { EssayEditor } from './EssayEditor';
 import { ExamStartCard } from './ExamStartCard';
 import { Layout } from './Layout';
 import { PaperEditMode } from './PaperEditMode';
+import { PaperLayout } from './PaperLayout';
 import type { DraftInit } from './useDraftAutosave';
 import { WordCounter } from './WordCounter';
 
@@ -57,19 +59,21 @@ type Submitted = {
 function ViewMode({
   assignmentId,
   assignmentClosed,
+  paper,
   citationStyle,
   part,
   submitted
 }: {
   assignmentId: number;
   assignmentClosed: boolean;
+  paper: boolean;
   citationStyle: CitationStyle;
   part: StudentPartDetail;
   submitted: Submitted | null;
 }) {
   const pending = part.status === 'NOT_STARTED' || part.status === 'DRAFT' || part.status === 'REVISION_REQUESTED';
   const toolbar = (
-    <div className="mx-auto flex w-full max-w-180 flex-col gap-3">
+    <div className={`flex w-full flex-col gap-3 ${submitted?.paper ? '' : 'mx-auto max-w-180'}`}>
       {pending ? (
         <Alert
           type="error"
@@ -98,16 +102,38 @@ function ViewMode({
     </div>
   );
 
+  // Bài PAPER: cùng khung 2 cột với lúc soạn (đề + mục lục bên trái). Mục lục tính từ tài liệu đã nộp; bản nộp cũ
+  // chỉ có chữ thuần (trước B25a) thì không có mục lục, bài hiện dạng chữ.
+  if (paper) {
+    const doc = submitted?.paper;
+    const outline = doc ? (
+      <PaperOutline counts={sectionWordCounts(doc.contentJson as unknown as DocNode, part.sections)} />
+    ) : undefined;
+    return (
+      <PaperLayout part={part} outline={outline} toolbar={toolbar}>
+        {doc ? (
+          <PaperViewer
+            contentJson={doc.contentJson}
+            references={doc.references}
+            style={citationStyle}
+            footer={<span className="text-caption text-neutral-500">{doc.wordCount} từ</span>}
+          />
+        ) : submitted ? (
+          <EssayEditor
+            value={submitted.content}
+            readOnly
+            footer={<WordCounter count={countWords(submitted.content)} minWords={null} />}
+          />
+        ) : (
+          <p className="text-neutral-500">Nhóm chưa nộp phần này.</p>
+        )}
+      </PaperLayout>
+    );
+  }
+
   return (
     <Layout part={part} toolbar={toolbar}>
-      {submitted?.paper ? (
-        <PaperViewer
-          contentJson={submitted.paper.contentJson}
-          references={submitted.paper.references}
-          style={citationStyle}
-          footer={<span className="text-caption text-neutral-500">{submitted.paper.wordCount} từ</span>}
-        />
-      ) : submitted?.inline ? (
+      {submitted?.inline ? (
         <AnnotatedEssay content={submitted.content} inline={submitted.inline} />
       ) : submitted ? (
         <EssayEditor
@@ -223,6 +249,7 @@ export function WritingPanel({
     <ViewMode
       assignmentId={assignmentId}
       assignmentClosed={assignmentClosed}
+      paper={paper}
       citationStyle={citationStyle ?? 'IEEE'}
       part={part}
       submitted={loaded.submitted}

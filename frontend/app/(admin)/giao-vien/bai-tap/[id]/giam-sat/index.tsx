@@ -237,7 +237,7 @@ export default function MonitorPage() {
       <MonitorStats online={onlineCount} hasExam={examParts.length > 0} summary={summary} />
       {assignment.kind === 'PAPER' && <PaperDocsCard assignmentId={id} parts={assignment.parts} />}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <Card styles={{ body: { padding: 0 } }}>
           <div className="flex flex-wrap items-center gap-2 p-4">
             <Select<number>

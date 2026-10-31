@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AcaWrite mobile sinh viên</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand-50: #EFF4FF; --brand-100: #DBE6FE; --brand-600: #2457E6; --brand-700: #1C44C2;
+    --n0: #FFFFFF; --n25: #F8FAFC; --n50: #F1F5F9; --n100: #E2E8F0; --n400: #94A3B8; --n500: #64748B; --n700: #334155; --n900: #0F172A;
+    --ok: #15803D; --ok-bg: #F0FDF4; --ok-dot: #16A34A;
+    --warn: #B45309; --warn-dark: #92400E; --warn-bg: #FFFBEB; --warn-border: #FDE68A; --warn-dot: #F59E0B;
+    --err: #B91C1C; --err-bg: #FEF2F2; --err-border: #FECACA; --err-dot: #DC2626;
+    --teal: #0F766E; --teal-bg: #F0FDFA; --purple: #6D28D9; --purple-bg: #F5F3FF;
+    --sans: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --serif: 'Noto Serif', Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E9EDF3; font-family: var(--sans); color: var(--n900); }
+  a { color: var(--brand-600); text-decoration: none; }
+  button { font-family: inherit; }
+  .page { max-width: 1440px; margin: 0 auto; padding: 40px 16px 64px; }
+  .page h1 { margin: 0 0 4px; font-size: 32px; letter-spacing: -0.01em; }
+  .page > p { margin: 0 0 32px; color: var(--n500); }
+  .gallery { display: flex; flex-wrap: wrap; gap: 40px 32px; justify-content: center; }
+  .frame { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .frame-label { font-size: 14px; font-weight: 500; color: var(--n700); }
+  .phone { width: 390px; height: 844px; border-radius: 36px; overflow: hidden; background: var(--n25);
+    box-shadow: 0 0 0 10px #0F172A, 0 24px 48px rgba(15,23,42,0.25); display: flex; flex-direction: column; position: relative;
+    transition: box-shadow 200ms; }
+  .phone.flash { box-shadow: 0 0 0 10px #0F172A, 0 0 0 16px var(--brand-600), 0 24px 48px rgba(15,23,42,0.25); }
+  @media (max-width: 440px) { .phone { width: 100%; max-width: 390px; } }
+
+  /* chung */
+  .bar { display: flex; align-items: center; gap: 4px; padding: 8px 12px 8px 8px; background: var(--n0); border-bottom: 1px solid var(--n100); }
+  .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--n700); border: 0; background: transparent; cursor: pointer; border-radius: 22px; }
+  .bar-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .bar-title b { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-title small { font-size: 12px; color: var(--n500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved { display: inline-flex; align-items: center; gap: 4px; color: var(--ok) !important; }
+  .scroll { flex: 1; overflow-y: auto; padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .card { padding: 16px; border-radius: 16px; background: var(--n0); border: 1px solid var(--n100); }
+  .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip.brand { background: var(--brand-50); color: var(--brand-700); }
+  .chip.teal { background: var(--teal-bg); color: var(--teal); }
+  .chip.purple { background: var(--purple-bg); color: var(--purple); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.err { background: var(--err-bg); color: var(--err); }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.muted { background: var(--n50); color: var(--n700); }
+  .track { height: 6px; border-radius: 3px; background: var(--n50); overflow: hidden; }
+  .track > i { display: block; height: 100%; border-radius: 3px; background: var(--brand-600); }
+  .eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--n500); }
+  .serif { font-family: var(--serif); }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; border: 1px solid var(--n100); background: var(--n0); color: var(--n700); }
+  .btn.primary { border: 0; background: var(--brand-600); color: #FFFFFF; }
+  .btn.primary:hover { background: var(--brand-700); }
+  .code { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--brand-600); }
+
+  /* thanh điều hướng dưới */
+  .nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--n0); border-top: 1px solid var(--n100); padding: 6px 8px 18px; }
+  .nav a { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; min-height: 44px; color: var(--n500); font-size: 12px; }
+  .nav a[aria-current="page"] { color: var(--brand-600); font-weight: 500; }
+
+  /* 1 · Bài được giao */
+  .home-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 12px; background: var(--n0); }
+  .home-head h2 { margin: 2px 0 0; font-size: 24px; letter-spacing: -0.01em; }
+  .home-head span { font-size: 13px; color: var(--n500); }
+  .bell { position: relative; width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--n100); background: var(--n0); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .bell em { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--err-dot); color: #FFFFFF; font-size: 11px; font-weight: 700; font-style: normal; display: flex; align-items: center; justify-content: center; }
+  .pills { display: flex; gap: 8px; padding: 4px 20px 14px; background: var(--n0); border-bottom: 1px solid var(--n100); overflow-x: auto; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; border: 1px solid var(--n100); background: var(--n0); color: var(--n700); }
+  .pill .n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--n50); }
+  .pill.err .n { background: var(--err-bg); color: var(--err); }
+  .pill[aria-selected="true"] { border-color: var(--brand-600); background: var(--brand-600); color: #FFFFFF; }
+  .pill[aria-selected="true"] .n { background: rgba(255,255,255,0.22); color: #FFFFFF; }
+  .task { display: flex; flex-direction: column; gap: 10px; color: var(--n900); }
+  .task:hover { border-color: var(--brand-100); }
+  .task-title { font-size: 16px; font-weight: 500; line-height: 22px; }
+  .task-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--n500); }
+  .task-meta b { font-weight: 500; color: var(--n700); }
+  .empty { padding: 48px 16px; text-align: center; color: var(--n500); font-size: 14px; }
+
+  /* 2 · Chi tiết */
+  .stat2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .tile { padding: 14px; border-radius: 14px; display: flex; flex-direction: column; gap: 4px; background: var(--n0); border: 1px solid var(--n100); }
+  .tile small { font-size: 12px; font-weight: 500; color: var(--n500); }
+  .tile strong { font-size: 18px; }
+  .tile.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .tile.warn small, .tile.warn strong, .tile.warn span { color: var(--warn-dark); }
+  .tile span { font-size: 12px; color: var(--n500); }
+  .prompt p { margin: 0; font-size: 16px; line-height: 27px; }
+  .acc { padding: 0; overflow: hidden; }
+  .acc-head { width: 100%; min-height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; font-size: 15px; font-weight: 500; color: var(--n900); cursor: pointer; }
+  .acc-head svg { transition: transform 160ms; }
+  .acc-head[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .acc ul { list-style: none; margin: 0; padding: 0 16px 12px; }
+  .acc li { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--n50); font-size: 14px; }
+  .acc li span:last-child { color: var(--n500); }
+  .rows { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .rows div { display: flex; justify-content: space-between; }
+  .rows div span:first-child { color: var(--n500); }
+  .foot { padding: 12px 20px 24px; background: var(--n0); border-top: 1px solid var(--n100); }
+
+  /* 3 · Làm bài */
+  .prompt-toggle { display: flex; align-items: center; gap: 10px; margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--brand-100); background: var(--brand-50); color: var(--brand-700); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; }
+  .prompt-toggle span { flex: 1; }
+  .prompt-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .chev { transition: transform 160ms; display: inline-flex; }
+  .prompt-body { margin: 8px 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--n25); font-size: 15px; line-height: 25px; }
+  .essay { flex: 1; margin: 0; padding: 16px 20px; border: 0; outline: none; resize: none; font-family: var(--serif); font-size: 17px; line-height: 30px; color: var(--n900); background: var(--n0); }
+  .essay::placeholder { color: var(--n400); }
+  .write-foot { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 24px; border-top: 1px solid var(--n100); background: var(--n0); }
+  .count-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .count-row b.warn { color: var(--warn); } .count-row b.ok { color: var(--ok); }
+  .count-row span { color: var(--n500); }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* 4 · Paper */
+  .avatars { display: flex; }
+  .av { width: 32px; height: 32px; border-radius: 16px; border: 2px solid var(--n0); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .av + .av { margin-left: -8px; }
+  .sections { display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto; border-bottom: 1px solid var(--n50); background: var(--n0); }
+  .sec { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 18px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; border: 1px solid var(--n100); background: var(--n0); color: var(--n700); }
+  .sec i { width: 8px; height: 8px; border-radius: 4px; }
+  .sec small { font-size: 12px; opacity: 0.8; }
+  .sec[aria-selected="true"] { border-color: var(--brand-600); background: var(--brand-50); color: var(--brand-700); }
+  .paper-body { background: var(--n0); }
+  .peer { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--teal); background: var(--teal-bg); border-radius: 10px; padding: 8px 12px; }
+  .paper-body h3 { margin: 0; font-family: var(--serif); font-size: 20px; }
+  .paper-body p { margin: 0; font-family: var(--serif); font-size: 16px; line-height: 28px; }
+  mark.hl { background: #FEF3C7; border-bottom: 2px solid var(--warn-dot); padding: 1px 0; }
+  .tcomment { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); border: 1px solid var(--warn-border); }
+  .tcomment header { display: flex; justify-content: space-between; font-size: 12px; color: var(--warn-dark); }
+  .tcomment header b { display: inline-flex; align-items: center; gap: 6px; }
+  .tcomment p { font-family: var(--sans) !important; font-size: 14px !important; line-height: 20px !important; }
+  .tcomment button { align-self: flex-start; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--warn-border); background: var(--n0); color: var(--warn-dark); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .resolved { font-size: 13px; color: var(--ok); }
+  .toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; border-top: 1px solid var(--n100); background: var(--n25); overflow-x: auto; }
+  .toolbar .icon-btn { font-size: 16px; }
+  .small-btn { height: 36px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; border: 1px solid var(--brand-100); background: var(--brand-50); color: var(--brand-700); }
+  .small-btn.primary { border: 0; background: var(--brand-600); color: #FFFFFF; }
+
+  /* 5 · Kết quả */
+  .hero { display: flex; align-items: center; gap: 16px; padding: 20px; background: var(--n0); }
+  .band { border-radius: 50%; background: var(--warn-bg); color: var(--warn); font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+  .hero div { display: flex; flex-direction: column; gap: 2px; }
+  .hero small { font-size: 12px; font-weight: 500; color: var(--n500); }
+  .hero strong { font-size: 20px; }
+  .hero span { font-size: 13px; color: var(--n500); }
+  .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 20px; padding: 4px; border-radius: 12px; background: var(--n50); }
+  .seg button { height: 40px; border-radius: 9px; border: 0; font-size: 14px; font-weight: 500; cursor: pointer; background: transparent; color: var(--n500); }
+  .seg button[aria-selected="true"] { background: var(--n0); color: var(--n900); box-shadow: 0 1px 2px rgba(15,23,42,0.08); }
+  .crit { display: flex; flex-direction: column; gap: 8px; }
+  .crit header { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+  .crit header b:last-child { font-size: 18px; }
+  .crit span { font-size: 13px; line-height: 19px; color: var(--n700); }
+  .note { padding: 12px 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 20px; }
+  .note b { font-size: 12px; }
+  .note.err { background: var(--err-bg); border: 1px solid var(--err-border); } .note.err b { color: var(--err); }
+  .note.info { background: var(--brand-50); border: 1px solid var(--brand-100); } .note.info b { color: var(--brand-700); }
+  mark.e { background: #FEE2E2; border-bottom: 2px solid var(--err-dot); padding: 1px 0; }
+  mark.c { background: #DBEAFE; border-bottom: 2px solid var(--brand-600); padding: 1px 0; }
+  [hidden] { display: none !important; }
+
+  /* 6 · Học tập */
+  .err-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .err-row .code { width: 44px; }
+  .err-row span:nth-child(2) { flex: 1; }
+  .err-row span:last-child { color: var(--n500); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>AcaWrite — sinh viên trên điện thoại</h1>
+  <p>Concept 6 màn (390×844). Bấm thử: tab, mở đề bài, gõ bài để đếm từ, chọn mục Paper, đổi tab kết quả. Bấm thẻ bài hoặc nút chuyển màn sẽ cuộn tới màn tương ứng.</p>
+
+  <div class="gallery">
+
+    <!-- ═══ 1 · Bài được giao ═══ -->
+    <section class="frame">
+      <span class="frame-label">1 · Bài được giao</span>
+      <div class="phone" id="s-home">
+        <header class="home-head">
+          <div><span>Chào Trần Văn Bình</span><h2>Bài được giao</h2></div>
+          <button class="bell" type="button" aria-label="Thông báo, 12 chưa đọc">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <em>12</em>
+          </button>
+        </header>
+        <div class="pills" role="tablist" id="home-tabs">
+          <button class="pill" role="tab" aria-selected="true" data-tab="todo">Cần làm <span class="n">2</span></button>
+          <button class="pill err" role="tab" aria-selected="false" data-tab="overdue">Quá hạn <span class="n">1</span></button>
+          <button class="pill" role="tab" aria-selected="false" data-tab="done">Đã nộp <span class="n">2</span></button>
+        </div>
+        <main class="scroll" id="home-list">
+          <a class="card task" href="#s-detail" data-tab="todo">
+            <div style="display:flex;gap:8px"><span class="chip brand">Bài luận IELTS</span><span class="chip warn">Còn 2 ngày</span></div>
+            <span class="task-title">Tuần 2 — Bài luận Task 2</span>
+            <div class="task-meta"><span>Task 2 · tối thiểu 250 từ</span><b>0 / 250 từ</b></div>
+            <div class="track"><i style="width:0%"></i></div>
+          </a>
+          <a class="card task" href="#s-paper" data-tab="todo">
+            <div style="display:flex;gap:8px"><span class="chip teal">Paper nhóm</span><span class="chip muted">Còn 50 ngày</span></div>
+            <span class="task-title">Paper nhóm — Đề cương nghiên cứu</span>
+            <div class="task-meta"><span>Nhóm của bạn · 2/3 người</span><b>3/5 mục</b></div>
+            <div class="track"><i style="width:60%"></i></div>
+          </a>
+          <a class="card task" href="#s-detail" data-tab="overdue" hidden>
+            <div style="display:flex;gap:8px"><span class="chip brand">Bài luận IELTS</span><span class="chip err">Quá hạn 6 ngày</span></div>
+            <span class="task-title">Bài tuần 3</span>
+            <div class="task-meta"><span>Task 1 · vẫn nộp muộn được</span><b style="color:var(--err)">Chưa làm</b></div>
+            <div class="track"><i style="width:0%"></i></div>
+          </a>
+          <a class="card task" href="#s-result" data-tab="done" hidden>
+            <div style="display:flex;gap:8px"><span class="chip brand">Bài luận IELTS</span><span class="chip ok">Đã trả bài</span></div>
+            <span class="task-title">Tuần 1 — Biểu đồ đường và bài luận thảo luận</span>
+            <div class="task-meta"><span>2 phần · Band cả bài</span><b style="color:var(--ok);font-size:16px;font-weight:700">7.0</b></div>
+            <div class="track"><i style="width:100%;background:var(--ok-dot)"></i></div>
+          </a>
+          <a class="card task" href="#s-detail" data-tab="done" hidden>
+            <div style="display:flex;gap:8px"><span class="chip purple">Thi thử</span><span class="chip brand">Chờ chấm</span></div>
+            <span class="task-title">Thi thử B15c</span>
+            <div class="task-meta"><span>Nộp lúc 21:32, 30/10</span><b style="color:var(--brand-700)">Đã nộp</b></div>
+            <div class="track"><i style="width:100%;background:var(--ok-dot)"></i></div>
+          </a>
+        </main>
+        <nav class="nav" aria-label="Điều hướng chính">
+          <a href="#s-home" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Bài tập</a>
+          <a href="#s-learn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Kết quả</a>
+          <a href="#"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Trao đổi</a>
+          <a href="#"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Tài khoản</a>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ═══ 2 · Chi tiết bài ═══ -->
+    <section class="frame">
+      <span class="frame-label">2 · Chi tiết bài</span>
+      <div class="phone" id="s-detail">
+        <header class="bar">
+          <a class="icon-btn" href="#s-home" aria-label="Quay lại Bài được giao"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
+          <div class="bar-title"><b>Chi tiết bài</b></div>
+        </header>
+        <main class="scroll" style="gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span class="chip brand" style="align-self:flex-start">Bài luận IELTS · 1 phần</span>
+            <h3 style="margin:0;font-size:22px;line-height:28px">Tuần 2 — Bài luận Task 2</h3>
+            <span style="font-size:14px;color:var(--n500)">Giáo viên mẫu DEMO</span>
+          </div>
+          <div class="stat2">
+            <div class="tile warn"><small>Hạn nộp</small><strong>Còn 2 ngày</strong><span>09:09, 03/11/2026</span></div>
+            <div class="tile"><small>Yêu cầu</small><strong>≥ 250 từ</strong><span>Gợi ý 40 phút</span></div>
+          </div>
+          <div class="card prompt" style="display:flex;flex-direction:column;gap:10px">
+            <h4 class="eyebrow">Đề bài</h4>
+            <p class="serif">Some people believe that university students should study whatever they like. Others believe that they should only be allowed to study subjects that will be useful in the future.</p>
+            <p class="serif">Discuss both views and give your own opinion.</p>
+          </div>
+          <div class="card acc">
+            <button class="acc-head" type="button" aria-expanded="false" data-toggle="crit-list">Tiêu chí chấm (4)
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <ul id="crit-list" hidden>
+              <li><span><span class="code">TR</span> Task Response</span><span>Tối đa 9</span></li>
+              <li><span><span class="code">CC</span> Coherence and Cohesion</span><span>Tối đa 9</span></li>
+              <li><span><span class="code">LR</span> Lexical Resource</span><span>Tối đa 9</span></li>
+              <li><span><span class="code">GRA</span> Grammar</span><span>Tối đa 9</span></li>
+            </ul>
+          </div>
+          <div class="card rows">
+            <div><span>Nộp muộn</span><span>Cho phép, có ghi chú</span></div>
+            <div><span>Yêu cầu sửa</span><span>Tối đa 2 lần</span></div>
+            <div><span>Nháp</span><span>Tự lưu khi bạn viết</span></div>
+          </div>
+        </main>
+        <footer class="foot">
+          <a class="btn primary" href="#s-write" style="height:52px;border-radius:14px;font-size:16px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Bắt đầu viết
+          </a>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ═══ 3 · Làm bài luận ═══ -->
+    <section class="frame">
+      <span class="frame-label">3 · Làm bài luận</span>
+      <div class="phone" id="s-write" style="background:var(--n0)">
+        <header class="bar">
+          <a class="icon-btn" href="#s-detail" aria-label="Quay lại chi tiết bài"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
+          <div class="bar-title"><b>Tuần 2 — Bài luận Task 2</b>
+            <small class="saved"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span id="saved-text">Đã lưu nháp lúc 09:41</span></small>
+          </div>
+          <span class="chip warn" style="height:28px;padding:0 10px">Còn 2 ngày</span>
+        </header>
+        <button class="prompt-toggle" type="button" aria-expanded="false" data-toggle="write-prompt">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          <span>Xem đề bài</span>
+          <span class="chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+        </button>
+        <p class="prompt-body serif" id="write-prompt" hidden>Some people believe that university students should study whatever they like. Others believe that they should only be allowed to study subjects that will be useful in the future. Discuss both views and give your own opinion.</p>
+        <label for="essay" class="sr">Bài làm</label>
+        <textarea id="essay" class="essay" spellcheck="false" lang="en" placeholder="Bắt đầu viết bài của bạn tại đây…">In recent years, there has been a growing debate about whether university students should be free to choose any subject or be guided towards fields with clear career prospects.
+
+On the one hand, studying a subject one is passionate about often leads to deeper engagement and better results. Students who follow their interests tend to stay motivated through difficult courses.
+
+On the other hand, </textarea>
+        <footer class="write-foot">
+          <div class="count-row"><b id="wc" class="warn">0 / 250 từ</b><span id="wc-hint"></span></div>
+          <div class="track"><i id="wc-bar" style="width:0%;background:var(--warn-dot)"></i></div>
+          <div class="two">
+            <button class="btn" type="button" id="save-btn">Lưu nháp</button>
+            <button class="btn primary" type="button">Nộp bài</button>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ═══ 4 · Soạn Paper nhóm ═══ -->
+    <section class="frame">
+      <span class="frame-label">4 · Soạn Paper nhóm</span>
+      <div class="phone" id="s-paper" style="background:var(--n0)">
+        <header class="bar">
+          <a class="icon-btn" href="#s-home" aria-label="Quay lại Bài được giao"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
+          <div class="bar-title"><b>Paper nhóm — Đề cương</b>
+            <small class="saved"><i style="width:6px;height:6px;border-radius:3px;background:var(--ok-dot)"></i>Đã đồng bộ · lưu 09:42</small>
+          </div>
+          <div class="avatars" aria-label="Đang mở: Trần Văn Bình (bạn), Lê Văn Chi">
+            <span class="av" title="Trần Văn Bình (bạn)" style="background:var(--brand-100);color:var(--brand-700)">B</span>
+            <span class="av" title="Lê Văn Chi — đang soạn Phương pháp" style="background:#CCFBF1;color:var(--teal)">C</span>
+          </div>
+        </header>
+        <nav class="sections" aria-label="Mục lục" role="tablist" id="paper-secs">
+          <button class="sec" role="tab" aria-selected="false" data-title="Giới thiệu"><i style="background:var(--ok-dot)"></i>Giới thiệu <small>182 từ</small></button>
+          <button class="sec" role="tab" aria-selected="true" data-title="Phương pháp"><i style="background:var(--warn-dot)"></i>Phương pháp <small>46/150</small></button>
+          <button class="sec" role="tab" aria-selected="false" data-title="Kết quả dự kiến"><i style="background:var(--err-dot)"></i>Kết quả dự kiến <small>0 từ</small></button>
+          <button class="sec" role="tab" aria-selected="false" data-title="Tài liệu tham khảo"><i style="background:var(--ok-dot)"></i>Tài liệu tham khảo <small>3 mục</small></button>
+        </nav>
+        <main class="scroll paper-body" style="gap:14px">
+          <div class="peer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Lê Văn Chi đang soạn mục Phương pháp
+          </div>
+          <h3 id="paper-title">Phương pháp</h3>
+          <p>Chúng tôi huấn luyện một mô hình transformer cỡ nhỏ trên <mark class="hl">nhật ký học tập của khoá học</mark> để dự đoán sinh viên có nguy cơ nộp muộn [1].</p>
+          <p style="color:var(--n700)">Dữ liệu được chia 80/20 cho huấn luyện và kiểm thử…</p>
+          <aside class="tcomment" id="tcomment">
+            <header><b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Giáo viên · Gợi ý sửa</b><span>2 phút trước</span></header>
+            <p>Nêu rõ cỡ dữ liệu: bao nhiêu sinh viên, bao nhiêu học kỳ.</p>
+            <button type="button" id="resolve-btn">Đánh dấu đã xử lý</button>
+          </aside>
+          <span class="resolved" id="resolved" hidden>Đã xử lý nhận xét của giáo viên.</span>
+        </main>
+        <div class="toolbar" role="toolbar" aria-label="Định dạng">
+          <button class="icon-btn" type="button" aria-label="Đậm" style="font-weight:700">B</button>
+          <button class="icon-btn" type="button" aria-label="Nghiêng" style="font-family:Georgia,serif;font-style:italic;font-size:17px">I</button>
+          <button class="icon-btn" type="button" aria-label="Danh sách"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+          <button class="icon-btn" type="button" aria-label="Chèn hình"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></button>
+          <button class="small-btn" type="button" style="margin-left:4px">[1] Trích dẫn</button>
+          <span style="flex:1"></span>
+          <button class="small-btn primary" type="button">Nộp</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 5 · Kết quả một phần ═══ -->
+    <section class="frame">
+      <span class="frame-label">5 · Kết quả một phần</span>
+      <div class="phone" id="s-result">
+        <header class="bar">
+          <a class="icon-btn" href="#s-home" aria-label="Quay lại Bài được giao"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
+          <div class="bar-title"><b>Kết quả · Task 1</b><small>Tuần 1 — Biểu đồ đường và bài luận thảo luận</small></div>
+        </header>
+        <section class="hero">
+          <span class="band" style="width:72px;height:72px;font-size:28px">6.5</span>
+          <div><small>Band Task 1</small><strong>Khá</strong><span>Trả bài 24/10 · lần nộp 2</span></div>
+        </section>
+        <div class="seg" role="tablist" id="result-tabs">
+          <button type="button" role="tab" aria-selected="true" data-pane="pane-score">Điểm</button>
+          <button type="button" role="tab" aria-selected="false" data-pane="pane-marked">Bài đã chấm</button>
+          <button type="button" role="tab" aria-selected="false" data-pane="pane-comment">Nhận xét</button>
+        </div>
+        <main class="scroll">
+          <div id="pane-score" style="display:flex;flex-direction:column;gap:12px">
+            <div class="card crit"><header><b><span class="code">TA</span> Task Achievement</b><b>6.0</b></header><div class="track"><i style="width:67%"></i></div><span>Thiếu so sánh số liệu năm 2015.</span></div>
+            <div class="card crit"><header><b><span class="code">CC</span> Coherence and Cohesion</b><b>7.0</b></header><div class="track"><i style="width:78%"></i></div><span>Chia đoạn hợp lý, từ nối tự nhiên.</span></div>
+            <div class="card crit"><header><b><span class="code">LR</span> Lexical Resource</b><b>6.5</b></header><div class="track"><i style="width:72%"></i></div><span>Lặp "increase" 4 lần.</span></div>
+            <div class="card crit"><header><b><span class="code">GRA</span> Grammar</b><b>6.5</b></header><div class="track"><i style="width:72%"></i></div><span>Sai thì quá khứ ở 2 chỗ.</span></div>
+          </div>
+          <div id="pane-marked" hidden style="display:flex;flex-direction:column;gap:12px">
+            <p class="card serif" style="margin:0;font-size:16px;line-height:28px">The line graph compares how many people <mark class="e">visit</mark> three museums in a city over a ten-year period starting in 2010. Overall, the Science Museum was the most popular attraction, <mark class="c">while the Art Gallery attracted the fewest visitors</mark>.</p>
+            <div class="note err"><b>Lỗi · VT Thì động từ</b><span><s style="color:var(--err)">visit</s> → <b style="color:var(--ok);font-size:14px">visited</b></span></div>
+            <div class="note info"><b>Nhận xét</b><span>Câu tổng quan tốt, nêu đúng hai xu hướng chính.</span></div>
+          </div>
+          <div id="pane-comment" hidden class="card" style="flex-direction:column;gap:10px">
+            <h4 class="eyebrow">Nhận xét chung</h4>
+            <p style="margin:0;font-size:15px;line-height:23px">Bài có bố cục rõ, số liệu chọn lọc hợp lý. Cần chú ý thì quá khứ khi mô tả số liệu năm cũ và tránh lặp từ "increase".</p>
+            <a class="btn" href="#" style="height:44px;font-size:14px">Trao đổi với giáo viên</a>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- ═══ 6 · Kết quả học tập ═══ -->
+    <section class="frame">
+      <span class="frame-label">6 · Kết quả học tập</span>
+      <div class="phone" id="s-learn">
+        <header style="padding:20px 20px 16px;background:var(--n0)">
+          <h3 style="margin:0;font-size:24px;letter-spacing:-0.01em">Kết quả học tập</h3>
+          <span style="font-size:13px;color:var(--n500)">Theo dõi tiến bộ qua các bài đã được trả</span>
+        </header>
+        <main class="scroll">
+          <div class="card" style="display:flex;align-items:center;gap:16px">
+            <span class="band" style="width:64px;height:64px;font-size:24px">6.8</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <small style="font-size:12px;color:var(--n500);font-weight:500">Band trung bình</small>
+              <strong style="font-size:18px">Khá</strong>
+              <span style="font-size:13px;color:var(--n500)">6.83 trên 1 bài đủ kết quả</span>
+            </div>
+          </div>
+          <div class="stat2">
+            <div class="tile"><small>Phần đã nộp</small><strong style="font-size:26px">4</strong><span>2 phần có kết quả</span></div>
+            <div class="tile"><small>Nộp muộn</small><strong style="font-size:26px">1</strong><span>25% số phần đã nộp</span></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><h4 style="margin:0;font-size:16px;font-weight:500">Band theo thời gian</h4><span style="font-size:12px;color:var(--n500)">4 bài gần nhất</span></div>
+            <svg width="100%" height="140" viewBox="0 0 318 140" role="img" aria-label="Band cả bài: 6.0 ngày 26/09, 6.5 ngày 10/10, 6.5 ngày 17/10, 7.0 ngày 24/10">
+              <line x1="24" y1="20" x2="310" y2="20" stroke="#F1F5F9"/><line x1="24" y1="60" x2="310" y2="60" stroke="#F1F5F9"/><line x1="24" y1="100" x2="310" y2="100" stroke="#F1F5F9"/>
+              <text x="0" y="24" font-size="11" fill="#64748B">8</text><text x="0" y="64" font-size="11" fill="#64748B">7</text><text x="0" y="104" font-size="11" fill="#64748B">6</text>
+              <polyline points="40,100 120,80 200,80 290,60" fill="none" stroke="#2457E6" stroke-width="2" stroke-linejoin="round"/>
+              <circle cx="40" cy="100" r="5" fill="#2457E6" stroke="#FFFFFF" stroke-width="2"/><circle cx="120" cy="80" r="5" fill="#2457E6" stroke="#FFFFFF" stroke-width="2"/>
+              <circle cx="200" cy="80" r="5" fill="#2457E6" stroke="#FFFFFF" stroke-width="2"/><circle cx="290" cy="60" r="5" fill="#2457E6" stroke="#FFFFFF" stroke-width="2"/>
+              <text x="282" y="48" font-size="12" font-weight="700" fill="#0F172A">7.0</text>
+              <text x="28" y="132" font-size="11" fill="#64748B">26/09</text><text x="108" y="132" font-size="11" fill="#64748B">10/10</text><text x="188" y="132" font-size="11" fill="#64748B">17/10</text><text x="272" y="132" font-size="11" fill="#64748B">24/10</text>
+            </svg>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;gap:12px">
+            <h4 style="margin:0;font-size:16px;font-weight:500">Lỗi bạn hay gặp</h4>
+            <div class="err-row"><span class="code">WC</span><span>Chọn từ chưa tự nhiên</span><span>2 lần</span></div>
+            <div class="err-row"><span class="code">PREP</span><span>Giới từ</span><span>1 lần</span></div>
+            <div class="err-row"><span class="code">VT</span><span>Thì động từ</span><span>1 lần</span></div>
+          </div>
+          <a class="card" href="#s-result" style="display:flex;align-items:center;justify-content:space-between;color:var(--n900)">
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:500">Tuần 1 — Biểu đồ đường…</span><span style="font-size:12px;color:var(--n500)">2/2 phần đã trả · 24/10</span></span>
+            <span class="chip ok" style="height:28px;padding:0 10px;font-size:14px;font-weight:700">7.0</span>
+          </a>
+        </main>
+        <nav class="nav" aria-label="Điều hướng chính">
+          <a href="#s-home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Bài tập</a>
+          <a href="#s-learn" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Kết quả</a>
+          <a href="#"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Trao đổi</a>
+          <a href="#"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Tài khoản</a>
+        </nav>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // Chuyển màn: bấm link #s-… → cuộn tới điện thoại đó và nháy viền.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var id = a.getAttribute('href').slice(1);
+    e.preventDefault();
+    if (!id) return;
+    var target = document.getElementById(id);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    target.classList.add('flash');
+    setTimeout(function () { target.classList.remove('flash'); }, 900);
+  });
+
+  // 1 · tab Cần làm / Quá hạn / Đã nộp
+  var homeTabs = document.querySelectorAll('#home-tabs .pill');
+  homeTabs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      homeTabs.forEach(function (b) { b.setAttribute('aria-selected', String(b === btn)); });
+      document.querySelectorAll('#home-list .task').forEach(function (card) {
+        card.hidden = card.dataset.tab !== btn.dataset.tab;
+      });
+    });
+  });
+
+  // 2, 3 · mở / thu gọn (tiêu chí chấm, đề bài)
+  document.querySelectorAll('[data-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var panel = document.getElementById(btn.dataset.toggle);
+      var open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(open));
+      panel.hidden = !open;
+      var label = btn.querySelector('span:not(.chev)');
+      if (btn.classList.contains('prompt-toggle') && label) label.textContent = open ? 'Thu gọn đề bài' : 'Xem đề bài';
+    });
+  });
+
+  // 3 · đếm từ khi gõ
+  var essay = document.getElementById('essay');
+  var MIN = 250;
+  function countWords() {
+    var t = essay.value.trim();
+    var n = t === '' ? 0 : t.split(/\s+/).length;
+    var ok = n >= MIN;
+    var wc = document.getElementById('wc');
+    wc.textContent = n + ' / ' + MIN + ' từ';
+    wc.className = ok ? 'ok' : 'warn';
+    document.getElementById('wc-hint').textContent = ok ? 'Đủ số từ tối thiểu' : 'Còn thiếu ' + (MIN - n) + ' từ';
+    var bar = document.getElementById('wc-bar');
+    bar.style.width = Math.min(100, Math.round((n / MIN) * 100)) + '%';
+    bar.style.background = ok ? 'var(--ok-dot)' : 'var(--warn-dot)';
+  }
+  essay.addEventListener('input', countWords);
+  countWords();
+  document.getElementById('save-btn').addEventListener('click', function () {
+    var d = new Date();
+    document.getElementById('saved-text').textContent =
+      'Đã lưu nháp lúc ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  });
+
+  // 4 · chọn mục Paper + xử lý nhận xét
+  var secs = document.querySelectorAll('#paper-secs .sec');
+  secs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      secs.forEach(function (b) { b.setAttribute('aria-selected', String(b === btn)); });
+      document.getElementById('paper-title').textContent = btn.dataset.title;
+    });
+  });
+  document.getElementById('resolve-btn').addEventListener('click', function () {
+    document.getElementById('tcomment').hidden = true;
+    document.getElementById('resolved').hidden = false;
+  });
+
+  // 5 · tab Điểm / Bài đã chấm / Nhận xét
+  var resTabs = document.querySelectorAll('#result-tabs button');
+  resTabs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      resTabs.forEach(function (b) {
+        var on = b === btn;
+        b.setAttribute('aria-selected', String(on));
+        var pane = document.getElementById(b.dataset.pane);
+        pane.hidden = !on;
+        if (on && b.dataset.pane === 'pane-comment') pane.style.display = 'flex';
+      });
+    });
+  });
+</script>
+</body>
+</html>

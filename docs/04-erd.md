@@ -728,7 +728,7 @@ PK `(user_id, channel_type, channel_ref_id)`; `channel_ref_id` = id bài nộp, 
 |---|---|---|---|
 | id | BIGINT | PK | |
 | actor_id | BIGINT | FK → users (SET NULL) | Người thực hiện. NULL = hệ thống, hoặc lần đăng nhập bị chặn / sai tên |
-| action | VARCHAR(50) | NN | Theo enum `AuditAction`: `LOGIN`, `LOGIN_FAILED`, `LOGIN_BLOCKED`, `CREATE_TEACHER`, `LOCK_USER`, `UNLOCK_USER`, `RESET_PASSWORD`, `REVOKE_SESSION`, `REVOKE_USER_SESSIONS`, `CLEANUP_SESSIONS`, `IMPORT_STUDENTS`, `TCP_IMPORT`, `PUBLISH_ASSIGNMENT`, `RETURN_GRADE`, `REQUEST_REVISION`. Không đặt CHECK vì danh sách mở |
+| action | VARCHAR(50) | NN | Theo enum `AuditAction`: `LOGIN`, `LOGIN_FAILED`, `LOGIN_BLOCKED`, `CREATE_TEACHER`, `IMPORT_TEACHERS`, `LOCK_USER`, `UNLOCK_USER`, `RESET_PASSWORD`, `REVOKE_SESSION`, `REVOKE_USER_SESSIONS`, `CLEANUP_SESSIONS`, `IMPORT_STUDENTS`, `TCP_IMPORT`, `PUBLISH_ASSIGNMENT`, `RETURN_GRADE`, `REQUEST_REVISION`. Không đặt CHECK vì danh sách mở |
 | target_type, target_id | VARCHAR(30), BIGINT | | Đối tượng bị tác động: `USER`, `CLASSROOM`, `ASSIGNMENT`, `SUBMISSION` |
 | ip | VARCHAR(45) | | IPv4 hoặc IPv6 của client (HTTP: qua nginx lấy từ `X-Forwarded-For`; TCP: địa chỉ socket) |
 | detail | JSONB | | Số liệu tóm tắt (vd số dòng import, tên đăng nhập đã gõ, lý do). **Không** chứa mật khẩu, token, mã SV / tên trong file import |

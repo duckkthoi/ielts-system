@@ -95,7 +95,7 @@ export default function TeacherDashboardPage() {
       />
 
       {!data || !summary ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
             <Card key={i}>
               <Skeleton active paragraph={{ rows: 1 }} />
@@ -104,7 +104,7 @@ export default function TeacherDashboardPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <Link href="/giao-vien/cham-bai" className="block">
               <StatCard
                 label="Bài chờ chấm"
@@ -133,7 +133,7 @@ export default function TeacherDashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
             <Card
               title="Bài đang mở"
               extra={
@@ -237,9 +237,9 @@ export default function TeacherDashboardPage() {
                 <Link href="/giao-vien/lop-hoc">Đến Lớp học</Link>
               </Empty>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {data.classes.map((c) => (
-                  <div key={c.id} className="flex items-center gap-3 rounded-lg border border-neutral-100 p-3">
+                  <div key={c.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-neutral-100 p-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-600">
                       <Users size={18} />
                     </span>

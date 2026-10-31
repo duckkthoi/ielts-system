@@ -626,7 +626,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 |---|---|
 | UC-03 Đăng xuất | Thu hồi refresh token, đóng WebSocket, xoá token ở trình duyệt, chuyển về trang đăng nhập. |
 | UC-04 Nhận và xem thông báo | Thông báo lưu DB rồi đẩy qua WebSocket tới đúng người. Chuông hiện số chưa đọc, toast hiện ngay. Có trang danh sách, đánh dấu một hoặc tất cả là đã đọc. Kết nối lại thì lấy các thông báo bị lỡ. Một số loại thông báo gửi kèm email. |
-| UC-05 Quản lý tài khoản giáo viên | Admin tạo giáo viên (tên đăng nhập, họ tên, email, mật khẩu tạm), sửa thông tin, khoá/mở, đặt lại mật khẩu. Giáo viên mới bị bắt đổi mật khẩu. |
+| UC-05 Quản lý tài khoản giáo viên | Admin tạo giáo viên (tên đăng nhập, họ tên, email, mật khẩu tạm), sửa thông tin, khoá/mở, đặt lại mật khẩu. Giáo viên mới bị bắt đổi mật khẩu. **UC-05b**: import nhiều giáo viên từ file .xlsx / .csv — mỗi dòng xử lý riêng, giáo viên đã có bị bỏ qua, mật khẩu tạm của tài khoản mới hiện một lần để tải về. |
 | UC-06 Quản lý người dùng | Admin tìm theo tên, mã sinh viên, vai trò, trạng thái; xem chi tiết; khoá/mở tài khoản. Tài khoản bị khoá bị đăng xuất ngay. |
 | UC-07 Xem nhật ký hệ thống | Lọc audit log theo người thực hiện, hành động, thời gian, IP. |
 | UC-08 Quản lý phiên đăng nhập | Xem các phiên đang hoạt động (thiết bị, IP, thời gian) và buộc đăng xuất một phiên. |

@@ -7,6 +7,7 @@ public enum AuditAction {
 	/** Đăng nhập bị chặn vì sai quá nhiều lần (NFR-09). */
 	LOGIN_BLOCKED,
 	CREATE_TEACHER,
+	IMPORT_TEACHERS,
 	LOCK_USER,
 	UNLOCK_USER,
 	RESET_PASSWORD,

@@ -55,8 +55,9 @@ export function StudentResults({ stats, assignmentHref, partHref }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card styles={{ body: { padding: 20 } }}>
+      {/* Điện thoại: thẻ band chiếm cả hàng, 2 thẻ số liệu chung hàng dưới. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <Card className="col-span-2 sm:col-span-1" styles={{ body: { padding: 20 } }}>
           <div className="flex items-center gap-4">
             <BandBadge band={stats.averageBand} size="lg" />
             <div className="min-w-0">

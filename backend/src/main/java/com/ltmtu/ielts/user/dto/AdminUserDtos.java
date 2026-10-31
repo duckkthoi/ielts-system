@@ -1,6 +1,7 @@
 package com.ltmtu.ielts.user.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 import com.ltmtu.ielts.user.Role;
 import com.ltmtu.ielts.user.User;
@@ -58,5 +59,19 @@ public final class AdminUserDtos {
 	}
 
 	public record TemporaryPassword(String temporaryPassword) {
+	}
+
+	// ─── Import giáo viên từ file (UC-05b) ────────────────────────────────────
+
+	public record TeacherImportError(int row, String username, String reason) {
+	}
+
+	/** Tài khoản vừa tạo. Mật khẩu tạm chỉ có trong response này: không ghi DB, không ghi log (BR-02). */
+	public record ImportedTeacher(Long id, String username, String fullName, String email, String temporaryPassword) {
+	}
+
+	/** {@code skipped}: tên đăng nhập đã là giáo viên (không đổi gì). */
+	public record TeacherImportReport(int totalRows, int created, int skipped, List<TeacherImportError> errors,
+			List<ImportedTeacher> accounts) {
 	}
 }

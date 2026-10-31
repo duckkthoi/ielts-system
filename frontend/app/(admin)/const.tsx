@@ -54,8 +54,15 @@ const SHARED_PAGE_TITLE: Record<string, string> = {
   '/ca-nhan': 'Thông tin cá nhân'
 };
 
-/** Tìm key menu đang active: mục có đường dẫn là tiền tố dài nhất của pathname. */
-export function findActiveMenuKey(items: MenuItem[], pathname: string): string | undefined {
+/** Trang con không nằm dưới đường dẫn mục menu của nó: chi tiết bài của sinh viên thuộc "Bài được giao". */
+const MENU_ALIAS: Record<string, string> = {
+  '/sinh-vien/bai-tap': '/sinh-vien/tong-quan'
+};
+
+/** Tìm key menu đang active: mục có đường dẫn là tiền tố dài nhất của pathname (sau khi đổi theo MENU_ALIAS). */
+export function findActiveMenuKey(items: MenuItem[], rawPathname: string): string | undefined {
+  const alias = Object.keys(MENU_ALIAS).find((p) => rawPathname === p || rawPathname.startsWith(`${p}/`));
+  const pathname = alias ? MENU_ALIAS[alias] : rawPathname;
   return items
     .map((item) => (item && 'key' in item ? String(item.key) : ''))
     .filter((key) => key && (pathname === key || pathname.startsWith(`${key}/`)))

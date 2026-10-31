@@ -21,6 +21,25 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 
 { "username": "gv.hanh", "fullName": "ThS. Nguyễn Thị Hạnh", "email": "hanh@truong.edu.vn" }
 
+### Import giáo viên từ file → số tạo mới / bỏ qua / lỗi + mật khẩu tạm của tài khoản mới (chỉ trong response này)
+POST {{baseUrl}}/api/admin/teachers/import
+Authorization: Bearer {{login.response.body.data.accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="giao-vien.csv"
+Content-Type: text/csv
+
+Tên đăng nhập;Họ và tên;Email
+gv.lan;ThS. Phạm Thị Lan;lan@truong.edu.vn
+gv.minh;Lê Văn Minh;
+gv minh;Tên sai;
+--WebAppBoundary--
+
+### File mẫu import giáo viên (format=xlsx|csv)
+GET {{baseUrl}}/api/admin/teachers/import-template?format=csv
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
 ### Danh sách giáo viên (lọc, phân trang, sắp xếp theo username|fullName|createdAt|lastLoginAt)
 GET {{baseUrl}}/api/admin/teachers?keyword=hanh&page=0&size=20&sort=fullName,asc
 Authorization: Bearer {{login.response.body.data.accessToken}}

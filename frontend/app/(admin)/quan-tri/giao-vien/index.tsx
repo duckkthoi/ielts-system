@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { App, Button, Card, Input, Select, Table } from 'antd';
-import { Plus } from 'lucide-react';
+import { FileUp, Plus } from 'lucide-react';
 
 import { useAccountActions } from '@/components/AccountActions';
 import { PageHeader } from '@/components/PageHeader';
@@ -13,12 +13,14 @@ import { useServerList } from '@/lib/utils/hooks';
 
 import { ACTIVE_OPTIONS, buildColumns, PAGE_SIZE } from './const';
 import { TeacherFormDrawer } from './TeacherFormDrawer';
+import { TeacherImportModal } from './TeacherImportModal';
 
-// ─── Quản trị: danh sách giáo viên (UC-05) ────────────────────────────────────
+// ─── Quản trị: danh sách giáo viên (UC-05) + import từ file (UC-05b) ──────────
 
 export default function TeachersPage() {
   const { message } = App.useApp();
   const [query, setQuery] = useState<UserListParams>({ page: 0, size: PAGE_SIZE });
+  const [importOpen, setImportOpen] = useState(false);
   const [drawer, setDrawer] = useState<{ open: boolean; editing: UserSummary | null }>({ open: false, editing: null });
   const { data, total, loading, reload } = useServerList(adminApi.listTeachers, query);
   const { renderMenu, showPassword, passwordModal } = useAccountActions(reload);
@@ -52,11 +54,16 @@ export default function TeachersPage() {
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
       <PageHeader
         title="Giáo viên"
-        description="Tạo tài khoản giáo viên, sửa thông tin, khoá và đặt lại mật khẩu."
+        description="Tạo tài khoản giáo viên (từng người hoặc import từ file), sửa thông tin, khoá và đặt lại mật khẩu."
         extra={
-          <Button type="primary" icon={<Plus size={16} />} onClick={openCreate}>
-            Thêm giáo viên
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button icon={<FileUp size={16} />} onClick={() => setImportOpen(true)}>
+              Import từ file
+            </Button>
+            <Button type="primary" icon={<Plus size={16} />} onClick={openCreate}>
+              Thêm giáo viên
+            </Button>
+          </div>
         }
       />
       <Card styles={{ body: { padding: 0 } }}>
@@ -99,6 +106,7 @@ export default function TeachersPage() {
         onCreated={handleCreated}
         onUpdated={handleUpdated}
       />
+      <TeacherImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={reload} />
       {passwordModal}
     </div>
   );

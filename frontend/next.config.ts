@@ -6,6 +6,8 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8080';
 // Không bật cacheComponents / partialPrefetching: dữ liệu lấy từ backend Spring ở phía client
 // (token nằm trong localStorage), và antd sinh giá trị ngẫu nhiên khi prerender.
 const nextConfig: NextConfig = {
+  // Tắt nút tròn "N" của Next ở góc dưới trái khi chạy dev (đè lên khối tài khoản ở thanh bên).
+  devIndicators: false,
   turbopack: {
     rules: {
       '*.css': {

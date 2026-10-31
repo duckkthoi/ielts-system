@@ -76,7 +76,7 @@ Dữ liệu mẫu chỉ có khi bật profile **`demo`** (`dev,demo` khi chạy 
 |---|---|---|
 | `gv.demo` | `Demo@2026` | Giáo viên mẫu, **không** bị bắt đổi mật khẩu. Chủ lớp `DEMO-A`, `DEMO-B` và các bài mẫu |
 
-Giáo viên khác do admin tạo ở **Quản trị → Giáo viên**; mật khẩu tạm hiện **một lần** khi tạo.
+Giáo viên khác do admin tạo ở **Quản trị → Giáo viên** (từng người hoặc **Import từ file**); mật khẩu tạm hiện **một lần** khi tạo.
 
 ### 3.3. Sinh viên
 
@@ -133,9 +133,9 @@ Sinh viên mới do giáo viên **import** từ file: mật khẩu tạm nằm t
 | Trang | Làm được gì |
 |---|---|
 | **Tổng quan** | Thống kê toàn hệ thống có bộ lọc (xem mục 6.6b): kỳ (mặc định 30 ngày, so với kỳ liền trước), giáo viên, loại bài, trạng thái bài. Thêm khối **Người dùng** (theo vai trò, người mới, hoạt động 7 / 30 ngày) và **Phiên & đăng nhập** (phiên đang hoạt động, đăng nhập sai trong kỳ) |
-| **Giáo viên** | **Thêm giáo viên**: tên đăng nhập (chữ không dấu, số, `. _ -`), họ tên, email → hệ thống hiện **mật khẩu tạm một lần** (bấm "Sao chép" rồi gửi cho giáo viên). Nút "…" ở mỗi dòng: sửa thông tin, đặt lại mật khẩu, khoá / mở khoá |
+| **Giáo viên** | **Thêm giáo viên**: tên đăng nhập (chữ không dấu, số, `. _ -`), họ tên, email → hệ thống hiện **mật khẩu tạm một lần** (bấm "Sao chép" rồi gửi cho giáo viên). **Import từ file**: tải file mẫu (Excel / CSV), điền `ten_dang_nhap`, `ho_ten`, `email` (tuỳ chọn), tối đa 500 dòng → kết quả ghi số tạo mới / đã là giáo viên / lỗi kèm lý do từng dòng; bấm **Tải danh sách tài khoản** để lưu mật khẩu tạm (chỉ hiện một lần, đóng hộp thoại là mất). Nút "…" ở mỗi dòng: sửa thông tin, đặt lại mật khẩu, khoá / mở khoá |
 | **Người dùng** | Tra cứu mọi tài khoản theo tên / mã SV / email, lọc vai trò và trạng thái. Bấm một dòng để xem chi tiết (số phiên đang hoạt động, lần đăng nhập gần nhất). Khoá tài khoản → người đó bị đăng xuất ngay trên mọi thiết bị. Đặt lại mật khẩu → mật khẩu tạm mới, bắt đổi khi đăng nhập |
-| **Nhật ký hệ thống** | Các thao tác quan trọng kèm IP: đăng nhập (đúng / sai / bị chặn), tạo giáo viên, khoá, đặt lại mật khẩu, import, phát hành, trả bài… Lọc theo hành động, tiền tố IP (vd `192.168.`), khoảng ngày; bấm ⊕ ở đầu dòng để xem chi tiết |
+| **Nhật ký hệ thống** | Các thao tác quan trọng kèm IP: đăng nhập (đúng / sai / bị chặn), tạo / import giáo viên, khoá, đặt lại mật khẩu, import sinh viên, phát hành, trả bài… Lọc theo hành động, tiền tố IP (vd `192.168.`), khoảng ngày; bấm ⊕ ở đầu dòng để xem chi tiết |
 | **Phiên đăng nhập** | Bảng các phiên (mặc định chỉ phiên đang hoạt động): người dùng, thiết bị / trình duyệt, IP đã che, lúc đăng nhập, hoạt động lần cuối, hết hạn, trạng thái *Đang hoạt động / Đã hết hạn / Đã thu hồi* (kèm lý do). Lọc theo tên, vai trò, trạng thái, ngày đăng nhập; bấm tiêu đề cột để sắp xếp. Nút **…** ở mỗi dòng: **Thu hồi phiên này** (thiết bị đó bị đăng xuất ngay) hoặc **Thu hồi mọi phiên của tài khoản**. **Dọn phiên hết hạn** xoá các phiên đã quá hạn. Không thu hồi được phiên bạn đang dùng (dòng có nhãn *Phiên của bạn*) |
 
 Admin không tự khoá được chính mình.

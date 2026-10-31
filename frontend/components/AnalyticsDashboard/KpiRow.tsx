@@ -44,7 +44,7 @@ const pct = (r: Ratio) => (r.rate === null ? null : Math.round(r.rate * 1000) / 
 export function KpiRow({ o }: { o: AnalyticsOverview }) {
   const k = o.kpis;
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <Kpi
         label="Lần nộp trong kỳ"
         value={String(k.submissions.current)}

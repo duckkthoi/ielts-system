@@ -46,6 +46,16 @@ export interface CreatedTeacher {
   temporaryPassword: string;
 }
 
+/** Import giáo viên từ file (docs/05 mục A.3). `skipped` = tên đăng nhập đã là giáo viên. */
+export interface TeacherImportReport {
+  totalRows: number;
+  created: number;
+  skipped: number;
+  errors: { row: number; username: string | null; reason: string }[];
+  /** Mật khẩu tạm chỉ có trong response này — đóng hộp thoại là mất. */
+  accounts: { id: number; username: string; fullName: string; email: string | null; temporaryPassword: string }[];
+}
+
 export interface SystemStats {
   usersByRole: Partial<Record<Role, number>>;
   lockedUsers: number;
@@ -63,6 +73,7 @@ export type AuditAction =
   | 'LOGIN_FAILED'
   | 'LOGIN_BLOCKED'
   | 'CREATE_TEACHER'
+  | 'IMPORT_TEACHERS'
   | 'LOCK_USER'
   | 'UNLOCK_USER'
   | 'RESET_PASSWORD'

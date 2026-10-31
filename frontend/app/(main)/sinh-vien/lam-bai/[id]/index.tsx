@@ -94,7 +94,7 @@ export default function WritingPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col">
       <div className="border-b border-neutral-100 bg-neutral-0 px-4 pt-3 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-h3 font-semibold text-neutral-900">{detail.title}</h1>

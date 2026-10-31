@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { filenameFromDisposition } from './download.ts';
+import { filenameFromDisposition, toCsv } from './download.ts';
 
 test('filenameFromDisposition: ưu tiên filename* UTF-8 (tên tiếng Việt)', () => {
   const header =
@@ -21,4 +21,13 @@ test('filenameFromDisposition: dạng filename="…" thường', () => {
 test('filenameFromDisposition: không có header / không có tên → null', () => {
   assert.equal(filenameFromDisposition(null), null);
   assert.equal(filenameFromDisposition('inline'), null);
+});
+
+test('toCsv: có BOM, CRLF, bọc ô có dấu phẩy / ngoặc kép', () => {
+  const csv = toCsv([
+    ['ten_dang_nhap', 'ho_ten'],
+    ['gv.a', 'Nguyễn, Văn "A"'],
+    ['gv.b', null]
+  ]);
+  assert.equal(csv, '﻿ten_dang_nhap,ho_ten\r\ngv.a,"Nguyễn, Văn ""A"""\r\ngv.b,\r\n');
 });

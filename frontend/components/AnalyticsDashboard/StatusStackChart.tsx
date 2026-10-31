@@ -7,7 +7,8 @@ import type { AnalyticsOverview } from '@/lib/types/analytics';
 
 // ─── Cột ngang chồng: trạng thái (sinh viên × phần) của từng bài ──────────────
 // Thứ tự cố định Chưa làm · Đang làm · Cần sửa · Đã nộp · Đã trả bài; khe 2px giữa các đoạn, đầu thanh bo 4px.
-// Chú giải luôn hiện; rê chuột vào đoạn → số + tỉ lệ. Quá hạn ghi bằng chữ bên phải (không phải một đoạn màu).
+// Chú giải luôn hiện; rê chuột vào đoạn → số + tỉ lệ. Mỗi bài: tên + số lượt (quá hạn ghi bằng chữ, không phải một
+// đoạn màu) ở dòng trên, thanh rộng hết khung ở dòng dưới — khung hẹp vẫn đọc được.
 
 type Row = AnalyticsOverview['byAssignment'][number];
 
@@ -34,14 +35,16 @@ export function StatusStackChart({ rows }: { rows: Row[] }) {
         {rows.map((r) => {
           const total = SEGMENTS.reduce((sum, s) => sum + Number(r[s.key]), 0);
           return (
-            <li
-              key={r.assignmentId}
-              className="grid grid-cols-1 gap-1 sm:grid-cols-[200px_minmax(0,1fr)_88px] sm:items-center"
-            >
-              <span className="truncate text-small text-neutral-900" title={r.title}>
-                {r.title}
-                {r.kind === 'PAPER' && <span className="text-neutral-500"> · Paper</span>}
-              </span>
+            <li key={r.assignmentId} className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-small text-neutral-900" title={r.title}>
+                  {r.title}
+                  {r.kind === 'PAPER' && <span className="text-neutral-500"> · Paper</span>}
+                </span>
+                <span className="shrink-0 text-caption whitespace-nowrap text-neutral-500 tabular-nums">
+                  {total} lượt{r.overdue > 0 && <span className="text-error"> · {r.overdue} quá hạn</span>}
+                </span>
+              </div>
               <div className="flex h-3.5 gap-0.5 overflow-hidden rounded-sm">
                 {total === 0 ? (
                   <span className="flex-1 rounded-sm bg-neutral-50" />
@@ -60,9 +63,6 @@ export function StatusStackChart({ rows }: { rows: Row[] }) {
                   })
                 )}
               </div>
-              <span className="text-caption text-neutral-500 tabular-nums sm:text-right">
-                {total} lượt{r.overdue > 0 && <span className="text-error"> · {r.overdue} quá hạn</span>}
-              </span>
             </li>
           );
         })}

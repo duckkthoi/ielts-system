@@ -261,7 +261,7 @@ Mọi component dựa trên Ant Design, theme hoá bằng token. Cột **Nguồn
 |---|---|---|
 | **StatusTag** | Tag hình viên thuốc, có chấm màu bên trái và nhãn theo bảng 2.4 / 2.5 | `size`: sm / md. Có chấm hoặc không |
 | **BandBadge** | Hiển thị band ("6.5") trong vòng tròn hoặc viên thuốc, màu theo bảng 2.6 | `size`: sm 24px / md 32px / lg 56px (màn kết quả). `null` → "—" |
-| **ScorePicker** | Chọn điểm một tiêu chí: dải nút 0 → 9 bước 0.5 (segmented), phím ← → để đổi | Đang chọn: nền `brand-600` chữ trắng. Có tooltip mô tả band |
+| **ScorePicker** | Chọn điểm một tiêu chí: dải nút 0 → 9 bước 0.5 (segmented), phím ← → để đổi. Quá 21 mức (thang 10 bước nhỏ) → thanh trượt + ô nhập số theo đúng bước, dòng phụ ghi khoảng / bước / trần | Đang chọn: nền `brand-600` chữ trắng. Có tooltip mô tả band |
 | **LevelsEditor** (Mức 4, trình soạn bài) | Khung "Mức đạt" dưới checklist của tiêu chí bài Paper: mỗi mức là thẻ nền `neutral-25` gồm tên, hai ô điểm "Từ – Đến", nút xoá và ô mô tả tự giãn; lỗi chung (chồng khoảng, thiếu mức…) hiện dưới danh sách. Nút "Thêm mức" (tối đa 6), "Dùng 4 mức mặc định" khi chưa có mức | Bài luận IELTS không có khung này |
 | **CriterionCard** | Một tiêu chí trên màn chấm: tên + mô tả rút gọn, checklist (Checkbox), ScorePicker, ô nhận xét | Thu gọn / mở rộng. Viền trái `brand-600` khi đã chấm đủ |
 | **ChecklistItem** | Checkbox + nội dung. Đã tick: chữ `neutral-500` | |
@@ -280,7 +280,7 @@ Mọi component dựa trên Ant Design, theme hoá bằng token. Cột **Nguồn
 | **NotificationBell** | Icon chuông + badge số chưa đọc (tối đa "99+"). Bấm mở popover 8 thông báo mới nhất + "Xem tất cả" | Có thông báo mới: chuông rung nhẹ 1 lần |
 | **PresenceDot** | Chấm 8px màu theo bảng 2.8, đặt góc dưới phải avatar hoặc trước tên | online / away / offline |
 | **ProgressCell** | Ô ma trận tiến độ: nền `solid` theo trạng thái, hiện band nếu đã trả, icon đồng hồ nếu muộn. Hover: tooltip chi tiết; bấm: mở bài để chấm | Hiệu ứng `pulse` khi vừa đổi |
-| **StatCard** | Thẻ số liệu dashboard: nhãn `caption`, số `display`, so sánh tăng/giảm | |
+| **StatCard** | Thẻ số liệu dashboard: nhãn `caption`, số `display`, so sánh tăng/giảm. Điện thoại (< `sm`): 2 thẻ một hàng, ẩn ô icon | |
 | **PageHeader** | Tiêu đề `h1` + mô tả + breadcrumb + vùng nút bên phải | |
 | **AssignmentHeader** | Đầu trang của một bài tập (giáo viên): breadcrumb *Bài tập › tên bài*, `h1` tên bài, mô tả của trang, vùng nút; dưới cùng là tab **Chi tiết · Nhóm (Paper) · Tiến độ · Giám sát · Thống kê** gạch chân `brand-600`. Chỉ trang Chi tiết có nút thao tác (Chấm bài này + menu **Thao tác**: Giao thêm, Cài đặt, Nhân bản, Đóng / Mở lại, Xoá) | Điện thoại: hàng tab cuộn ngang, không tràn trang. Bài nháp không có tab |
 | **ImportResult** | Kết quả import: 4 số (tạo mới / đã có / bỏ qua / lỗi) + bảng lỗi + nút "Tải file tài khoản" (nổi bật, kèm cảnh báo "chỉ tải được một lần") | |

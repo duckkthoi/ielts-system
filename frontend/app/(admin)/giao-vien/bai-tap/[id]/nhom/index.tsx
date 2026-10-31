@@ -177,7 +177,7 @@ export default function GroupsPage() {
               />
             </Card>
           ) : (
-            <div className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid content-start gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {view.groups.map((g) => (
                 <Card
                   key={g.id}

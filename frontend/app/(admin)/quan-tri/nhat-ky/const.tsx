@@ -12,6 +12,7 @@ export const AUDIT_ACTION_META: Record<AuditAction, { label: string; color: stri
   LOGIN_FAILED: { label: 'Đăng nhập sai', color: 'warning' },
   LOGIN_BLOCKED: { label: 'Chặn đăng nhập', color: 'error' },
   CREATE_TEACHER: { label: 'Tạo giáo viên', color: 'processing' },
+  IMPORT_TEACHERS: { label: 'Import giáo viên', color: 'processing' },
   LOCK_USER: { label: 'Khoá tài khoản', color: 'error' },
   UNLOCK_USER: { label: 'Mở khoá', color: 'success' },
   RESET_PASSWORD: { label: 'Đặt lại mật khẩu', color: 'warning' },

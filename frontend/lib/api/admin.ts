@@ -1,3 +1,5 @@
+import type { AxiosProgressEvent, AxiosResponse } from 'axios';
+
 import axiosClient from '@/lib/axiosClient';
 import { formatUrl } from '@/lib/api/base';
 import type {
@@ -8,11 +10,13 @@ import type {
   SessionRow,
   SystemStats,
   TeacherFormValues,
+  TeacherImportReport,
   UserDetail,
   UserListParams,
   UserSummary
 } from '@/lib/types/admin';
 import type { ApiResponse } from '@/lib/types/api';
+import { filenameFromDisposition, saveBlob } from '@/lib/utils/download';
 
 // ─── Quản trị (docs/05 mục A.3) ───────────────────────────────────────────────
 // Danh sách trả cả ApiResponse để lấy `totalRecord`; còn lại trả `data` đã bóc.
@@ -34,6 +38,31 @@ export async function updateTeacher(id: number, data: Omit<TeacherFormValues, 'u
     toastError: false
   })) as unknown as ApiResponse<UserSummary>;
   return res.data;
+}
+
+/** Lỗi cả file (BAD_FILE) do hộp thoại tự hiện nên tắt toast. */
+export async function importTeachers(
+  file: File,
+  onUploadProgress?: (event: AxiosProgressEvent) => void
+): Promise<TeacherImportReport> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = (await axiosClient.post('/api/admin/teachers/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    toastError: false,
+    onUploadProgress
+  })) as unknown as ApiResponse<TeacherImportReport>;
+  return res.data;
+}
+
+export async function downloadTeacherTemplate(format: 'xlsx' | 'csv'): Promise<void> {
+  const res = (await axiosClient.get('/api/admin/teachers/import-template', {
+    params: { format },
+    responseType: 'blob',
+    rawResponse: true
+  })) as AxiosResponse<Blob>;
+  const header = res.headers['content-disposition'] as string | undefined;
+  saveBlob(res.data, filenameFromDisposition(header) ?? `mau-danh-sach-giao-vien.${format}`);
 }
 
 export async function listUsers(params: UserListParams): Promise<ApiResponse<UserSummary[]>> {
@@ -105,6 +134,8 @@ export async function cleanupSessions(): Promise<ApiResponse<{ count: number }>>
 export const adminApi = {
   listTeachers,
   createTeacher,
+  importTeachers,
+  downloadTeacherTemplate,
   updateTeacher,
   listUsers,
   getUser,

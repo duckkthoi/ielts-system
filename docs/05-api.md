@@ -125,6 +125,8 @@
 |---|---|---|---|
 | GET | `/api/admin/teachers?keyword&active&page&size` | Danh sách giáo viên | 1 |
 | POST | `/api/admin/teachers` | Tạo giáo viên `{username, fullName, email}` → `{teacher, temporaryPassword}` | 1 |
+| POST | `/api/admin/teachers/import` | Import giáo viên từ file (multipart `file` .xlsx/.csv ≤ 10 MB, tối đa 500 dòng; cột `ten_dang_nhap`, `ho_ten`, tuỳ chọn `email` — tên cột không phân biệt hoa thường / dấu) → `{totalRows, created, skipped, errors[{row, username, reason}], accounts[{id, username, fullName, email, temporaryPassword}]}`. Mỗi dòng một transaction; tên đăng nhập đã là giáo viên → `skipped`, trùng tài khoản vai trò khác / sai định dạng / trùng dòng → lỗi dòng. Tài khoản mới: mật khẩu tạm, bắt đổi lần đầu (BR-02); mật khẩu chỉ có trong response, không ghi DB / log. Lỗi cả file → `400 BAD_FILE`. Ghi nhật ký `IMPORT_TEACHERS` (chỉ số lượng) | 3 |
+| GET | `/api/admin/teachers/import-template?format=xlsx\|csv` | File mẫu import giáo viên | 3 |
 | PUT | `/api/admin/teachers/{id}` | Sửa `{fullName, email}` | 1 |
 | GET | `/api/admin/users?keyword&role&active&page&size` | Tra cứu người dùng | 1 |
 | GET | `/api/admin/users/{id}` | Chi tiết người dùng | 1 |
