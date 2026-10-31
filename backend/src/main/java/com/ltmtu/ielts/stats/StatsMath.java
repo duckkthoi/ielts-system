@@ -31,10 +31,18 @@ final class StatsMath {
 		return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
 	}
 
-	/** Phân bố theo band đã làm tròn hiển thị (BR-12, bước 0.5), chỉ band có bài, tăng dần. */
-	static List<BandCount> distribution(Collection<BigDecimal> rawBands) {
+	/**
+	 * Phân bố theo band đã làm tròn hiển thị (BR-12, bước 0.5), chỉ band có bài, tăng dần. Bài PAPER (thang 10): gom
+	 * theo nửa điểm gần nhất (vd 7.67 → 7.5, 7.8 → 8.0).
+	 */
+	static List<BandCount> distribution(Collection<BigDecimal> rawBands, boolean paper) {
 		Map<BigDecimal, Integer> counts = new TreeMap<>();
-		rawBands.forEach(b -> counts.merge(BandCalculator.display(b), 1, Integer::sum));
+		rawBands.forEach(b -> counts.merge(paper ? halfPoint(b) : BandCalculator.display(b), 1, Integer::sum));
 		return counts.entrySet().stream().map(e -> new BandCount(e.getKey(), e.getValue())).toList();
+	}
+
+	private static BigDecimal halfPoint(BigDecimal score) {
+		return score.multiply(BigDecimal.TWO).setScale(0, RoundingMode.HALF_UP).divide(BigDecimal.TWO, 1,
+				RoundingMode.UNNECESSARY);
 	}
 }

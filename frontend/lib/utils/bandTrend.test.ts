@@ -13,7 +13,8 @@ const asg = (id: number, band: number | null, complete: boolean, at: string): As
   returnedParts: complete ? 2 : 1,
   complete,
   band,
-  returnedAt: at
+  returnedAt: at,
+  paper: false
 });
 
 const part = (id: number, taskType: PartBand['taskType'], band: number | null, at: string): PartBand => ({
@@ -23,7 +24,8 @@ const part = (id: number, taskType: PartBand['taskType'], band: number | null, a
   partTitle: `Phần ${id}`,
   taskType,
   band,
-  returnedAt: at
+  returnedAt: at,
+  paper: false
 });
 
 test('buildBandTrend: band cả bài chỉ lấy bài đủ phần, sắp theo thời gian', () => {
@@ -75,4 +77,15 @@ test('timeScale: đưa về [0, 1]; một thời điểm → 0.5', () => {
   assert.equal(scale(200), 0.5);
   assert.equal(scale(300), 1);
   assert.equal(timeScale([42])(42), 0.5);
+});
+
+test('buildBandTrend: bài PAPER (thang 10) không vẽ lên biểu đồ band', () => {
+  const series = buildBandTrend(
+    [asg(1, 6.5, true, '2026-10-01T00:00:00Z'), { ...asg(2, 7.67, true, '2026-10-02T00:00:00Z'), paper: true }],
+    [{ ...part(9, 'CUSTOM', 7.67, '2026-10-02T00:00:00Z'), paper: true }]
+  );
+  assert.deepEqual(
+    series.map((s) => [s.key, s.points.map((p) => p.band)]),
+    [['overall', [6.5]]]
+  );
 });

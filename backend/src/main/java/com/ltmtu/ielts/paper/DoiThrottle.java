@@ -21,11 +21,7 @@ public class DoiThrottle {
 	/** {@code null} nếu được tra; nếu không thì là thời gian phải chờ. Được tra thì tính luôn vào bộ đếm. */
 	Duration tryLookup(Long userId) {
 		String key = String.valueOf(userId);
-		if (limiter.isLimited(key)) {
-			return limiter.retryAfter(key);
-		}
-		limiter.hit(key);
-		return null;
+		return limiter.tryAcquire(key) ? null : limiter.retryAfter(key);
 	}
 
 	/** Xoá mọi bộ đếm (dùng trong test). */

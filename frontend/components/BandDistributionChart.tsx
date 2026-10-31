@@ -12,7 +12,16 @@ import { fillBandBins } from '@/lib/utils/bandDistribution';
 
 const CHART_HEIGHT = 160;
 
-export function BandDistributionChart({ distribution, unit = 'bài' }: { distribution: BandCount[]; unit?: string }) {
+export function BandDistributionChart({
+  distribution,
+  unit = 'bài',
+  label = 'Band'
+}: {
+  distribution: BandCount[];
+  unit?: string;
+  /** Tên trục: "Band" (IELTS) hoặc "Điểm" (bài PAPER thang 10, gom theo nửa điểm). */
+  label?: string;
+}) {
   const bins = fillBandBins(distribution);
   const max = Math.max(1, ...bins.map((b) => b.count));
   const peak = bins.findIndex((b) => b.count === max);
@@ -31,7 +40,7 @@ export function BandDistributionChart({ distribution, unit = 'bài' }: { distrib
           <div className="absolute inset-x-0 top-0 border-t border-dashed border-neutral-100" />
           <div className="flex items-end gap-0.5 border-b border-neutral-300" style={{ height: CHART_HEIGHT }}>
             {bins.map((bin, index) => (
-              <Tooltip key={bin.band} title={`Band ${formatBand(bin.band)}: ${bin.count} ${unit}`}>
+              <Tooltip key={bin.band} title={`${label} ${formatBand(bin.band)}: ${bin.count} ${unit}`}>
                 <div className="group flex h-full flex-1 cursor-default flex-col items-center justify-end">
                   {index === peak && (
                     <span className="mb-1 text-caption font-medium text-neutral-700 tabular-nums">{bin.count}</span>
@@ -54,7 +63,7 @@ export function BandDistributionChart({ distribution, unit = 'bài' }: { distrib
         </div>
       </div>
       <figcaption className="sr-only">
-        {bins.map((b) => `Band ${formatBand(b.band)}: ${b.count} ${unit}`).join('; ')}
+        {bins.map((b) => `${label} ${formatBand(b.band)}: ${b.count} ${unit}`).join('; ')}
       </figcaption>
     </figure>
   );

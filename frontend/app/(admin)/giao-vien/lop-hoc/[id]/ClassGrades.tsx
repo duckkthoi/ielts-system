@@ -61,6 +61,7 @@ export function ClassGrades({ classId }: { classId: number }) {
           <Tooltip title={assignment.title}>
             <Link href={`/giao-vien/bai-tap/${assignment.assignmentId}/thong-ke?lop=${classId}`}>
               <span className="block max-w-36 truncate">{assignment.title}</span>
+              {assignment.kind === 'PAPER' && <span className="block text-caption font-normal">Paper · thang 10</span>}
             </Link>
           </Tooltip>
         ),
@@ -72,7 +73,10 @@ export function ClassGrades({ classId }: { classId: number }) {
           return band === null ? (
             <span className="text-neutral-400">—</span>
           ) : (
-            <span className="font-semibold tabular-nums text-neutral-900">{band.toFixed(2)}</span>
+            <span className="font-semibold tabular-nums text-neutral-900">
+              {band.toFixed(2)}
+              {assignment.kind === 'PAPER' && <span className="text-caption font-normal text-neutral-500"> / 10</span>}
+            </span>
           );
         }
       })),
@@ -118,7 +122,8 @@ export function ClassGrades({ classId }: { classId: number }) {
         <div>
           <h2 className="text-h3 font-semibold text-neutral-900">Bảng điểm lớp</h2>
           <p className="text-small text-neutral-500">
-            Mỗi cột là một bài đã giao · dấu — nghĩa là chưa được trả đủ mọi phần
+            Mỗi cột là một bài đã giao · dấu — nghĩa là chưa được trả đủ mọi phần · bài Paper chấm thang 10, không tính
+            vào band trung bình
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">

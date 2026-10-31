@@ -17,10 +17,21 @@ import { formatBand, getBandLevel } from '@/lib/theme/status';
 import type { AssignmentBand, PartBand, StudentStats } from '@/lib/types/stats';
 import { buildBandTrend } from '@/lib/utils/bandTrend';
 import { formatDate } from '@/lib/utils/date';
+import { formatScore } from '@/lib/utils/grading';
 
 // ─── Kết quả học tập của một sinh viên (UC-28, Prompt 8) ──────────────────────
 // Dùng chung: sinh viên xem mình (/sinh-vien/ket-qua) và giáo viên xem một sinh viên (thống kê lớp).
 // Chỉ có kết quả đã trả (BR-13) — server đã lọc. `partHref` bỏ trống thì không có link sang kết quả từng phần.
+// Bài PAPER: điểm riêng thang 10 chỉ hiện trong bảng, không vào band trung bình / biểu đồ band (server đã tách).
+
+function PaperScore({ score }: { score: number | null }) {
+  return (
+    <span className="font-semibold text-neutral-900 tabular-nums">
+      {score === null ? '—' : formatScore(score)}
+      <span className="text-small font-normal text-neutral-500"> / 10</span>
+    </span>
+  );
+}
 
 interface Props {
   stats: StudentStats;
@@ -39,7 +50,7 @@ export function StudentResults({ stats, assignmentHref, partHref }: Props) {
   const assignmentRows = useMemo(() => [...stats.assignments].reverse(), [stats]);
 
   const level = stats.averageBand === null ? null : getBandLevel(stats.averageBand);
-  const completeCount = stats.assignments.filter((a) => a.complete).length;
+  const completeCount = stats.assignments.filter((a) => a.complete && !a.paper).length;
   const latePercent = stats.submittedCount > 0 ? Math.round((stats.lateCount / stats.submittedCount) * 100) : 0;
 
   return (
@@ -149,11 +160,15 @@ export function StudentResults({ stats, assignmentHref, partHref }: Props) {
                   )
                 },
                 {
-                  title: 'Band cả bài',
-                  width: 130,
+                  title: 'Band / điểm cả bài',
+                  width: 150,
                   render: (_, row) =>
                     row.complete ? (
-                      <BandBadge band={row.band} />
+                      row.paper ? (
+                        <PaperScore score={row.band} />
+                      ) : (
+                        <BandBadge band={row.band} />
+                      )
                     ) : (
                       <span className="text-small text-neutral-500">Chưa đủ phần</span>
                     )
@@ -173,10 +188,11 @@ function PartList({ parts, partHref }: { parts: PartBand[]; partHref?: (part: Pa
     <ul className="m-0 flex list-none flex-col gap-2 p-0">
       {parts.map((p) => (
         <li key={p.partId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <BandBadge band={p.band} size="sm" />
+          {p.paper ? <PaperScore score={p.band} /> : <BandBadge band={p.band} size="sm" />}
           <span className="font-medium text-neutral-900">{p.partTitle}</span>
           <span className="text-small text-neutral-500">
-            {TASK_TYPE_LABEL[p.taskType]} · band {formatBand(p.band)} · trả {formatDate(p.returnedAt)}
+            {p.paper ? 'Paper theo nhóm' : `${TASK_TYPE_LABEL[p.taskType]} · band ${formatBand(p.band)}`} · trả{' '}
+            {formatDate(p.returnedAt)}
           </span>
           {partHref && (
             <Link href={partHref(p)} className="text-small">

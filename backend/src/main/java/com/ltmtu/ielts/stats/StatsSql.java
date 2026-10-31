@@ -35,7 +35,8 @@ final class StatsSql {
 			        JOIN class_members m ON m.classroom_id = t.classroom_id
 			        WHERE t.assignment_id = :assignmentId
 			        UNION
-			        SELECT s.student_id FROM submissions s JOIN assignment_parts p ON p.id = s.part_id
+			        SELECT sm.student_id FROM submissions s JOIN submission_members sm ON sm.submission_id = s.id
+			        JOIN assignment_parts p ON p.id = s.part_id
 			        WHERE p.assignment_id = :assignmentId
 			    ) x
 			    WHERE CAST(:classId AS BIGINT) IS NULL
@@ -44,27 +45,36 @@ final class StatsSql {
 
 	/**
 	 * CTE {@code latest(submission_id, student_id, assignment_id, part_id, grade_id, grader_id, overall_score,
-	 * returned_at)}: với mỗi bài làm thoả {@code where} (bí danh {@code s} = submissions, {@code p} = assignment_parts),
-	 * kết quả <b>đã trả</b> của version mới nhất có kết quả đã trả (BR-13) — cùng cách chọn với màn kết quả của sinh
-	 * viên ({@code StudentResultService}).
+	 * returned_at, paper)}: với mỗi (bài làm, người sở hữu) thoả {@code where} (bí danh {@code s} = submissions,
+	 * {@code sm} = submission_members, {@code p} = assignment_parts, {@code a} = assignments), kết quả <b>đã trả</b>
+	 * của version mới nhất có kết quả đã trả (BR-13) — cùng cách chọn với màn kết quả của sinh viên
+	 * ({@code StudentResultService}). Bài PAPER: mỗi thành viên nhóm một dòng, {@code overall_score} là điểm riêng
+	 * = điểm cả bài làm tròn 2 chữ số + cộng / trừ, kẹp [0, 10] ({@code PaperScoreRules.memberScore}, BR-31).
 	 */
 	static String latestReturned(String where) {
 		return """
 				latest AS (
-				    SELECT DISTINCT ON (s.id) s.id AS submission_id, s.student_id, p.assignment_id, s.part_id,
-				           g.id AS grade_id, g.grader_id, g.overall_score, g.returned_at
+				    SELECT DISTINCT ON (s.id, sm.student_id) s.id AS submission_id, sm.student_id, p.assignment_id,
+				           s.part_id, g.id AS grade_id, g.grader_id,
+				           CASE WHEN a.kind = 'PAPER'
+				                THEN least(10, greatest(0, round(g.overall_score, 2) + coalesce(adj.delta, 0)))
+				                ELSE g.overall_score END AS overall_score,
+				           g.returned_at, a.kind = 'PAPER' AS paper
 				    FROM submissions s
+				    JOIN submission_members sm ON sm.submission_id = s.id
 				    JOIN assignment_parts p ON p.id = s.part_id
+				    JOIN assignments a ON a.id = p.assignment_id
 				    JOIN submission_versions v ON v.submission_id = s.id
 				    JOIN grades g ON g.submission_version_id = v.id AND g.status = 'RETURNED'
+				    LEFT JOIN grade_member_adjustments adj ON adj.grade_id = g.id AND adj.student_id = sm.student_id
 				    WHERE %s
-				    ORDER BY s.id, v.version_no DESC
+				    ORDER BY s.id, sm.student_id, v.version_no DESC
 				)""".formatted(where);
 	}
 
 	/** {@link #latestReturned} cho các sinh viên của một bài ({@link #PEOPLE} phải đứng trước). */
 	static final String LATEST_RETURNED = latestReturned(
-			"p.assignment_id = :assignmentId AND s.student_id IN (SELECT student_id FROM people)");
+			"p.assignment_id = :assignmentId AND sm.student_id IN (SELECT student_id FROM people)");
 
 	/**
 	 * Mã lỗi hay gặp trong nhận xét inline của các kết quả {@code latest}: số lần, số sinh viên. Tên / nhóm tiêu chí
@@ -73,7 +83,7 @@ final class StatsSql {
 	 */
 	static final String TOP_ERRORS = """
 			SELECT ic.error_code AS code, e.name, e.criterion,
-			       count(*) AS total, count(DISTINCT l.student_id) AS students
+			       count(DISTINCT ic.id) AS total, count(DISTINCT l.student_id) AS students
 			FROM latest l
 			JOIN inline_comments ic ON ic.grade_id = l.grade_id
 			LEFT JOIN LATERAL (

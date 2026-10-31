@@ -2,7 +2,7 @@ import { Tooltip } from 'antd';
 
 import { formatBand } from '@/lib/theme/status';
 
-// ─── Thanh ngang: điểm trung bình theo tiêu chí (thang 0 – 9) ─────────────────
+// ─── Thanh ngang: điểm trung bình theo tiêu chí (thang 0 – 9, hoặc `max` riêng của tiêu chí bài PAPER) ─
 // Một chuỗi nên một màu (brand); giá trị ghi bên phải bằng chữ thường, không tô màu chuỗi.
 // Trung bình hiện 2 chữ số như server trả (không làm tròn kiểu IELTS).
 
@@ -13,6 +13,8 @@ export interface CriteriaBarItem {
   hint?: string;
   average: number | null;
   count: number;
+  /** Điểm tối đa; bỏ trống = 9 (IELTS). */
+  max?: number;
 }
 
 const MAX_SCORE = 9;
@@ -35,13 +37,13 @@ export function CriteriaBars({ items }: { items: CriteriaBarItem[] }) {
             title={
               item.average === null
                 ? 'Chưa có điểm'
-                : `Trung bình ${formatBand(item.average)} / ${MAX_SCORE} · ${item.count} lượt chấm`
+                : `Trung bình ${item.max ? item.average.toFixed(2) : formatBand(item.average)} / ${item.max ?? MAX_SCORE} · ${item.count} lượt chấm`
             }
           >
             <div className="h-2 w-full rounded-full bg-neutral-50">
               <div
                 className="h-full rounded-full bg-brand-600"
-                style={{ width: `${((item.average ?? 0) / MAX_SCORE) * 100}%` }}
+                style={{ width: `${((item.average ?? 0) / (item.max ?? MAX_SCORE)) * 100}%` }}
               />
             </div>
           </Tooltip>

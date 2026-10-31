@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentKind;
 import com.ltmtu.ielts.assignment.AssignmentEnums.AssignmentStatus;
 import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.classroom.dto.ClassroomDtos.ClassroomSummary;
@@ -45,24 +46,25 @@ public class ClassStatsService {
 			WHERE t.classroom_id = :classId AND a.teacher_id = :teacherId AND a.status <> 'DRAFT'""";
 
 	private static final String ASSIGNMENTS_SQL = """
-			SELECT a.id, a.title, a.status, a.due_at,
+			SELECT a.id, a.title, a.status, a.due_at, a.kind,
 			       (SELECT count(*) FROM assignment_parts p WHERE p.assignment_id = a.id) AS part_count
 			FROM assignments a WHERE a.id IN (""" + CLASS_ASSIGNMENTS + """
 			)
 			ORDER BY a.due_at NULLS LAST, a.id""";
 
-	private static final String MEMBER_FILTER = "s.student_id IN (SELECT student_id FROM class_members WHERE classroom_id = :classId)";
+	private static final String MEMBER_FILTER = "sm.student_id IN (SELECT student_id FROM class_members WHERE classroom_id = :classId)";
 
-	/** Theo (sinh viên, bài): số phần đã nộp, số phần có lần nộp đầu muộn. */
+	/** Theo (sinh viên, bài): số phần đã nộp, số phần có lần nộp đầu muộn (bài PAPER: mọi thành viên nhóm). */
 	private static final String SUBMITTED_SQL = """
-			SELECT s.student_id, p.assignment_id,
+			SELECT sm.student_id, p.assignment_id,
 			       count(*) FILTER (WHERE s.current_version > 0) AS submitted, count(*) FILTER (WHERE v.is_late) AS late
 			FROM submissions s
+			JOIN submission_members sm ON sm.submission_id = s.id
 			JOIN assignment_parts p ON p.id = s.part_id
 			LEFT JOIN submission_versions v ON v.submission_id = s.id AND v.version_no = 1
 			WHERE p.assignment_id IN (""" + CLASS_ASSIGNMENTS + ") AND " + MEMBER_FILTER + """
 
-			GROUP BY s.student_id, p.assignment_id""";
+			GROUP BY sm.student_id, p.assignment_id""";
 
 	private static final String RETURNED_SQL = "WITH "
 			+ StatsSql.latestReturned("p.assignment_id IN (" + CLASS_ASSIGNMENTS + ") AND " + MEMBER_FILTER) + """
@@ -84,7 +86,8 @@ public class ClassStatsService {
 		Map<Long, AssignmentRow> assignments = new LinkedHashMap<>();
 		jdbc.query(ASSIGNMENTS_SQL, params, rs -> {
 			assignments.put(rs.getLong("id"), new AssignmentRow(rs.getString("title"),
-					AssignmentStatus.valueOf(rs.getString("status")), StatsSql.instant(rs, "due_at"), rs.getInt("part_count")));
+					AssignmentStatus.valueOf(rs.getString("status")), StatsSql.instant(rs, "due_at"), rs.getInt("part_count"),
+					AssignmentKind.valueOf(rs.getString("kind"))));
 		});
 		// (sinh viên, bài) → [đã nộp, muộn]
 		Map<Key, int[]> submitted = new HashMap<>();
@@ -121,7 +124,7 @@ public class ClassStatsService {
 					graded.add(bands.get(k));
 				}
 			}
-			assignmentStats.add(new ClassAssignment(id, a.title(), a.status(), a.dueAt(), a.partCount(), completed,
+			assignmentStats.add(new ClassAssignment(id, a.title(), a.kind(), a.status(), a.dueAt(), a.partCount(), completed,
 					members.isEmpty() ? 0 : (double) completed / members.size(), graded.size(),
 					StatsMath.average(graded)));
 		});
@@ -139,7 +142,10 @@ public class ClassStatsService {
 				lateParts += counts[1];
 				if (bands.containsKey(k)) {
 					BigDecimal band = bands.get(k);
-					own.add(band);
+					// Bài PAPER thang 10 chỉ hiện trong bảng điểm, không gộp vào band trung bình / xếp hạng IELTS.
+					if (assignments.get(id).kind() != AssignmentKind.PAPER) {
+						own.add(band);
+					}
 					assignmentBands.put(id, StatsMath.round(band));
 				} else {
 					assignmentBands.put(id, null);
@@ -148,8 +154,11 @@ public class ClassStatsService {
 			ranking.add(new RankingRow(null, m, StatsMath.average(own), own.size(), submittedParts, lateParts,
 					assignmentBands));
 		}
+		List<BigDecimal> essayBands = bands.entrySet().stream()
+				.filter(e -> assignments.get(e.getKey().assignmentId()).kind() != AssignmentKind.PAPER)
+				.map(Map.Entry::getValue).toList();
 		return new ClassStats(new ClassInfo(c.id(), c.code(), c.name(), c.memberCount()),
-				StatsMath.average(bands.values()), assignmentStats, rank(ranking));
+				StatsMath.average(essayBands), assignmentStats, rank(ranking));
 	}
 
 	/** Band cao trước; bằng band thì cùng hạng (1, 1, 3); chưa có band → không xếp hạng, đứng cuối theo mã SV. */
@@ -174,6 +183,7 @@ public class ClassStatsService {
 	private record Key(long studentId, long assignmentId) {
 	}
 
-	private record AssignmentRow(String title, AssignmentStatus status, Instant dueAt, int partCount) {
+	private record AssignmentRow(String title, AssignmentStatus status, Instant dueAt, int partCount,
+			AssignmentKind kind) {
 	}
 }

@@ -24,6 +24,7 @@ import com.ltmtu.ielts.assignment.StudentAssignmentAccess;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.grading.BandCalculator;
 import com.ltmtu.ielts.grading.BandCalculator.Weighted;
+import com.ltmtu.ielts.grading.PaperScoreRules;
 import com.ltmtu.ielts.stats.dto.AssignmentStatsDtos.ErrorCount;
 import com.ltmtu.ielts.stats.dto.ProgressDtos.StudentRef;
 import com.ltmtu.ielts.stats.dto.StudentStatsDtos.AssignmentBand;
@@ -62,17 +63,18 @@ public class StudentStatsService {
 	private static final String COUNTS_SQL = """
 			SELECT count(*) FILTER (WHERE s.current_version > 0) AS submitted, count(*) FILTER (WHERE v.is_late) AS late
 			FROM submissions s
+			JOIN submission_members sm ON sm.submission_id = s.id
 			JOIN assignment_parts p ON p.id = s.part_id
 			LEFT JOIN submission_versions v ON v.submission_id = s.id AND v.version_no = 1
-			WHERE s.student_id = :studentId AND p.assignment_id IN (:assignmentIds)""";
+			WHERE sm.student_id = :studentId AND p.assignment_id IN (:assignmentIds)""";
 
 	private static final String LATEST = "WITH "
-			+ StatsSql.latestReturned("s.student_id = :studentId AND p.assignment_id IN (:assignmentIds)");
+			+ StatsSql.latestReturned("sm.student_id = :studentId AND p.assignment_id IN (:assignmentIds)");
 
 	private static final String RETURNED_SQL = LATEST + """
 
 			SELECT l.assignment_id, a.title AS assignment_title, l.part_id, p.title AS part_title, p.task_type, p.weight,
-			       l.overall_score, l.returned_at,
+			       l.overall_score, l.returned_at, l.paper,
 			       (SELECT count(*) FROM assignment_parts p2 WHERE p2.assignment_id = l.assignment_id) AS part_count
 			FROM latest l
 			JOIN assignment_parts p ON p.id = l.part_id
@@ -141,10 +143,11 @@ public class StudentStatsService {
 			Instant returnedAt = StatsSql.instant(rs, "returned_at");
 			long assignmentId = rs.getLong("assignment_id");
 			String title = rs.getString("assignment_title");
+			boolean paper = rs.getBoolean("paper");
 			parts.add(new PartBand(assignmentId, title, rs.getLong("part_id"), rs.getString("part_title"),
-					TaskType.valueOf(rs.getString("task_type")), BandCalculator.display(raw), returnedAt));
+					TaskType.valueOf(rs.getString("task_type")), PaperScoreRules.display(raw, paper), returnedAt, paper));
 			AssignmentAcc acc = byAssignment.computeIfAbsent(assignmentId,
-					id -> new AssignmentAcc(title, new ArrayList<>()));
+					id -> new AssignmentAcc(title, paper, new ArrayList<>()));
 			acc.partCount = rs.getInt("part_count");
 			acc.parts.add(new Weighted(raw, rs.getBigDecimal("weight")));
 			acc.returnedAt = returnedAt;
@@ -155,11 +158,12 @@ public class StudentStatsService {
 		byAssignment.forEach((id, acc) -> {
 			boolean complete = acc.parts.size() == acc.partCount;
 			BigDecimal raw = complete ? BandCalculator.assignmentBand(acc.parts) : null;
-			if (raw != null) {
+			// Bài PAPER thang 10 không gộp vào band trung bình IELTS.
+			if (raw != null && !acc.paper) {
 				completeBands.add(raw);
 			}
 			assignments.add(new AssignmentBand(id, acc.title, acc.partCount, acc.parts.size(), complete,
-					BandCalculator.display(raw), acc.returnedAt));
+					PaperScoreRules.display(raw, acc.paper), acc.returnedAt, acc.paper));
 		});
 		assignments.sort(Comparator.comparing(AssignmentBand::returnedAt));
 
@@ -177,12 +181,14 @@ public class StudentStatsService {
 	/** Gom các phần đã trả của một bài; dòng đến theo thời điểm trả tăng dần nên {@code returnedAt} là lần trả cuối. */
 	private static final class AssignmentAcc {
 		final String title;
+		final boolean paper;
 		final List<Weighted> parts;
 		int partCount;
 		Instant returnedAt;
 
-		AssignmentAcc(String title, List<Weighted> parts) {
+		AssignmentAcc(String title, boolean paper, List<Weighted> parts) {
 			this.title = title;
+			this.paper = paper;
 			this.parts = parts;
 		}
 	}

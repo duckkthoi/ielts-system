@@ -37,14 +37,15 @@ public class AssignmentStatsService {
 
 	private static final String STUDENTS_SQL = "WITH " + StatsSql.PEOPLE + " SELECT count(*) FROM people";
 
-	/** Theo từng phần: số đã nộp, số có lần nộp đầu muộn. */
+	/** Theo từng phần: số sinh viên đã nộp, số có lần nộp đầu muộn (bài PAPER: tính mọi thành viên nhóm). */
 	private static final String SUBMITTED_SQL = "WITH " + StatsSql.PEOPLE + """
 
 			SELECT s.part_id, count(*) AS submitted, count(*) FILTER (WHERE v.is_late) AS late
 			FROM submissions s
+			JOIN submission_members sm ON sm.submission_id = s.id
 			JOIN assignment_parts p ON p.id = s.part_id
 			JOIN submission_versions v ON v.submission_id = s.id AND v.version_no = 1
-			WHERE p.assignment_id = :assignmentId AND s.student_id IN (SELECT student_id FROM people)
+			WHERE p.assignment_id = :assignmentId AND sm.student_id IN (SELECT student_id FROM people)
 			GROUP BY s.part_id""";
 
 	private static final String RETURNED_SQL = "WITH " + StatsSql.PEOPLE + ", " + StatsSql.LATEST_RETURNED
@@ -53,7 +54,7 @@ public class AssignmentStatsService {
 	private static final String CRITERIA_SQL = "WITH " + StatsSql.PEOPLE + ", " + StatsSql.LATEST_RETURNED + """
 
 			SELECT gcs.criterion_id, avg(gcs.score) AS average, count(gcs.score) AS n
-			FROM latest l JOIN grade_criterion_scores gcs ON gcs.grade_id = l.grade_id
+			FROM (SELECT DISTINCT grade_id FROM latest) l JOIN grade_criterion_scores gcs ON gcs.grade_id = l.grade_id
 			GROUP BY gcs.criterion_id""";
 
 	private static final String ERRORS_SQL = "WITH " + StatsSql.PEOPLE + ", " + StatsSql.LATEST_RETURNED + " "
@@ -97,6 +98,7 @@ public class AssignmentStatsService {
 				});
 		List<ErrorCount> topErrors = jdbc.query(ERRORS_SQL, params, StatsSql.ERROR_COUNT);
 
+		boolean paper = a.isPaper();
 		List<PartStats> perPart = new ArrayList<>();
 		for (AssignmentPart p : a.getParts()) {
 			int[] counts = submitted.getOrDefault(p.getId(), new int[2]);
@@ -104,17 +106,20 @@ public class AssignmentStatsService {
 			List<CriterionAverage> criterionAverages = new ArrayList<>();
 			for (RubricCriterion c : p.getCriteria()) {
 				CriterionRow row = criteria.get(c.getId());
-				criterionAverages.add(new CriterionAverage(c.getId(), c.getCode(), c.getName(),
+				criterionAverages.add(new CriterionAverage(c.getId(), c.getCode(), c.getName(), c.getMaxScore(),
 						row == null ? null : StatsMath.round(row.average()), row == null ? 0 : row.count()));
 			}
 			perPart.add(new PartStats(p.getId(), p.getOrderNo(), p.getTitle(), p.getTaskType(), counts[0], counts[1],
 					counts[0] == 0 ? null : (double) (counts[0] - counts[1]) / counts[0], partBands.size(),
-					StatsMath.average(partBands), criterionAverages, StatsMath.distribution(partBands)));
+					StatsMath.average(partBands), criterionAverages, StatsMath.distribution(partBands, paper)));
 		}
 		return new AssignmentStats(students == null ? 0 : students, perPart, overall(a, bands), topErrors);
 	}
 
-	/** BR-12: band cả bài của từng sinh viên đã được trả mọi phần (trọng số theo phần). */
+	/**
+	 * BR-12: band cả bài của từng sinh viên đã được trả mọi phần (trọng số theo phần). Bài PAPER: điểm riêng thang 10
+	 * của từng thành viên (BR-31).
+	 */
 	private static OverallStats overall(Assignment a, Map<Long, Map<Long, BigDecimal>> bands) {
 		Map<Long, List<Weighted>> byStudent = new HashMap<>();
 		for (AssignmentPart p : a.getParts()) {
@@ -128,7 +133,8 @@ public class AssignmentStatsService {
 				overall.add(BandCalculator.assignmentBand(parts));
 			}
 		}
-		return new OverallStats(overall.size(), StatsMath.average(overall), StatsMath.distribution(overall));
+		return new OverallStats(overall.size(), StatsMath.average(overall),
+				StatsMath.distribution(overall, a.isPaper()));
 	}
 
 	private record CriterionRow(BigDecimal average, int count) {

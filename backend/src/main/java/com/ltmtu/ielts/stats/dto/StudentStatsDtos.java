@@ -20,8 +20,8 @@ public final class StudentStatsDtos {
 
 	/**
 	 * {@code submittedCount}: số phần đã nộp ít nhất một lần; {@code lateCount}: số phần có lần nộp đầu muộn (BR-08);
-	 * {@code returnedCount}: số phần có kết quả đã trả; {@code averageBand}: trung bình band cả bài của các bài đã đủ
-	 * phần.
+	 * {@code returnedCount}: số phần có kết quả đã trả; {@code averageBand}: trung bình band cả bài của các bài luận đã
+	 * đủ phần (bài PAPER thang 10 không tính).
 	 */
 	public record StudentStats(StudentRef student, int submittedCount, int lateCount, int returnedCount,
 			BigDecimal averageBand, List<AssignmentBand> assignments, List<PartBand> parts,
@@ -30,15 +30,16 @@ public final class StudentStatsDtos {
 
 	/**
 	 * Một bài có ít nhất một phần đã trả. {@code band} (BR-12) chỉ có khi mọi phần đã trả; {@code returnedAt} = lần
-	 * trả gần nhất trong các phần. Sắp theo {@code returnedAt} tăng dần (biểu đồ band theo thời gian).
+	 * trả gần nhất trong các phần. Sắp theo {@code returnedAt} tăng dần (biểu đồ band theo thời gian). Bài PAPER
+	 * ({@code paper}): {@code band} là điểm riêng thang 10, 2 chữ số (BR-31).
 	 */
 	public record AssignmentBand(Long assignmentId, String title, int partCount, int returnedParts, boolean complete,
-			BigDecimal band, Instant returnedAt) {
+			BigDecimal band, Instant returnedAt, boolean paper) {
 	}
 
-	/** Band của một phần đã trả, sắp theo thời điểm trả. */
+	/** Band của một phần đã trả, sắp theo thời điểm trả. Bài PAPER: điểm riêng thang 10. */
 	public record PartBand(Long assignmentId, String assignmentTitle, Long partId, String partTitle, TaskType taskType,
-			BigDecimal band, Instant returnedAt) {
+			BigDecimal band, Instant returnedAt, boolean paper) {
 	}
 
 	/** Trung bình điểm theo tiêu chí IELTS (gộp mọi bài); tiêu chí tự định nghĩa (không có mã) không tính. */

@@ -361,7 +361,8 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - Theo từng phần: `submittedCount` (đã nộp ít nhất một lần), `lateCount` (lần nộp **đầu tiên** bị muộn), `onTimeRate` = (đã nộp − muộn) / đã nộp, `returnedCount`, `averageBand`, trung bình từng tiêu chí, `bandDistribution` (đếm theo band đã làm tròn hiển thị, chỉ band có bài, tăng dần).
 - `overall`: band cả bài (BR-12, có trọng số phần) của các sinh viên **đã được trả mọi phần**.
 - `topErrors`: tối đa 10 mã lỗi hay gặp trong nhận xét inline, sắp theo số lần; bỏ mã khen (`GOOD`…). `name` / `criterion` lấy từ mã hệ thống hoặc mã riêng của giáo viên; `null` nếu mã riêng đã bị xoá.
-- Trung bình giữ 2 chữ số thập phân, **không** làm tròn kiểu IELTS. Chưa có dữ liệu → `null` (không phải 0).
+- Trung bình giữ 2 chữ số thập phân, **không** làm tròn kiểu IELTS. Chưa có dữ liệu → `null` (không phải 0). Mỗi tiêu chí kèm `maxScore` (IELTS 9; bài PAPER theo rubric).
+- **Bài PAPER (B25e, BR-31):** bài làm thuộc nhóm nên tính cho **từng thành viên hiện tại** của nhóm (`submittedCount`, `returnedCount`, `overall.count` đếm theo người). Điểm của mỗi người = điểm cả bài làm tròn 2 chữ số + cộng / trừ riêng, kẹp [0, 10]; `averageBand` là trung bình điểm thang 10, `bandDistribution` gom theo nửa điểm gần nhất (7.67 → 7.5). Trung bình tiêu chí tính một lần cho mỗi bài chấm của nhóm (không nhân theo số thành viên).
 - Bài của giáo viên khác → `404`; lớp không phải của mình → `400`. Số câu SQL cố định (4 truy vấn tổng hợp), không phụ thuộc số sinh viên.
 
 ```jsonc
@@ -372,7 +373,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
     {
       "partId": 12, "orderNo": 2, "title": "Task 2", "taskType": "WRITING_TASK2",
       "submittedCount": 40, "lateCount": 4, "onTimeRate": 0.9, "returnedCount": 35, "averageBand": 6.04,
-      "criteria": [ { "criterionId": 51, "code": "TR", "name": "Task Response", "average": 5.93, "count": 35 } ],
+      "criteria": [ { "criterionId": 51, "code": "TR", "name": "Task Response", "maxScore": 9.0, "average": 5.93, "count": 35 } ],
       "bandDistribution": [ { "band": 5.5, "count": 8 }, { "band": 6.0, "count": 12 } ]
     }
   ],
@@ -385,6 +386,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - Sheet **"Bảng điểm"**: cùng tập sinh viên và thứ tự với ma trận tiến độ. Cột: `STT`, `Mã SV` (dạng chữ), `Họ tên`; với mỗi phần: điểm từng tiêu chí (`<phần> – TA`…; tiêu chí tự định nghĩa dùng tên), `<phần> – Band`, `<phần> – Trạng thái` (Chưa làm / Đang làm / Đã nộp / Đang chấm / Đã trả / Cần sửa, thêm "(muộn)" nếu lần nộp mới nhất muộn); cuối: `Band cả bài`, `Số phần nộp muộn`.
 - Điểm lấy từ **lần nộp gần nhất đã được trả** (như màn kết quả của sinh viên). Ô chưa có điểm **để trống**, "Chấm 0" ghi `0`. Band đã làm tròn .25 / .75; band cả bài chỉ có khi mọi phần đã trả.
 - Sheet **"Thông tin"**: tên bài, thời điểm xuất và hạn nộp (giờ Việt Nam), phạm vi (lớp / mọi người nhận), ghi chú cách tính.
+- **Bài PAPER (B25e):** cột ghi `Điểm` thay cho `Band` (`<phần> – Điểm`, `Điểm cả bài`), định dạng 2 chữ số; điểm của mỗi thành viên = điểm nhóm + cộng / trừ riêng, kẹp [0, 10].
 - Bài của người khác → `404`; lớp không phải của mình → `400`.
 
 **Thống kê lớp (FR-65, đã cài ở B8d):**
@@ -393,6 +395,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - `assignments[]` (sắp theo hạn nộp): `completedCount` = thành viên đã nộp mọi phần, `completedRate` = `completedCount / memberCount`, `gradedCount` = thành viên đã được trả mọi phần, `averageBand` = trung bình band cả bài (BR-12) của những người đó.
 - `ranking[]`: mỗi thành viên một hàng — `averageBand` = trung bình band cả bài của các bài đã đủ phần (`gradedAssignments`), `submittedParts` / `lateParts` = số phần đã nộp / có lần nộp đầu muộn. `assignmentBands` là ánh xạ `assignmentId → band` (2 chữ số); bài chưa được trả đủ phần có giá trị `null`. Xếp band cao trước, **bằng band thì cùng hạng** (1, 1, 3), cùng hạng xếp theo mã SV; chưa có band → `rank = null`, đứng cuối.
 - `averageBand` của lớp = trung bình mọi band cả bài (thành viên × bài) đã đủ phần. Trung bình giữ 2 chữ số, không có dữ liệu → `null`.
+- **Bài PAPER (B25e):** mỗi bài trong `assignments[]` có `kind`. Bài `PAPER` tính cho mọi thành viên nhóm theo điểm riêng thang 10 (như thống kê một bài): `assignments[].averageBand` và `assignmentBands` của bài đó là điểm thang 10. Điểm thang 10 **không** gộp vào `averageBand` của lớp, `ranking[].averageBand`, `gradedAssignments` hay thứ hạng (khác thang với band IELTS).
 - Lớp của giáo viên khác → `404`. 4 câu SQL cố định.
 
 ```jsonc
@@ -401,7 +404,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
   "classroom": { "id": 3, "code": "K15-A", "name": "IELTS K15 – Lớp A", "memberCount": 45 },
   "averageBand": 5.92,
   "assignments": [ { "assignmentId": 7, "title": "Tuần 5", "status": "CLOSED", "dueAt": "2026-11-07T16:59:00Z",
-                     "partCount": 2, "completedCount": 40, "completedRate": 0.8889, "gradedCount": 38, "averageBand": 6.04 } ],
+                     "kind": "ESSAY", "partCount": 2, "completedCount": 40, "completedRate": 0.8889, "gradedCount": 38, "averageBand": 6.04 } ],
   "ranking": [ { "rank": 1, "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
                  "averageBand": 7.17, "gradedAssignments": 3, "submittedParts": 6, "lateParts": 0,
                  "assignmentBands": { "7": 7.25 } } ]
@@ -607,6 +610,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - `assignments`: các bài có ít nhất một phần đã trả, sắp theo lần trả gần nhất tăng dần (biểu đồ "band theo thời gian"); `band` (đã làm tròn .25 / .75) chỉ có khi `complete`.
 - `parts`: band từng phần đã trả, sắp theo thời điểm trả.
 - `criteria`: trung bình theo mã tiêu chí IELTS (thứ tự TA, TR, CC, LR, GRA), gộp mọi bài; tiêu chí tự định nghĩa không tính.
+- **Bài PAPER (B25e):** bài nhóm tính cho mọi thành viên (`submittedCount`, `lateCount` gồm cả phần nhóm đã nộp). Dòng `assignments` / `parts` của bài PAPER có `paper = true`, `band` là **điểm riêng thang 10** (2 chữ số, đã gồm cộng / trừ); không gộp vào `averageBand` và không vẽ trên biểu đồ band. Bài luận: `paper = false`.
 - `errorProfile` (**hồ sơ lỗi**, docs/08 mục 4.5): tối đa 10 mã lỗi hay gặp, cùng cách tính với `topErrors` của thống kê bài; tên mã theo bộ mã của người chấm.
 
 ```jsonc
@@ -614,9 +618,9 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
   "student": { "id": 42, "studentCode": "2151234567", "fullName": "Nguyễn Văn A" },
   "submittedCount": 9, "lateCount": 1, "returnedCount": 8, "averageBand": 6.17,
   "assignments": [ { "assignmentId": 7, "title": "Tuần 5", "partCount": 2, "returnedParts": 2, "complete": true,
-                     "band": 6.0, "returnedAt": "2026-11-09T03:00:00Z" } ],
+                     "band": 6.0, "returnedAt": "2026-11-09T03:00:00Z", "paper": false } ],
   "parts": [ { "assignmentId": 7, "assignmentTitle": "Tuần 5", "partId": 11, "partTitle": "Task 1",
-               "taskType": "WRITING_TASK1", "band": 5.5, "returnedAt": "2026-11-08T03:00:00Z" } ],
+               "taskType": "WRITING_TASK1", "band": 5.5, "returnedAt": "2026-11-08T03:00:00Z", "paper": false } ],
   "criteria": [ { "code": "TA", "average": 5.50, "count": 4 }, { "code": "CC", "average": 5.75, "count": 8 } ],
   "errorProfile": [ { "code": "VT", "name": "Thì động từ", "criterion": "GRA", "count": 12, "studentCount": 1 } ]
 }

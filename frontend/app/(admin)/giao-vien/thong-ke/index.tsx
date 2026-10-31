@@ -74,7 +74,7 @@ export default function ClassStatsPage() {
   const header = (
     <PageHeader
       title="Thống kê lớp"
-      description="Kết quả các bài đã giao cho lớp và bảng xếp hạng theo band cả bài."
+      description="Kết quả các bài đã giao cho lớp và bảng xếp hạng theo band cả bài (bài Paper chấm thang 10, không tính vào xếp hạng)."
       extra={
         classes && classes.length > 0 ? (
           <Select<number>
@@ -189,10 +189,17 @@ export default function ClassStatsPage() {
                 },
                 { title: 'Đã có đủ kết quả', dataIndex: 'gradedCount', width: 140 },
                 {
-                  title: 'Band trung bình',
+                  title: 'Band / điểm trung bình',
                   dataIndex: 'averageBand',
-                  width: 140,
-                  render: (b: number | null) => <span className="font-semibold tabular-nums">{avg(b)}</span>
+                  width: 170,
+                  render: (b: number | null, a) => (
+                    <span className="font-semibold tabular-nums">
+                      {avg(b)}
+                      {a.kind === 'PAPER' && b !== null && (
+                        <span className="text-small font-normal text-neutral-500"> / 10</span>
+                      )}
+                    </span>
+                  )
                 }
               ]}
             />

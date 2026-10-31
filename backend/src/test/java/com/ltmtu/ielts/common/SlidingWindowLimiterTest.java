@@ -3,6 +3,10 @@ package com.ltmtu.ielts.common;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,5 +47,25 @@ class SlidingWindowLimiterTest {
 		assertThat(limiter.isLimited("b")).isTrue();
 		limiter.clear();
 		assertThat(limiter.isLimited("b")).isFalse();
+	}
+
+	@Test
+	@DisplayName("tryAcquire nguyên tử: nhiều luồng gọi cùng lúc cũng chỉ được đúng max lần")
+	void tryAcquireConcurrent() throws InterruptedException {
+		SlidingWindowLimiter big = new SlidingWindowLimiter(120, Duration.ofMinutes(1), clock);
+		AtomicInteger ok = new AtomicInteger();
+		ExecutorService pool = Executors.newFixedThreadPool(8);
+		for (int i = 0; i < 400; i++) {
+			pool.execute(() -> {
+				if (big.tryAcquire("k")) {
+					ok.incrementAndGet();
+				}
+			});
+		}
+		pool.shutdown();
+		assertThat(pool.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+		assertThat(ok.get()).isEqualTo(120);
+		assertThat(big.tryAcquire("k")).isFalse();
+		assertThat(big.tryAcquire("khác")).isTrue();
 	}
 }

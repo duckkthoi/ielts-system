@@ -35,11 +35,12 @@ final class GradebookWorkbook {
 	record PartValues(List<BigDecimal> scores, BigDecimal band, SubmissionStatus status, boolean late) {
 	}
 
-	static byte[] build(String assignmentTitle, List<String> info, List<Column> parts, List<Line> lines) {
+	static byte[] build(String assignmentTitle, List<String> info, List<Column> parts, List<Line> lines, boolean paper) {
+		String scoreLabel = paper ? "Điểm" : "Band";
 		try (XSSFWorkbook wb = new XSSFWorkbook()) {
 			CellStyle header = headerStyle(wb);
 			CellStyle number = wb.createCellStyle();
-			number.setDataFormat(wb.createDataFormat().getFormat("0.0"));
+			number.setDataFormat(wb.createDataFormat().getFormat(paper ? "0.00" : "0.0"));
 			CellStyle text = wb.createCellStyle();
 			text.setDataFormat(wb.createDataFormat().getFormat("@"));
 
@@ -53,10 +54,10 @@ final class GradebookWorkbook {
 				for (String criterion : p.criteria()) {
 					c = put(h, c, p.title() + " – " + criterion, header);
 				}
-				c = put(h, c, p.title() + " – Band", header);
+				c = put(h, c, p.title() + " – " + scoreLabel, header);
 				c = put(h, c, p.title() + " – Trạng thái", header);
 			}
-			c = put(h, c, "Band cả bài", header);
+			c = put(h, c, scoreLabel + " cả bài", header);
 			int columns = put(h, c, "Số phần nộp muộn", header);
 
 			int r = 1;

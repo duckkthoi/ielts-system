@@ -241,4 +241,34 @@ class PaperGradingIntegrationTest extends PaperTestSupport {
 		assertThat(total.get("parts").get(0).get("band").decimalValue()).isEqualByComparingTo("6.67");
 		assertThat(total.get("band").decimalValue()).isEqualByComparingTo("6.67");
 	}
+
+	@Test
+	@DisplayName("B25e / BR-31: thống kê bài PAPER tính cho mọi thành viên theo điểm riêng thang 10; kết quả học tập không gộp vào band trung bình IELTS")
+	void statsCountEveryMemberOutOfTen() throws Exception {
+		saveGrade(List.of(score(method, "7.25", null), score(style, "8.5", null)),
+				List.of(Map.of("studentId", b.getId(), "delta", "-1", "reason", "Ít tham gia"))).andExpect(apiStatus(200));
+		call(post("/api/teacher/submissions/" + submissionId + "/return"), teacher).andExpect(apiStatus(200));
+
+		JsonNode stats = data(call(get("/api/teacher/assignments/" + assignmentId + "/stats"), teacher));
+		JsonNode part = stats.get("perPart").get(0);
+		assertThat(part.get("submittedCount").asInt()).isEqualTo(2);
+		assertThat(part.get("returnedCount").asInt()).isEqualTo(2);
+		assertThat(part.get("averageBand").decimalValue()).isEqualByComparingTo("7.17");
+		// 6.67 → 6.5, 7.67 → 7.5 (nửa điểm gần nhất, không làm tròn kiểu IELTS)
+		assertThat(part.get("bandDistribution").get(0).get("band").decimalValue()).isEqualByComparingTo("6.5");
+		assertThat(part.get("bandDistribution").get(1).get("band").decimalValue()).isEqualByComparingTo("7.5");
+		// trung bình tiêu chí tính một lần cho bài chấm của nhóm, không nhân theo số thành viên
+		assertThat(part.get("criteria").get(0).get("count").asInt()).isEqualTo(1);
+		assertThat(stats.get("overall").get("count").asInt()).isEqualTo(2);
+
+		JsonNode mine = data(call(get("/api/student/results"), accessToken(b)));
+		assertThat(mine.get("submittedCount").asInt()).isEqualTo(1);
+		assertThat(mine.get("averageBand").isNull()).isTrue();
+		JsonNode row = mine.get("assignments").get(0);
+		assertThat(row.get("paper").asBoolean()).isTrue();
+		assertThat(row.get("band").decimalValue()).isEqualByComparingTo("6.67");
+
+		JsonNode ofA = data(call(get("/api/teacher/stats/students/" + a.getId()), teacher));
+		assertThat(ofA.get("parts").get(0).get("band").decimalValue()).isEqualByComparingTo("7.67");
+	}
 }

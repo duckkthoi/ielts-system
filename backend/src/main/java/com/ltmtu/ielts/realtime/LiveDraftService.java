@@ -87,10 +87,9 @@ public class LiveDraftService {
 			return;
 		}
 		String k = key(partId, student.id());
-		if (limiter.isLimited(k)) {
+		if (!limiter.tryAcquire(k)) {
 			return;
 		}
-		limiter.hit(k);
 		Instant now = clock.instant();
 		try {
 			studentAssignmentAccess.requireVisiblePart(partId, student.id(), now);

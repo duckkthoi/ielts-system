@@ -28,7 +28,9 @@ public final class AssignmentStatsDtos {
 			List<BandCount> bandDistribution) {
 	}
 
-	public record CriterionAverage(Long criterionId, CriterionCode code, String name, BigDecimal average, int count) {
+	/** {@code maxScore}: điểm tối đa của tiêu chí (IELTS 9; bài PAPER theo rubric, thường 10). */
+	public record CriterionAverage(Long criterionId, CriterionCode code, String name, BigDecimal maxScore,
+			BigDecimal average, int count) {
 	}
 
 	/** Số bài theo band đã làm tròn hiển thị (bước 0.5), chỉ các band có ít nhất một bài, band tăng dần. */

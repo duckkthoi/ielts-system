@@ -56,6 +56,23 @@ public final class SlidingWindowLimiter {
 		}
 	}
 
+	/** Chưa đủ {@code max} lần thì tính thêm một lần và trả {@code true}; kiểm tra + đếm nguyên tử trên cùng khoá. */
+	public boolean tryAcquire(String key) {
+		if (hits.size() > CLEANUP_THRESHOLD) {
+			cleanup();
+		}
+		Deque<Instant> q = hits.computeIfAbsent(key, k -> new ArrayDeque<>());
+		synchronized (q) {
+			Instant now = clock.instant();
+			prune(q, now);
+			if (q.size() >= max) {
+				return false;
+			}
+			q.addLast(now);
+			return true;
+		}
+	}
+
 	public void hit(String key) {
 		if (hits.size() > CLEANUP_THRESHOLD) {
 			cleanup();

@@ -20,6 +20,7 @@ import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.config.AppProperties;
 import com.ltmtu.ielts.grading.BandCalculator;
 import com.ltmtu.ielts.grading.BandCalculator.Weighted;
+import com.ltmtu.ielts.grading.PaperScoreRules;
 import com.ltmtu.ielts.stats.GradebookWorkbook.Column;
 import com.ltmtu.ielts.stats.GradebookWorkbook.Line;
 import com.ltmtu.ielts.stats.GradebookWorkbook.PartValues;
@@ -74,6 +75,7 @@ public class GradebookExportService {
 			}
 		});
 
+		boolean paper = a.isPaper();
 		List<AssignmentPart> parts = a.getParts();
 		List<Column> columns = parts.stream().map(p -> new Column(p.getTitle(),
 				p.getCriteria().stream().map(GradebookExportService::criterionLabel).toList())).toList();
@@ -89,17 +91,18 @@ public class GradebookExportService {
 				BigDecimal raw = bands.get(new Key(studentId, p.getId()));
 				List<BigDecimal> criterionScores = p.getCriteria().stream()
 						.map(c -> scores.get(new Key(studentId, c.getId()))).toList();
-				values.add(new PartValues(criterionScores, BandCalculator.display(raw), cell.status(), cell.late()));
+				values.add(new PartValues(criterionScores, PaperScoreRules.display(raw, paper), cell.status(), cell.late()));
 				weighted.add(new Weighted(raw, p.getWeight()));
 				if (cell.late()) {
 					late++;
 				}
 			}
 			lines.add(new Line(row.student().studentCode(), row.student().fullName(), values,
-					BandCalculator.display(BandCalculator.assignmentBand(weighted)), late));
+					PaperScoreRules.display(BandCalculator.assignmentBand(weighted), paper), late));
 		}
 
-		byte[] content = GradebookWorkbook.build(a.getTitle(), info(a, classCode, lines.size()), columns, lines);
+		byte[] content = GradebookWorkbook.build(a.getTitle(), info(a, classCode, lines.size()), columns, lines,
+				paper);
 		log.info("Giáo viên {} xuất bảng điểm bài {} ({} sinh viên)", teacherId, assignmentId, lines.size());
 		return new ExportFile("bang-diem-bai-" + assignmentId + (classCode == null ? "" : "-" + classCode) + ".xlsx",
 				content);
@@ -114,8 +117,13 @@ public class GradebookExportService {
 		info.add("Phạm vi: " + (classCode == null ? "mọi người nhận bài" : "lớp " + classCode) + " — " + students
 				+ " sinh viên");
 		info.add("Điểm lấy từ lần nộp gần nhất đã được trả bài; bài đang chấm chưa có điểm.");
-		info.add("Band phần và band cả bài đã làm tròn theo quy ước IELTS (.25 / .75). Band cả bài chỉ có khi mọi phần "
-				+ "đã trả; Task 2 có trọng số gấp đôi Task 1 (ước lượng, IELTS không công bố công thức chính xác).");
+		if (a.isPaper()) {
+			info.add("Bài viết paper theo nhóm, thang 10, làm tròn 2 chữ số. Điểm của mỗi người = điểm của nhóm + điểm "
+					+ "cộng / trừ riêng (nếu có). Điểm cả bài chỉ có khi mọi phần đã trả.");
+		} else {
+			info.add("Band phần và band cả bài đã làm tròn theo quy ước IELTS (.25 / .75). Band cả bài chỉ có khi mọi "
+					+ "phần đã trả; Task 2 có trọng số gấp đôi Task 1 (ước lượng, IELTS không công bố công thức chính xác).");
+		}
 		info.add("Ô điểm để trống = chưa có điểm (khác với điểm 0).");
 		return info;
 	}

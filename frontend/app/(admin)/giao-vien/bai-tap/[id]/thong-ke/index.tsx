@@ -72,13 +72,20 @@ export default function AssignmentStatsPage() {
   };
 
   const overallBand = stats?.overall.averageBand ?? null;
+  // Bài PAPER: điểm thang 10 (BR-31) thay cho band IELTS.
+  const paper = assignment.kind === 'PAPER';
+  const scoreWord = paper ? 'Điểm' : 'Band';
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
       <AssignmentSubNav id={id} view="thong-ke" paper={assignment.kind === 'PAPER'} />
       <PageHeader
         title={`Thống kê — ${assignment.title}`}
-        description="Chỉ tính các phần đã trả bài. Trung bình giữ 2 chữ số, chưa làm tròn kiểu IELTS."
+        description={
+          paper
+            ? 'Chỉ tính các phần đã trả bài. Điểm thang 10 của từng thành viên (đã gồm cộng / trừ riêng).'
+            : 'Chỉ tính các phần đã trả bài. Trung bình giữ 2 chữ số, chưa làm tròn kiểu IELTS.'
+        }
         extra={
           <>
             <Select<number>
@@ -104,13 +111,15 @@ export default function AssignmentStatsPage() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card styles={{ body: { padding: 20 } }}>
               <div className="flex items-center gap-4">
-                <BandBadge band={overallBand} size="lg" />
+                {!paper && <BandBadge band={overallBand} size="lg" />}
                 <div className="min-w-0">
-                  <p className="text-caption font-medium text-neutral-500">Band cả bài trung bình</p>
+                  <p className="text-caption font-medium text-neutral-500">{scoreWord} cả bài trung bình</p>
                   <p className="mt-0.5 text-h3 font-semibold text-neutral-900">
                     {overallBand === null
                       ? 'Chưa có'
-                      : `${overallBand.toFixed(2)} · ${getBandLevel(overallBand).label}`}
+                      : paper
+                        ? `${overallBand.toFixed(2)} / 10`
+                        : `${overallBand.toFixed(2)} · ${getBandLevel(overallBand).label}`}
                   </p>
                   <p className="mt-0.5 text-small text-neutral-500">
                     {stats.overall.count} sinh viên đã được trả đủ mọi phần
@@ -154,7 +163,7 @@ export default function AssignmentStatsPage() {
                 { title: 'Đúng hạn', width: 100, render: (_, p) => percent(p.onTimeRate) },
                 { title: 'Đã trả', dataIndex: 'returnedCount', width: 90 },
                 {
-                  title: 'Band trung bình',
+                  title: `${scoreWord} trung bình`,
                   width: 140,
                   render: (_, p) => (
                     <span className="font-semibold tabular-nums">
@@ -180,11 +189,11 @@ export default function AssignmentStatsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card
-              title="Phân bố band"
+              title={paper ? 'Phân bố điểm' : 'Phân bố band'}
               extra={
                 <span className="text-small text-neutral-500">
                   {part
-                    ? `${part.returnedCount} bài · trung bình ${formatBand(part.averageBand)}`
+                    ? `${part.returnedCount} ${paper ? 'sinh viên' : 'bài'} · trung bình ${paper ? (part.averageBand?.toFixed(2) ?? '—') : formatBand(part.averageBand)}`
                     : `${stats.overall.count} sinh viên đủ phần`}
                 </span>
               }
@@ -192,7 +201,8 @@ export default function AssignmentStatsPage() {
               {(part ? part.bandDistribution : stats.overall.bandDistribution).length > 0 ? (
                 <BandDistributionChart
                   distribution={part ? part.bandDistribution : stats.overall.bandDistribution}
-                  unit={part ? 'bài' : 'sinh viên'}
+                  unit={part ? (paper ? 'sinh viên' : 'bài') : 'sinh viên'}
+                  label={scoreWord}
                 />
               ) : (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có bài nào được trả." />
@@ -207,7 +217,8 @@ export default function AssignmentStatsPage() {
                       label: c.name,
                       hint: c.code ?? undefined,
                       average: c.average,
-                      count: c.count
+                      count: c.count,
+                      max: paper ? c.maxScore : undefined
                     }))}
                   />
                 ) : (
@@ -224,7 +235,8 @@ export default function AssignmentStatsPage() {
                           label: c.name,
                           hint: c.code ?? undefined,
                           average: c.average,
-                          count: c.count
+                          count: c.count,
+                          max: paper ? c.maxScore : undefined
                         }))}
                       />
                     </div>

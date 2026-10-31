@@ -1,6 +1,6 @@
 // ─── Biểu đồ "Band theo thời gian" (UC-28) ────────────────────────────────────
 // Hàm thuần (có test): tách chuỗi band cả bài / Task 1 / Task 2 theo thời điểm trả bài,
-// tính miền trục band và trục thời gian. Phần "Tự do" (CUSTOM) không vẽ — vẫn có trong bảng.
+// tính miền trục band và trục thời gian. Phần "Tự do" (CUSTOM) và bài PAPER (thang 10) không vẽ — vẫn có trong bảng.
 
 import type { AssignmentBand, PartBand } from '@/lib/types/stats';
 
@@ -27,7 +27,7 @@ const byTime = (a: TrendPoint, b: TrendPoint) => a.at - b.at;
 export function buildBandTrend(assignments: AssignmentBand[], parts: PartBand[]): TrendSeries[] {
   const partPoints = (type: PartBand['taskType']) =>
     parts
-      .filter((p) => p.taskType === type && p.band !== null)
+      .filter((p) => p.taskType === type && !p.paper && p.band !== null)
       .map((p) => ({
         key: `part-${p.partId}`,
         label: `${p.assignmentTitle} · ${p.partTitle}`,
@@ -41,7 +41,7 @@ export function buildBandTrend(assignments: AssignmentBand[], parts: PartBand[])
       key: 'overall',
       label: 'Band cả bài',
       points: assignments
-        .filter((a) => a.complete && a.band !== null)
+        .filter((a) => a.complete && !a.paper && a.band !== null)
         .map((a) => ({
           key: `asg-${a.assignmentId}`,
           label: a.title,

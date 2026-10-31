@@ -150,10 +150,9 @@ public class PaperDocumentService {
 			throw ApiException.conflict("INVALID_STATE", "Nhóm đã nộp giai đoạn này hoặc bài đã đóng — tài liệu chỉ đọc");
 		}
 		String key = documentId + ":" + student.id();
-		if (limiter.isLimited(key)) {
+		if (!limiter.tryAcquire(key)) {
 			throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "Gửi thay đổi quá dày, hãy thử lại sau");
 		}
-		limiter.hit(key);
 		byte[] payload = decode(msg.update(), limits.maxUpdateBytes(), "Gói cập nhật");
 		long seq = locked.getLastSeq() + 1;
 		locked.setLastSeq(seq);

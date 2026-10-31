@@ -1,5 +1,5 @@
 import type { AssignmentStatus, SubmissionStatus } from '@/lib/theme/status';
-import type { CriterionCode, TaskType } from '@/lib/types/assignment';
+import type { AssignmentKind, CriterionCode, TaskType } from '@/lib/types/assignment';
 
 // ─── Tiến độ, thống kê, kết quả học tập (docs/05 mục A.6, A.8) ────────────────
 // Chỉ tính kết quả đã trả (BR-13). Trung bình giữ 2 chữ số thập phân (không làm tròn kiểu IELTS),
@@ -27,7 +27,10 @@ export interface BandCount {
 
 // ─── Kết quả học tập của một sinh viên (UC-28) ────────────────────────────────
 
-/** Bài có ít nhất một phần đã trả; `band` chỉ có khi `complete`. Sắp theo `returnedAt` tăng dần. */
+/**
+ * Bài có ít nhất một phần đã trả; `band` chỉ có khi `complete`. Sắp theo `returnedAt` tăng dần.
+ * Bài PAPER (`paper`): `band` là điểm riêng thang 10, không tính vào band trung bình.
+ */
 export interface AssignmentBand {
   assignmentId: number;
   title: string;
@@ -36,6 +39,7 @@ export interface AssignmentBand {
   complete: boolean;
   band: number | null;
   returnedAt: string;
+  paper: boolean;
 }
 
 export interface PartBand {
@@ -46,6 +50,7 @@ export interface PartBand {
   taskType: TaskType;
   band: number | null;
   returnedAt: string;
+  paper: boolean;
 }
 
 export interface CriterionCodeAverage {
@@ -113,6 +118,8 @@ export interface CriterionAverage {
   criterionId: number;
   code: CriterionCode | null;
   name: string;
+  /** Điểm tối đa của tiêu chí (IELTS 9; bài PAPER theo rubric). */
+  maxScore: number;
   average: number | null;
   count: number;
 }
@@ -143,6 +150,8 @@ export interface AssignmentStats {
 export interface ClassAssignmentStats {
   assignmentId: number;
   title: string;
+  /** PAPER: `averageBand` là trung bình điểm thang 10, không gộp vào band trung bình / xếp hạng. */
+  kind: AssignmentKind;
   status: AssignmentStatus;
   dueAt: string | null;
   partCount: number;
@@ -160,7 +169,7 @@ export interface RankingRow {
   gradedAssignments: number;
   submittedParts: number;
   lateParts: number;
-  /** Band cả bài theo assignmentId; null nếu chưa được trả đủ mọi phần. */
+  /** Band cả bài theo assignmentId (bài PAPER: điểm thang 10); null nếu chưa được trả đủ mọi phần. */
   assignmentBands: Record<string, number | null>;
 }
 

@@ -38,13 +38,7 @@ public class ExamThrottle {
 	}
 
 	private static boolean tryHit(SlidingWindowLimiter limiter, Long sessionId) {
-		String key = String.valueOf(sessionId);
-		// Kiểm tra rồi mới đếm không nguyên tử, nhưng chỉ lệch một lần khi 2 tab gửi cùng lúc — chấp nhận được.
-		if (limiter.isLimited(key)) {
-			return false;
-		}
-		limiter.hit(key);
-		return true;
+		return limiter.tryAcquire(String.valueOf(sessionId));
 	}
 
 	/** Xoá mọi bộ đếm (dùng trong test). */
