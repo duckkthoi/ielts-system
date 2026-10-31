@@ -66,6 +66,7 @@
 | 409 | `VERSION_CONFLICT` | `expectedVersion` lệch: đã nộp ở tab hoặc máy khác |
 | 409 | `DRAFT_CONFLICT` | `draftVersion` lệch: tab / máy khác vừa lưu nháp. `data` = `{serverContent, draftVersion, savedAt}` (bước 10) |
 | 409 | `DUPLICATE` | Trùng mã lớp, tên đăng nhập… |
+| 400 | `CURRENT_SESSION` | Admin thu hồi chính phiên đang dùng (hãy dùng Đăng xuất) |
 | 409 | `INVALID_STATE` | Thao tác không hợp lệ với trạng thái hiện tại, ví dụ xoá bài đã phát hành |
 | 409 | `GROUP_LOCKED` | Bài PAPER: đã qua hạn chốt nhóm, sinh viên không tự đổi nhóm được (BR-27) |
 | 409 | `GROUP_FULL` | Bài PAPER: nhóm đã đủ người |
@@ -132,11 +133,14 @@
 | POST | `/api/admin/users/{id}/reset-password` | Đặt lại mật khẩu → `{temporaryPassword}`; bắt đổi lần sau | 1 |
 | GET | `/api/admin/stats` | Thống kê toàn hệ thống (UC-09) → `{usersByRole, lockedUsers, classrooms, assignmentsByStatus, submissionsToday, submissionsByDay[14], activeSessions}`. "Ngày" tính theo giờ Việt Nam (`app.zone`) | 1 |
 | GET | `/api/admin/audit-logs?actorId&action&ip&from&to&page&size` | Nhật ký hệ thống (UC-07, đã cài ở bước 12): mới nhất trước; `ip` lọc theo tiền tố (vd `192.168.`); `from` ≤ thời điểm < `to`, `from ≥ to` → `400`. Mỗi dòng `{id, actorId, actorUsername, actorName, action, targetType, targetId, ip, detail, createdAt}` | 2 |
-| GET | `/api/admin/sessions?userId&page&size` | Phiên đang hoạt động (UC-08) | 3 |
-| DELETE | `/api/admin/sessions/{id}` | Buộc đăng xuất một phiên | 3 |
+| GET | `/api/admin/sessions?keyword&role&status&from&to&page&size&sort` | Danh sách phiên (UC-08): `keyword` khớp tên đăng nhập / họ tên; `status` ∈ `ACTIVE`, `EXPIRED`, `REVOKED`; `from` ≤ lúc đăng nhập < `to`; sắp xếp theo `lastUsedAt` (mặc định, giảm dần), `createdAt`, `expiresAt`, `username`. Mỗi dòng `SessionRow` = `{sessionId, userId, username, fullName, role, ipMasked, device, createdAt, lastUsedAt, expiresAt, revokedAt, revokeReason, status, current}` — **không có token**, IP che một phần (`192.168.1.*`, IPv6 giữ 3 nhóm đầu), `device` = "Trình duyệt · Hệ điều hành", `current` = phiên admin đang dùng | 3 ✅ |
+| DELETE | `/api/admin/sessions/{id}` | Thu hồi một phiên (`ADMIN_FORCED`) → `SessionRow`. Phiên đang dùng → `400 CURRENT_SESSION`; đã hết hạn → `409 INVALID_STATE`; đã thu hồi → trả lại như cũ (không ghi nhật ký lần 2) | 3 ✅ |
+| POST | `/api/admin/users/{id}/sessions/revoke` | Thu hồi mọi phiên còn hiệu lực của tài khoản (giữ phiên đang dùng nếu là chính mình) → `{count}` | 3 ✅ |
+| POST | `/api/admin/sessions/cleanup` | Xoá các phiên đã hết hạn → `{count}` (phiên đã thu hồi nhưng chưa hết hạn được giữ để phát hiện dùng lại refresh token) | 3 ✅ |
 
 **Quy tắc riêng:**
 - Admin **không tự khoá được chính mình** → `409 INVALID_STATE`.
+- Thu hồi phiên đi qua `SessionRevoker` như khoá / đặt lại mật khẩu: thiết bị đang mở WebSocket nhận `FORCE_LOGOUT` (`ADMIN_FORCED`) rồi bị ngắt; REST và refresh bằng phiên đó → `401`. Thu hồi / dọn ghi nhật ký `REVOKE_SESSION`, `REVOKE_USER_SESSIONS`, `CLEANUP_SESSIONS` (chỉ id + số lượng, không ghi token, IP hay user-agent).
 - Đặt lại mật khẩu sẽ thu hồi mọi phiên của tài khoản đó (`ADMIN_FORCED`).
 - Danh sách chỉ cho sắp xếp theo `username`, `fullName`, `createdAt`, `lastLoginAt` (mặc định `createdAt,desc`). Trường khác → `400`.
 - Tên đăng nhập của giáo viên: 3–50 ký tự, chỉ gồm chữ không dấu, số và `. _ -`.
@@ -637,6 +641,22 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 
 ---
 
+### A.9b Thống kê tổng hợp có bộ lọc (H5)
+
+Cùng một bộ API cho admin (`/api/admin/analytics…`, toàn hệ thống, lọc thêm theo `teacherId`) và giáo viên (`/api/teacher/analytics…`, luôn là của mình — `teacherId` bị bỏ qua). Tính hoàn toàn bằng SQL tổng hợp, không trả bài làm.
+
+Tham số lọc chung: `from`, `to` (`YYYY-MM-DD`, gồm cả 2 ngày, theo `app.zone`; bỏ trống = 30 ngày gần nhất; `from > to` hoặc quá 366 ngày → `400`), `classId` (giáo viên: lớp không phải của mình → `400`), `assignmentId` (bài của người khác → `404`), `kind` (`ESSAY` / `PAPER`), `status` (`PUBLISHED` / `CLOSED`; `DRAFT` → `400`).
+
+| Method | Endpoint | Mô tả |
+|---|---|---|
+| GET | `/api/{admin\|teacher}/analytics` | `Overview` (bên dưới) |
+| GET | `/api/{admin\|teacher}/analytics/students?alertsOnly=true&page&size` | Bảng sinh viên (phân trang, `size` ≤ 100): `[{studentId, studentCode, fullName, classes, assigned, submitted, overdue, revisions, latestBand, progress, lastActivityAt, alerts[]}]` + `totalRecord`. Cảnh báo: quá hạn > 0, không hoạt động ≥ 7 ngày (phiên, lần nộp, nháp, sửa tài liệu Paper), `revisions` ≥ 2 (số lần nộp lại + phần đang Cần sửa) |
+| GET | `/api/{admin\|teacher}/analytics/export?format=CSV\|XLSX` | Tải bảng sinh viên (mọi sinh viên trong phạm vi, ≤ 5000 dòng) đúng bộ lọc; dòng đầu ghi kỳ + múi giờ; CSV có BOM UTF-8 |
+
+`Overview` = `{period {from, to, previousFrom, previousTo, zone}, users (chỉ admin: byRole, newUsers {current, previous}, active7Days, active30Days, activeSessions, failedLogins {current, previous}), classes {total, withOpenAssignment}, assignments [{kind, status, count}], units {total, notStarted, inProgress, submitted, revision, returned, overdue, completion}, kpis {submissions, onTime, avgBand, avgPaperScore — mỗi cái {current, previous}}, submissionsByDay [{date, count}], byAssignment [12 bài, mỗi trạng thái], bandSummary / paperSummary {count, mean, median, min, max}, bandHistogram / paperHistogram [{value, count}] (bước 0,5), criteria [{kind, name, average, maxScore, count}], heatmap [{dow 1–7, hour 0–23, count}], topErrors, paper {groups, studentsWithoutGroup, updatesInPeriod, liveComments, openLiveComments}, generatedAt}`.
+
+Quy tắc dữ liệu: `Ratio` = `{numerator, denominator, rate}` (`rate` null khi mẫu số 0). Đơn vị tiến độ = (sinh viên nhận bài, phần); nháp (`DRAFT`) là *đang làm*, **không** tính đã nộp; quá hạn = chưa nộp và đã qua hạn của phần. Bài nhóm Paper: lần nộp đếm một lần, đơn vị / điểm tính cho từng thành viên một lần (`submission_members`). Người hoạt động = `DISTINCT user_id` có phiên dùng trong 7 / 30 ngày (nhiều phiên không đếm trùng). "Lớp có bài đang mở" = lớp được giao ít nhất một bài `PUBLISHED` (lớp không có trạng thái đóng). Kỳ trước = cùng số ngày, liền trước. Điểm theo tiêu chí, phân bố band dùng kết quả đã trả mới nhất của mỗi (bài làm, sinh viên) như các màn thống kê khác (BR-13).
+
 ### A.10 Paper theo nhóm (Mức 4, đã cài ở B21a — thiết kế: [12](12-viet-paper.md))
 
 **Bài tập loại PAPER** dùng chung API ở A.5, thêm các trường `kind`, `citationStyle`, `maxGroupSize`, `groupLockAt` và `sections[]` của từng phần (ví dụ ở A.5):
@@ -676,9 +696,13 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 | GET | `/api/papers/docs/{id}` | `DocumentState` — thành viên nhóm hoặc giáo viên chủ bài (chỉ đọc) |
 | GET | `/api/papers/docs/{id}/updates?afterSeq` | Lấy bù sau khi kết nối lại → `{updates, lastSeq, resync}`; `resync = true` khi các update cần lấy đã bị gộp → tải lại `DocumentState` |
 | PUT | `/api/papers/docs/{id}/snapshot` | Thành viên gửi snapshot đã gộp `{state, upToSeq, contentJson?, contentText?}`. `upToSeq` > `lastSeq` → `400`; ≤ snapshot đang có → bỏ qua (người khác vừa lưu bản mới hơn); JSON sai → `400`; snapshot > 4 MB / chữ > 200 000 ký tự → `400`. Update ≤ `upToSeq` bị bỏ nội dung (giữ dòng cho thống kê) |
-| GET | `/api/papers/docs/{id}/comments` | Thành viên nhóm hoặc giáo viên chủ bài lấy các nhận xét trực tiếp trên tài liệu |
-| POST | `/api/teacher/papers/docs/{id}/comments` | Giáo viên thêm nhận xét với `{startOffset, endOffset, quote, comment}`; đoạn chọn tối đa 10.000 ký tự |
-| PUT / DELETE | `/api/teacher/papers/docs/{id}/comments/{commentId}` | Giáo viên sửa nội dung hoặc xoá nhận xét của mình trên tài liệu |
+| GET | `/api/papers/docs/{id}/comments` | Thành viên nhóm hoặc giáo viên chủ bài lấy các nhận xét trực tiếp trên tài liệu → `[LiveCommentDto]`, theo vị trí |
+| POST | `/api/teacher/papers/docs/{id}/comments` | Giáo viên chủ bài thêm nhận xét `{startOffset, endOffset, quote, comment, kind?, suggestion?, sectionKey?}` → `LiveCommentDto` |
+| PUT / DELETE | `/api/teacher/papers/docs/{id}/comments/{commentId}` | **Tác giả** sửa `{comment, kind?, suggestion?}` (đoạn chọn không đổi) hoặc xoá; giáo viên khác → `403` |
+| PUT | `/api/papers/docs/{id}/comments/{commentId}/resolve` | Thành viên nhóm hoặc giáo viên chủ bài đánh dấu đã xử lý / mở lại `{resolved}` → `LiveCommentDto` (H4) |
+| GET | `/api/teacher/assignments/{id}/groups/documents` | Tài liệu nhóm đã mở của bài (màn Giám sát): `[{documentId, partId, partTitle, groupId, groupName, members, lastSeq, updatedAt, openComments, totalComments}]`, sửa gần nhất trước (H4) |
+
+**Nhận xét trực tiếp trên Paper đang viết (H4, V22 + V23):** phản hồi hướng dẫn, **không phải chấm chính thức** (tách khỏi `inline_comments` của bản nộp, không đổi nội dung tài liệu, không có rubric). `LiveCommentDto` = `{id, documentId, authorId, authorName, startOffset, endOffset, quote, comment, kind, suggestion, sectionKey, resolvedAt, resolvedByName, createdAt, updatedAt}`; `kind` ∈ `COMMENT` (Nhận xét), `GRAMMAR` (Lỗi ngữ pháp), `VOCABULARY` (Từ vựng), `COHERENCE` (Mạch lạc), `CITATION` (Trích dẫn), `FORMAT` (Định dạng), mặc định `COMMENT`. Offset tính trên chữ thuần của tài liệu lúc tạo (cách tính như `docText`); `quote` bất biến — client chỉ tô khi đoạn tại offset vẫn đúng bằng `quote`, lệch thì hiện "Đoạn văn đã thay đổi" (không dò chỗ khác). Giới hạn: `quote`, `comment`, `suggestion` ≤ 2000 ký tự; `endOffset > startOffset`; `sectionKey` chỉ gồm `a-z0-9-`; ghi (tạo / sửa / xoá / xử lý) tối đa 30 lần / phút / người → `429 RATE_LIMITED`. Tài liệu không tồn tại / không có quyền đọc → `404`; sinh viên tạo → `403`.
 
 - `DocumentState` = `{documentId, partId, groupId, snapshot (base64 \| null), snapshotSeq, lastSeq, updates: [{seq, update, authorId, createdAt}], editable}`. Dựng tài liệu = áp `snapshot` rồi lần lượt `updates`. `editable = false` khi nhóm đã nộp giai đoạn này (chờ chấm / đã trả) hoặc bài đã đóng; "Cần sửa" thì sửa tiếp được.
 - Quyền: thành viên **hiện tại** của nhóm; người khác → `404`. Nhóm đã có chỉnh sửa trên tài liệu (hoặc có mục trong thư viện trích dẫn) cũng tính là "đã có bài làm" (không tự rời / không xoá nhóm).
@@ -821,7 +845,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - **Gửi bù (bước 15e):** client gửi kèm `occurredAt` (giờ xảy ra, đã quy về giờ server); gửi không được thì giữ trên máy (tối đa 30) và gửi lại theo thứ tự khi kết nối lại. Server: `occurredAt` sớm hơn lúc nhận ≥ 5 giây → ghi giờ đó (kẹp không sớm hơn `startedAt`) và `reportedLate = true`; còn lại → giờ nhận. Phiên đã nộp chỉ nhận sự kiện gửi bù xảy ra trước lúc nộp. Thông báo `EXAM_ALERT` của sự kiện gửi bù ghi rõ "xảy ra lúc mất mạng".
 - `DISCONNECT` / `RECONNECT`: server tự ghi vào mọi phiên chưa nộp khi sinh viên mất kết nối cuối cùng / có kết nối đầu tiên (cùng mốc với `presence`).
 
-**Tài liệu paper (Mức 4, bước 22):** luật `paper.PaperChannelRule` — thành viên nhóm và giáo viên chủ bài SUBSCRIBE được `/topic/paper/{id}`, `/topic/paper/{id}/awareness` và `/topic/paper/{id}/comments`; chỉ sinh viên SEND được `/app/paper/{id}/update|awareness`. Update được lưu (cấp `seq`) rồi **sau commit** mới phát, kể cả cho chính người gửi (nhận ra qua `clientId`) — vì vậy lấy bù bằng `afterSeq` không bỏ sót. Nhận xét trực tiếp phát sau commit trên `/topic/paper/{id}/comments` với `{type: CREATED|UPDATED|DELETED, comment, commentId}`. Lỗi (không phải thành viên `404`, tài liệu chỉ đọc `409 INVALID_STATE`, sai / quá lớn `400`, quá 600 update / phút / người / tài liệu `429 RATE_LIMITED`) trả riêng người gửi trên `/user/queue/errors`. Khung WebSocket tối đa 64 KB (bộ đệm Tomcat đã nâng từ 8 KB).
+**Tài liệu paper (Mức 4, bước 22):** luật `paper.PaperChannelRule` — thành viên nhóm và giáo viên chủ bài SUBSCRIBE được `/topic/paper/{id}`, `/topic/paper/{id}/awareness` và `/topic/paper/{id}/comments`; chỉ sinh viên SEND được `/app/paper/{id}/update|awareness`. Update được lưu (cấp `seq`) rồi **sau commit** mới phát, kể cả cho chính người gửi (nhận ra qua `clientId`) — vì vậy lấy bù bằng `afterSeq` không bỏ sót. Nhận xét trực tiếp phát sau commit trên `/topic/paper/{id}/comments` với `{type: CREATED|UPDATED|DELETED|RESOLVED, comment, commentId}` (`DELETED` có `comment = null`). Awareness (H3): client gửi `state` = `{"v":1,"active":true|false,"section":"<sectionKey>"|null}` mỗi 15 giây và khi đổi mục / rời màn; im quá 40 giây coi như đã rời — dùng để hiện ai đang mở tài liệu + đang soạn mục nào (màn làm bài và màn giám sát). Lỗi (không phải thành viên `404`, tài liệu chỉ đọc `409 INVALID_STATE`, sai / quá lớn `400`, quá 600 update / phút / người / tài liệu `429 RATE_LIMITED`) trả riêng người gửi trên `/user/queue/errors`. Khung WebSocket tối đa 64 KB (bộ đệm Tomcat đã nâng từ 8 KB).
 
 **Xem trực tiếp (Mức 3, bước 15b; BR-26):** luật `realtime.LiveChannelRule` — chỉ giáo viên chủ bài của phần SUBSCRIBE được `/topic/live/…`; chỉ sinh viên SEND được `/app/live/{partId}/content`. Server giữ bản mới nhất trong bộ nhớ (không ghi DB, không log nội dung) rồi phát ngay; phần không được thấy, phần đã nộp, nội dung > 30 000 ký tự, hoặc quá 120 lần / phút / (phần, sinh viên) (`app.live.max-updates-per-minute`) → bỏ qua, không lỗi. Sinh viên nộp → phát `SUBMITTED` sau commit và xoá bản trong bộ nhớ.
 

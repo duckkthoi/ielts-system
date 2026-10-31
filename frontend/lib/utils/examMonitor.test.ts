@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { ExamPush, MonitorRow } from '@/lib/types/exam';
+import type { ProgressRow } from '@/lib/types/stats';
 
-import { applyExamPush, mergeFeed, monitorSummary, prependFeed } from './examMonitor.ts';
+import { applyExamPush, examCellKey, isWorking, mergeFeed, monitorSummary, prependFeed } from './examMonitor.ts';
 
 const row = (over: Partial<MonitorRow> = {}): MonitorRow => ({
   sessionId: 1,
@@ -106,4 +107,18 @@ test('monitorSummary: đếm đang thi / quá giờ / đã nộp / có cảnh b�
     row({ sessionId: 4, status: 'FINISHED' })
   ]);
   assert.deepEqual(s, { inProgress: 1, overtime: 1, finished: 2, flagged: 2 });
+});
+
+test('isWorking: online, đang soạn, hoặc phiên thi chưa nộp mới tính là đang làm bài', () => {
+  const progress = (status: ProgressRow['cells'][number]['status'], online = false): ProgressRow =>
+    ({
+      student: { id: 7 },
+      online,
+      viewingPartId: null,
+      cells: [{ partId: 3, submissionId: null, status, currentVersion: 0, late: false, overdue: false, score: null }]
+    }) as unknown as ProgressRow;
+  assert.equal(isWorking(progress('NOT_STARTED'), new Map()), false);
+  assert.equal(isWorking(progress('NOT_STARTED', true), new Map()), true);
+  assert.equal(isWorking(progress('DRAFT'), new Map()), true);
+  assert.equal(isWorking(progress('SUBMITTED'), new Map([[examCellKey(7, 3), row({ finishedAt: null })]])), true);
 });

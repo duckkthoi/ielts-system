@@ -7,7 +7,7 @@ import { BookMarked, Send, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { PaperEditor, PaperOutline } from '@/components/PaperEditor';
+import { PaperEditor, PaperOutline, PresenceAvatars, usePaperPresence } from '@/components/PaperEditor';
 import { ReferenceLibrary, useGroupReferences } from '@/components/ReferenceLibrary';
 import { studentApi } from '@/lib/api/student';
 import { ApiError } from '@/lib/apiError';
@@ -15,13 +15,15 @@ import { studentAssignmentPath } from '@/lib/constants';
 import { subscribeRealtime } from '@/lib/realtime';
 import type { CitationStyle } from '@/lib/types/assignment';
 import type { StudentPartDetail } from '@/lib/types/student';
-import { formatDateTime } from '@/lib/utils/date';
+import { formatDateTime, formatTime } from '@/lib/utils/date';
 import { useOnlineStatus } from '@/lib/utils/hooks';
 import { initialDoc, sectionWordCounts, type DocNode } from '@/lib/utils/paperDoc';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 import { RELOAD_CODES } from './const';
-import { Layout } from './Layout';
+import { PaperLayout } from './PaperLayout';
 import { PaperSyncIndicator } from './PaperSyncIndicator';
+import { usePaperTeacherComments } from './PaperTeacherComments';
 import { usePaperDocument } from './usePaperDocument';
 
 // ─── Bài PAPER: cả nhóm viết chung một tài liệu cho giai đoạn này (BR-28) ─────
@@ -55,6 +57,17 @@ export function PaperEditMode({
   const [submitting, setSubmitting] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const library = useGroupReferences(paper.groupId);
+  const me = useAuthStore((st) => st.user?.id);
+  const [section, setSection] = useState<string | null>(null);
+  const peers = usePaperPresence(paper.sync?.documentId ?? null, { announce: paper.editable, section });
+  const teacherComments = usePaperTeacherComments(paper.sync?.documentId ?? null, part.sections);
+  // Lần lưu gần nhất = lúc server nhận hết thay đổi (sending → synced).
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [prevStatus, setPrevStatus] = useState(paper.status);
+  if (prevStatus !== paper.status) {
+    setPrevStatus(paper.status);
+    if (prevStatus === 'sending' && paper.status === 'synced') setLastSavedAt(new Date());
+  }
 
   // Chưa nạp xong tài liệu: mục lục theo khung, mọi mục 0 từ.
   const counts = useMemo(
@@ -75,10 +88,13 @@ export function PaperEditMode({
     [message]
   );
 
+  const outline = <PaperOutline counts={counts} />;
+
   if (paper.error === 'NO_GROUP') {
     return (
-      <Layout part={part} toolbar={null}>
+      <PaperLayout part={part} outline={outline}>
         <Result
+          className="rounded-lg border border-neutral-100 bg-neutral-0"
           icon={<Users size={48} className="mx-auto text-brand-600" />}
           title="Bạn chưa có nhóm"
           subTitle="Bài này viết theo nhóm. Hãy vào hoặc lập nhóm ở trang chi tiết bài rồi quay lại."
@@ -88,19 +104,20 @@ export function PaperEditMode({
             </Link>
           }
         />
-      </Layout>
+      </PaperLayout>
     );
   }
   if (paper.error === 'FAILED') {
     return (
-      <Layout part={part} toolbar={null}>
+      <PaperLayout part={part} outline={outline}>
         <Result
+          className="rounded-lg border border-neutral-100 bg-neutral-0"
           status="error"
           title="Không mở được tài liệu của nhóm"
           subTitle="Kiểm tra kết nối mạng rồi thử lại."
           extra={<Button onClick={paper.retry}>Thử lại</Button>}
         />
-      </Layout>
+      </PaperLayout>
     );
   }
 
@@ -181,6 +198,8 @@ export function PaperEditMode({
   const indicator = <PaperSyncIndicator status={paper.status} onRetry={paper.retry} />;
   const wordLabel = <span className="text-caption text-neutral-500">{words} từ</span>;
 
+  const sectionTitle = (key: string | null) => part.sections.find((x) => x.sectionKey === key)?.title;
+
   const toolbar = (
     <div className="flex flex-col gap-3">
       {part.status === 'REVISION_REQUESTED' && (
@@ -194,27 +213,34 @@ export function PaperEditMode({
       {!paper.editable && paper.sync && (
         <Alert type="info" showIcon title="Tài liệu chỉ đọc: nhóm đã nộp giai đoạn này hoặc bài đã đóng." />
       )}
-      <div className="mx-auto flex w-full max-w-240 flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-100 bg-neutral-0 px-4 py-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="inline-flex items-center gap-1.5 text-small font-medium text-neutral-900">
+            <Users size={14} className="text-brand-600" /> Tài liệu chung của nhóm
+          </span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {indicator}
+            {lastSavedAt && (
+              <span className="text-caption text-neutral-500">Lưu lần cuối {formatTime(lastSavedAt)}</span>
+            )}
+            {part.effectiveDueAt && <CountdownTimer dueAt={part.effectiveDueAt} />}
+          </span>
+        </div>
         <span className="flex flex-wrap items-center gap-3">
-          {part.effectiveDueAt && <CountdownTimer dueAt={part.effectiveDueAt} />}
-          {indicator}
+          <PresenceAvatars peers={peers} meId={me} sectionTitle={sectionTitle} />
           {paper.groupId !== null && (
             <Button size="small" icon={<BookMarked size={14} />} onClick={openLibrary}>
               Tài liệu tham khảo
             </Button>
           )}
+          <span className="hidden lg:inline-flex">{submitButton}</span>
         </span>
-        <span className="hidden lg:inline-flex">{submitButton}</span>
       </div>
     </div>
   );
 
   return (
-    <Layout part={part} toolbar={toolbar} outline={<PaperOutline counts={counts} />}>
-      <p className="mx-auto -mb-2 flex w-full max-w-240 items-center gap-1.5 text-caption text-neutral-500">
-        <Users size={14} />
-        Cả nhóm cùng viết tài liệu này; thay đổi được lưu tự động.
-      </p>
+    <PaperLayout part={part} outline={outline} toolbar={toolbar}>
       {paper.sync ? (
         <PaperEditor
           doc={paper.sync.doc}
@@ -226,6 +252,8 @@ export function PaperEditMode({
             onReload: library.reload
           }}
           onChange={(j) => setJson(j as DocNode)}
+          onSectionChange={setSection}
+          comments={teacherComments.layer}
           footer={
             <>
               {wordLabel}
@@ -234,10 +262,11 @@ export function PaperEditMode({
           }
         />
       ) : (
-        <div className="mx-auto w-full max-w-240 rounded-lg border border-neutral-100 bg-neutral-0 p-6">
+        <div className="w-full rounded-lg border border-neutral-100 bg-neutral-0 p-6">
           <Skeleton active paragraph={{ rows: 10 }} />
         </div>
       )}
+      {teacherComments.panel}
       {/* Điện thoại: thanh dưới cố định với số từ + nút nộp */}
       <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-neutral-100 bg-neutral-0 px-4 py-3 sm:-mx-6 sm:px-6 lg:hidden">
         {wordLabel}
@@ -255,6 +284,6 @@ export function PaperEditMode({
           reload={library.reload}
         />
       )}
-    </Layout>
+    </PaperLayout>
   );
 }

@@ -4,3 +4,6 @@ export { paperSchema } from './extensions';
 export { PaperEditor } from './PaperEditor';
 export { PaperOutline } from './PaperOutline';
 export { PaperViewer } from './PaperViewer';
+export { usePaperPresence } from './usePaperPresence';
+export type { CommentMark, PaperCommentLayer, SelectionAction, TextSelection } from './useCommentLayer';
+export { PresenceAvatars } from './PresenceAvatars';

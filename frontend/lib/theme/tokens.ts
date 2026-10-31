@@ -58,6 +58,20 @@ export const PRESENCE = {
  */
 export const CHART_SERIES = ['#2457E6', '#0D9488', '#C2410C'] as const;
 
+/**
+ * Cột chồng trạng thái (H5): Đang làm · Cần sửa · Đã nộp · Đã trả bài — thứ tự cố định, đã chạy validator dataviz
+ * (sáng, CVD ΔE ≥ 13). "Chưa làm" là nền trung tính `NEUTRAL[100]`, không phải một màu chuỗi.
+ */
+export const CHART_STATUS_STACK = {
+  inProgress: '#0D9488',
+  revision: '#C2410C',
+  submitted: '#2457E6',
+  returned: '#16A34A'
+} as const;
+
+/** Bản đồ nhiệt hoạt động: một sắc độ brand, nhạt → đậm (mức 1 → 4); mức 0 = `NEUTRAL[50]`. */
+export const CHART_HEAT = ['#DBE6FE', '#93B4FB', '#3B6FF6', '#1C44C2'] as const;
+
 export const FONT_FAMILY = {
   sans: 'var(--font-roboto), system-ui, -apple-system, "Segoe UI", sans-serif',
   serif: 'var(--font-noto-serif), Georgia, "Times New Roman", serif',

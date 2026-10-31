@@ -10,14 +10,13 @@ import { BandBadge } from '@/components/BandBadge';
 import { BandDistributionChart } from '@/components/BandDistributionChart';
 import { CriteriaBars } from '@/components/CriteriaBars';
 import { ErrorStatsTable } from '@/components/ErrorStatsTable';
-import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
 import { statsApi } from '@/lib/api/stats';
 import { formatBand, getBandLevel } from '@/lib/theme/status';
 import type { AssignmentStats, PartStats } from '@/lib/types/stats';
 import { overallOnTimeRate } from '@/lib/utils/bandDistribution';
 
-import { AssignmentHeaderFallback, AssignmentSubNav, useAssignmentHeader } from '../AssignmentSubNav';
+import { AssignmentHeader, AssignmentHeaderFallback, useAssignmentHeader } from '../AssignmentSubNav';
 
 // ─── Giáo viên: thống kê một bài (UC-19, FR-63, Prompt 5) ─────────────────────
 // Chỉ tính kết quả đã trả (BR-13). Trung bình giữ 2 chữ số như server trả, không làm tròn kiểu IELTS.
@@ -78,9 +77,11 @@ export default function AssignmentStatsPage() {
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <AssignmentSubNav id={id} view="thong-ke" paper={assignment.kind === 'PAPER'} />
-      <PageHeader
-        title={`Thống kê — ${assignment.title}`}
+      <AssignmentHeader
+        id={id}
+        view="thong-ke"
+        paper={assignment.kind === 'PAPER'}
+        title={assignment.title}
         description={
           paper
             ? 'Chỉ tính các phần đã trả bài. Điểm thang 10 của từng thành viên (đã gồm cộng / trừ riêng).'

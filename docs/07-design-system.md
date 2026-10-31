@@ -282,6 +282,7 @@ Mọi component dựa trên Ant Design, theme hoá bằng token. Cột **Nguồn
 | **ProgressCell** | Ô ma trận tiến độ: nền `solid` theo trạng thái, hiện band nếu đã trả, icon đồng hồ nếu muộn. Hover: tooltip chi tiết; bấm: mở bài để chấm | Hiệu ứng `pulse` khi vừa đổi |
 | **StatCard** | Thẻ số liệu dashboard: nhãn `caption`, số `display`, so sánh tăng/giảm | |
 | **PageHeader** | Tiêu đề `h1` + mô tả + breadcrumb + vùng nút bên phải | |
+| **AssignmentHeader** | Đầu trang của một bài tập (giáo viên): breadcrumb *Bài tập › tên bài*, `h1` tên bài, mô tả của trang, vùng nút; dưới cùng là tab **Chi tiết · Nhóm (Paper) · Tiến độ · Giám sát · Thống kê** gạch chân `brand-600`. Chỉ trang Chi tiết có nút thao tác (Chấm bài này + menu **Thao tác**: Giao thêm, Cài đặt, Nhân bản, Đóng / Mở lại, Xoá) | Điện thoại: hàng tab cuộn ngang, không tràn trang. Bài nháp không có tab |
 | **ImportResult** | Kết quả import: 4 số (tạo mới / đã có / bỏ qua / lỗi) + bảng lỗi + nút "Tải file tài khoản" (nổi bật, kèm cảnh báo "chỉ tải được một lần") | |
 | **VersionDiff** | So sánh 2 version: chọn version A/B, hiển thị theo `diff-added` / `diff-removed`; đoạn trích của lỗi đang chọn viền `brand-500` | Hiển thị gộp / song song. Diff theo từ (LCS tự viết, `lib/utils/textDiff.ts`), chữ thường — không innerHTML |
 | **DescriptorPanel** | Bảng mô tả band thu gọn (tiếng Việt) của một tiêu chí. Mở từ icon ⓘ cạnh tên tiêu chí; mỗi mức 9 → 0 là một dòng gọn, mức đang chọn được tô `brand-50`. Cuối bảng có link "Bản chính thức (ielts.org)" | Popover (desktop) / Drawer (điện thoại) |

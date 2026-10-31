@@ -1,3 +1,5 @@
+import type { LiveCommentKind } from '@/lib/theme/status';
+
 // ─── Paper theo nhóm (docs/05 mục A.10, docs/12) ──────────────────────────────
 
 export interface GroupMember {
@@ -135,4 +137,57 @@ export interface DoiLookup {
   doi: string;
   csl: CslItem;
   missing: MissingField[];
+}
+
+// ─── Nhận xét trực tiếp trên Paper đang viết (H4, docs/05 mục A.10) ──────────
+
+export type { LiveCommentKind };
+
+/** Offset tính trên chữ thuần của tài liệu lúc tạo (`docText`); `quote` giữ nguyên để phát hiện đoạn đã đổi. */
+export interface LiveComment {
+  id: number;
+  documentId: number;
+  authorId: number;
+  authorName: string;
+  startOffset: number;
+  endOffset: number;
+  quote: string;
+  comment: string;
+  kind: LiveCommentKind;
+  suggestion: string | null;
+  sectionKey: string | null;
+  resolvedAt: string | null;
+  resolvedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LiveCommentPush {
+  type: 'CREATED' | 'UPDATED' | 'DELETED' | 'RESOLVED';
+  comment: LiveComment | null;
+  commentId: number;
+}
+
+export interface LiveCommentInput {
+  startOffset: number;
+  endOffset: number;
+  quote: string;
+  comment: string;
+  kind: LiveCommentKind;
+  suggestion?: string | null;
+  sectionKey?: string | null;
+}
+
+/** Tài liệu của một nhóm cho một giai đoạn — danh sách xem trực tiếp của giáo viên. */
+export interface TeacherPaperDocument {
+  documentId: number;
+  partId: number;
+  partTitle: string;
+  groupId: number;
+  groupName: string;
+  members: string | null;
+  lastSeq: number;
+  updatedAt: string;
+  openComments: number;
+  totalComments: number;
 }

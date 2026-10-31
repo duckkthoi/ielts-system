@@ -4,6 +4,8 @@ import type {
   AuditLog,
   AuditLogParams,
   CreatedTeacher,
+  SessionListParams,
+  SessionRow,
   SystemStats,
   TeacherFormValues,
   UserDetail,
@@ -75,6 +77,31 @@ export async function listAuditLogs(params: AuditLogParams): Promise<ApiResponse
   return (await axiosClient.get('/api/admin/audit-logs', { params })) as unknown as ApiResponse<AuditLog[]>;
 }
 
+export async function listSessions(params: SessionListParams): Promise<ApiResponse<SessionRow[]>> {
+  return (await axiosClient.get('/api/admin/sessions', {
+    params,
+    controlLoading: true
+  })) as unknown as ApiResponse<SessionRow[]>;
+}
+
+export async function revokeSession(id: number): Promise<ApiResponse<SessionRow>> {
+  return (await axiosClient.delete(
+    formatUrl('/api/admin/sessions/{id}', { id })
+  )) as unknown as ApiResponse<SessionRow>;
+}
+
+export async function revokeUserSessions(userId: number): Promise<ApiResponse<{ count: number }>> {
+  return (await axiosClient.post(
+    formatUrl('/api/admin/users/{id}/sessions/revoke', { id: userId })
+  )) as unknown as ApiResponse<{
+    count: number;
+  }>;
+}
+
+export async function cleanupSessions(): Promise<ApiResponse<{ count: number }>> {
+  return (await axiosClient.post('/api/admin/sessions/cleanup')) as unknown as ApiResponse<{ count: number }>;
+}
+
 export const adminApi = {
   listTeachers,
   createTeacher,
@@ -85,5 +112,9 @@ export const adminApi = {
   unlockUser,
   resetPassword,
   getStats,
-  listAuditLogs
+  listAuditLogs,
+  listSessions,
+  revokeSession,
+  revokeUserSessions,
+  cleanupSessions
 };

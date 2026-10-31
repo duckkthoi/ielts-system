@@ -3,37 +3,29 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { App, Button, Card, Descriptions, Dropdown, Empty, Result, Skeleton, Tabs, Tag } from 'antd';
-import {
-  ArrowLeft,
-  BarChart3,
-  ClipboardCheck,
-  MoreHorizontal,
-  Pencil,
-  PieChart,
-  Send,
-  Settings,
-  UserPlus,
-  UsersRound
-} from 'lucide-react';
+import type { MenuProps } from 'antd';
+import { ClipboardCheck, MoreHorizontal, Pencil, Send, Settings, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
-import { editAssignmentPath, useAssignmentActions } from '@/components/AssignmentActions';
+import { ASSIGNMENT_ACTION, editAssignmentPath, useAssignmentActions } from '@/components/AssignmentActions';
 import { AssignTargetsModal } from '@/components/AssignTargetsModal';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { PageHeader } from '@/components/PageHeader';
 import { StatusTag } from '@/components/StatusTag';
 import { assignmentApi } from '@/lib/api/assignment';
 import { ASSIGNMENT_STATUS_META } from '@/lib/theme/status';
 import type { AssignmentDetail, Targets } from '@/lib/types/assignment';
 import { formatDateTime } from '@/lib/utils/date';
 
+import { AssignmentHeader } from './AssignmentSubNav';
 import { PartView } from './PartView';
 import { SettingsDrawer } from './SettingsDrawer';
 
 // ─── Giáo viên: chi tiết một bài tập (UC-12 → UC-14) ──────────────────────────
 
 const LIST_PATH = '/giao-vien/bai-tap';
+const ACTION_ADD_TARGETS = 'add-targets';
+const ACTION_SETTINGS = 'settings';
 
 export default function AssignmentDetailPage() {
   const router = useRouter();
@@ -82,19 +74,10 @@ export default function AssignmentDetailPage() {
     [message]
   );
 
-  const back = (
-    <Link
-      href={LIST_PATH}
-      className="mb-3 inline-flex items-center gap-1 text-small text-neutral-500 hover:text-brand-600"
-    >
-      <ArrowLeft size={14} /> Bài tập
-    </Link>
-  );
-
   if (notFound) {
     return (
       <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-        {back}
+        <AssignmentHeader id={id} view="chi-tiet" tabs={false} />
         <Result status="404" title="Không tìm thấy bài tập" subTitle="Bài tập không tồn tại hoặc không phải của bạn." />
       </div>
     );
@@ -103,13 +86,29 @@ export default function AssignmentDetailPage() {
   if (!assignment) {
     return (
       <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-        {back}
+        <AssignmentHeader id={id} view="chi-tiet" tabs={false} />
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
   }
 
   const isDraft = assignment.status === 'DRAFT';
+  const paper = assignment.kind === 'PAPER';
+  // Bài nháp đã có nút "Sửa nội dung" riêng → bỏ mục trùng trong menu.
+  const moreItems: MenuProps['items'] = [
+    ...(assignment.status === 'PUBLISHED'
+      ? [{ key: ACTION_ADD_TARGETS, icon: <UserPlus size={14} />, label: 'Giao thêm' }]
+      : []),
+    { key: ACTION_SETTINGS, icon: <Settings size={14} />, label: 'Cài đặt' },
+    { type: 'divider' },
+    ...(menuItems(assignment) ?? []).filter((item) => !isDraft || item?.key !== ASSIGNMENT_ACTION.edit)
+  ];
+  const runMore = (key: string) => {
+    if (key === ACTION_ADD_TARGETS) setAssignMode('add');
+    else if (key === ACTION_SETTINGS) setSettingsOpen(true);
+    else run(assignment, key);
+  };
+
   const actions = (
     <>
       {isDraft ? (
@@ -122,62 +121,46 @@ export default function AssignmentDetailPage() {
           </Button>
         </>
       ) : (
-        <>
-          {assignment.kind === 'PAPER' && (
-            <Link href={`/giao-vien/bai-tap/${assignment.id}/nhom`}>
-              <Button icon={<UsersRound size={16} />}>Nhóm</Button>
-            </Link>
-          )}
-          <Link href={`/giao-vien/bai-tap/${assignment.id}/tien-do`}>
-            <Button icon={<BarChart3 size={16} />}>Tiến độ</Button>
-          </Link>
-          <Link href={`/giao-vien/bai-tap/${assignment.id}/thong-ke`}>
-            <Button icon={<PieChart size={16} />}>Thống kê</Button>
-          </Link>
-          <Link href={`/giao-vien/cham-bai?assignmentId=${assignment.id}`}>
-            <Button icon={<ClipboardCheck size={16} />}>Chấm bài</Button>
-          </Link>
-          {assignment.status === 'PUBLISHED' && (
-            <Button icon={<UserPlus size={16} />} onClick={() => setAssignMode('add')}>
-              Giao thêm
-            </Button>
-          )}
-        </>
+        <Link href={`/giao-vien/cham-bai?assignmentId=${assignment.id}`}>
+          <Button type="primary" icon={<ClipboardCheck size={16} />}>
+            Chấm bài này
+          </Button>
+        </Link>
       )}
-      <Button icon={<Settings size={16} />} onClick={() => setSettingsOpen(true)}>
-        Cài đặt
-      </Button>
       <Dropdown
-        menu={{ items: menuItems(assignment), onClick: ({ key }) => run(assignment, key) }}
+        menu={{ items: moreItems, onClick: ({ key }) => runMore(key) }}
         trigger={['click']}
         placement="bottomRight"
       >
-        <Button icon={<MoreHorizontal size={16} />} aria-label="Thao tác khác" />
+        <Button icon={<MoreHorizontal size={16} />}>Thao tác</Button>
       </Dropdown>
     </>
   );
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      {back}
-      <PageHeader
+      <AssignmentHeader
+        id={assignment.id}
+        view="chi-tiet"
+        paper={paper}
+        tabs={!isDraft}
         title={assignment.title}
-        description={
+        meta={
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusTag meta={ASSIGNMENT_STATUS_META[assignment.status]} size="sm" />
-            {assignment.kind === 'PAPER' && (
+            {paper && (
               <Tag className="m-0" color="purple">
                 Paper theo nhóm
               </Tag>
             )}
-            {assignment.parts.length} {assignment.kind === 'PAPER' ? 'giai đoạn' : 'phần'}
+            {assignment.parts.length} {paper ? 'giai đoạn' : 'phần'}
             {targets && <> · giao cho {targets.recipientCount} sinh viên</>}
           </span>
         }
         extra={actions}
       />
       {assignment.description && (
-        <p className="-mt-2 mb-5 max-w-3xl whitespace-pre-line text-neutral-700">{assignment.description}</p>
+        <p className="mb-5 max-w-3xl whitespace-pre-line text-neutral-700">{assignment.description}</p>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">

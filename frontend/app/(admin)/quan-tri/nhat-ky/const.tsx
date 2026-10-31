@@ -15,6 +15,9 @@ export const AUDIT_ACTION_META: Record<AuditAction, { label: string; color: stri
   LOCK_USER: { label: 'Khoá tài khoản', color: 'error' },
   UNLOCK_USER: { label: 'Mở khoá', color: 'success' },
   RESET_PASSWORD: { label: 'Đặt lại mật khẩu', color: 'warning' },
+  REVOKE_SESSION: { label: 'Thu hồi phiên', color: 'warning' },
+  REVOKE_USER_SESSIONS: { label: 'Thu hồi mọi phiên', color: 'warning' },
+  CLEANUP_SESSIONS: { label: 'Dọn phiên hết hạn', color: 'default' },
   IMPORT_STUDENTS: { label: 'Import sinh viên', color: 'processing' },
   TCP_IMPORT: { label: 'Import qua TCP', color: 'processing' },
   PUBLISH_ASSIGNMENT: { label: 'Phát hành bài', color: 'processing' },
@@ -29,6 +32,7 @@ export const ACTION_OPTIONS = (Object.keys(AUDIT_ACTION_META) as AuditAction[]).
 
 const TARGET_LABEL: Record<string, string> = {
   USER: 'Tài khoản',
+  USER_SESSION: 'Phiên đăng nhập',
   CLASSROOM: 'Lớp',
   ASSIGNMENT: 'Bài tập',
   SUBMISSION: 'Bài nộp'

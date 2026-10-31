@@ -19,6 +19,7 @@ import com.ltmtu.ielts.classroom.ClassroomService;
 import com.ltmtu.ielts.common.ApiException;
 import com.ltmtu.ielts.paper.dto.PaperGroupDtos.GroupRequest;
 import com.ltmtu.ielts.paper.dto.PaperGroupDtos.StudentRef;
+import com.ltmtu.ielts.paper.dto.PaperGroupDtos.TeacherDocument;
 import com.ltmtu.ielts.paper.dto.PaperGroupDtos.TeacherGroups;
 import com.ltmtu.ielts.user.User;
 import com.ltmtu.ielts.user.UserQueryService;
@@ -40,6 +41,7 @@ public class TeacherPaperGroupService {
 	private final UserQueryService userQueryService;
 	private final PaperGroupRepository groupRepository;
 	private final PaperGroupMemberRepository memberRepository;
+	private final PaperDocumentRepository documentRepository;
 	private final Clock clock;
 	private final Random random = new SecureRandom();
 
@@ -49,6 +51,17 @@ public class TeacherPaperGroupService {
 	}
 
 	/** Tạo nhóm với các thành viên cho trước (có thể rỗng). */
+	/** Tài liệu nhóm đã mở của bài (để giáo viên xem trực tiếp + nhận xét), sửa gần nhất trước. */
+	@Transactional(readOnly = true)
+	public List<TeacherDocument> documents(Long teacherId, Long assignmentId) {
+		assignmentAccess.requireOwned(teacherId, assignmentId);
+		return documentRepository.teacherDocuments(assignmentId).stream()
+				.map(r -> new TeacherDocument(r.getDocumentId(), r.getPartId(), r.getPartTitle(), r.getGroupId(),
+						r.getGroupName(), r.getMembers(), r.getLastSeq(), r.getUpdatedAt(), r.getOpenComments(),
+						r.getTotalComments()))
+				.toList();
+	}
+
 	@Transactional
 	public TeacherGroups create(Long teacherId, Long assignmentId, GroupRequest req) {
 		Assignment a = requirePaper(teacherId, assignmentId);

@@ -3,6 +3,7 @@
 // Hàm thuần (có test).
 
 import type { ExamPush, MonitorRow } from '@/lib/types/exam';
+import type { ProgressRow } from '@/lib/types/stats';
 
 /** Số sự kiện tối đa giữ trong bảng tin bên phải. */
 export const FEED_LIMIT = 50;
@@ -59,4 +60,17 @@ export function monitorSummary(rows: MonitorRow[]) {
     finished: rows.filter((r) => r.status === 'FINISHED' || r.status === 'FINISHED_OVERTIME').length,
     flagged: rows.filter((r) => r.tabHiddenCount > 0 || r.pasteCount > 0).length
   };
+}
+
+/** Đang làm bài: online, hoặc có phần đang soạn / phiên thi chưa nộp. */
+export function isWorking(row: ProgressRow, exams: Map<string, MonitorRow>): boolean {
+  return (
+    row.online ||
+    row.cells.some(
+      (c) =>
+        c.status === 'DRAFT' ||
+        c.status === 'REVISION_REQUESTED' ||
+        exams.get(examCellKey(row.student.id, c.partId))?.finishedAt === null
+    )
+  );
 }

@@ -45,7 +45,7 @@ export function SectionsEditor({ partName }: { partName: number }) {
                     { max: 200, message: 'Tối đa 200 ký tự' }
                   ]}
                 >
-                  <Input placeholder={`Mục ${index + 1}, vd Introduction`} />
+                  <Input placeholder={`Mục ${index + 1}, vd Giới thiệu`} />
                 </Form.Item>
                 <Form.Item name={[item.name, 'required']} valuePropName="checked" className="mb-0">
                   <Switch checkedChildren="Bắt buộc" unCheckedChildren="Tuỳ chọn" />

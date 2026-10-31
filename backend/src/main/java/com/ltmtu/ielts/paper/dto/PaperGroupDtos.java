@@ -54,4 +54,9 @@ public final class PaperGroupDtos {
 	public record StudentGroups(Long assignmentId, Long myGroupId, boolean canChange, int maxGroupSize, Instant lockAt,
 			List<GroupDto> groups) {
 	}
+
+	/** Tài liệu của một nhóm cho một giai đoạn — danh sách xem trực tiếp của giáo viên (H4). */
+	public record TeacherDocument(Long documentId, Long partId, String partTitle, Long groupId, String groupName,
+			String members, long lastSeq, Instant updatedAt, long openComments, long totalComments) {
+	}
 }

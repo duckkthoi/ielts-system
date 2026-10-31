@@ -10,6 +10,12 @@ public enum AuditAction {
 	LOCK_USER,
 	UNLOCK_USER,
 	RESET_PASSWORD,
+	/** Admin thu hồi một phiên đăng nhập (UC-08). */
+	REVOKE_SESSION,
+	/** Admin thu hồi mọi phiên của một tài khoản. */
+	REVOKE_USER_SESSIONS,
+	/** Admin dọn các phiên đã hết hạn. */
+	CLEANUP_SESSIONS,
 	IMPORT_STUDENTS,
 	TCP_IMPORT,
 	PUBLISH_ASSIGNMENT,

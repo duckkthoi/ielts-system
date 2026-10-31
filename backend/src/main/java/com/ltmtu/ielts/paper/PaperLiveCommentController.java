@@ -15,13 +15,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ltmtu.ielts.common.ApiResponse;
 import com.ltmtu.ielts.paper.dto.PaperLiveCommentDtos.CommentDto;
 import com.ltmtu.ielts.paper.dto.PaperLiveCommentDtos.CreateRequest;
+import com.ltmtu.ielts.paper.dto.PaperLiveCommentDtos.ResolveRequest;
 import com.ltmtu.ielts.paper.dto.PaperLiveCommentDtos.UpdateRequest;
 import com.ltmtu.ielts.security.AuthPrincipal;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-/** Nhận xét trực tiếp trên tài liệu Paper, tách khỏi điểm chấm bản nộp. */
+/** Nhận xét trực tiếp trên tài liệu Paper, tách khỏi điểm chấm bản nộp — docs/05 mục A.10. */
 @RestController
 @RequiredArgsConstructor
 public class PaperLiveCommentController {
@@ -55,5 +56,13 @@ public class PaperLiveCommentController {
 			@PathVariable Long id) {
 		service.delete(me, documentId, id);
 		return ApiResponse.message("Đã xoá nhận xét");
+	}
+
+	@PutMapping("/api/papers/docs/{documentId}/comments/{id}/resolve")
+	@PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
+	public ApiResponse<CommentDto> resolve(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long documentId,
+			@PathVariable Long id, @RequestBody ResolveRequest body) {
+		return ApiResponse.ok(service.resolve(me, documentId, id, body.resolved()),
+				body.resolved() ? "Đã đánh dấu đã xử lý" : "Đã mở lại nhận xét");
 	}
 }

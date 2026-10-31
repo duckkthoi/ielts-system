@@ -121,6 +121,7 @@ stateDiagram-v2
 - Mỗi lần **refresh**, phiên vẫn ở `ACTIVE`: token được xoay vòng, `last_used_at` và `expires_at` được cập nhật.
 - **Thu hồi** khi: đăng xuất, đăng nhập nơi khác (một phiên), đổi mật khẩu, bị khoá, admin buộc đăng xuất, hoặc phát hiện dùng lại token cũ. Ghi bằng `revoked_at` + `revoke_reason`.
 - `EXPIRED` không cần lưu riêng, so `expires_at` với giờ hiện tại là biết.
+- Màn quản trị **Phiên đăng nhập** (H2) hiện 3 nhãn: `ACTIVE` *Đang hoạt động* (xanh), `EXPIRED` *Đã hết hạn* (xám), `REVOKED` *Đã thu hồi* (đỏ, kèm lý do). Phiên `EXPIRED` có thể bị **dọn** (xoá hẳn khỏi bảng); phiên `REVOKED` chưa hết hạn được giữ để phát hiện dùng lại refresh token.
 
 ---
 
@@ -201,6 +202,22 @@ stateDiagram-v2
 - **Nộp**: lần nộp đầu tiên đặt `finished_at`. Nộp đúng `ends_at` vẫn là trong giờ; sau đó là `FINISHED_OVERTIME`. Nộp lại bản sửa (yêu cầu sửa) không đổi phiên.
 
 Phiên thi tách riêng với trạng thái bài nộp: bài nộp vẫn đi theo mục 2 (`DRAFT` → `SUBMITTED` …).
+
+---
+
+## 8b. Nhận xét trực tiếp trên Paper đang viết (H4, `paper_live_comments`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN: Giáo viên tạo
+    OPEN --> RESOLVED: Nhóm / giáo viên đánh dấu đã xử lý
+    RESOLVED --> OPEN: Mở lại
+    OPEN --> [*]: Tác giả xoá
+    RESOLVED --> [*]: Tác giả xoá
+```
+
+- Không có cột trạng thái riêng: `resolved_at` NULL = *Chưa xử lý*, có giá trị = *Đã xử lý* (kèm `resolved_by`).
+- Trạng thái hiển thị phụ (chỉ phía client): **Đoạn văn đã thay đổi** khi chữ tại `start_offset…end_offset` không còn bằng `quote` — không tô, không dò chỗ khác.
 
 ---
 

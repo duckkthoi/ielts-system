@@ -60,9 +60,9 @@ export function useAuthGuard(): { ready: boolean; user: AccountInfo | null } {
 export function useServerList<T, Q extends object>(
   fetcher: (query: Q) => Promise<ApiResponse<T[]>>,
   query: Q
-): { data: T[]; total: number; loading: boolean; reload: () => void } {
+): { data: T[]; total: number; loading: boolean; error: boolean; reload: () => void } {
   const [version, setVersion] = useState(0);
-  const [result, setResult] = useState<{ key: string; data: T[]; total: number } | null>(null);
+  const [result, setResult] = useState<{ key: string; data: T[]; total: number; error?: boolean } | null>(null);
   const queryKey = JSON.stringify(query);
   const key = `${queryKey}#${version}`;
 
@@ -74,7 +74,7 @@ export function useServerList<T, Q extends object>(
       })
       .catch(() => {
         // axiosClient đã hiển thị toast lỗi; giữ dữ liệu cũ nhưng thoát trạng thái đang tải
-        if (!cancelled) setResult((prev) => ({ key, data: prev?.data ?? [], total: prev?.total ?? 0 }));
+        if (!cancelled) setResult((prev) => ({ key, data: prev?.data ?? [], total: prev?.total ?? 0, error: true }));
       });
     return () => {
       cancelled = true;
@@ -82,7 +82,13 @@ export function useServerList<T, Q extends object>(
   }, [fetcher, queryKey, key]);
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
-  return { data: result?.data ?? [], total: result?.total ?? 0, loading: result?.key !== key, reload };
+  return {
+    data: result?.data ?? [],
+    total: result?.total ?? 0,
+    loading: result?.key !== key,
+    error: result?.key === key && !!result.error,
+    reload
+  };
 }
 
 // ─── Trạng thái mạng của trình duyệt (sự kiện online / offline) ───────────────

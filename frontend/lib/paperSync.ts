@@ -40,7 +40,9 @@ export class PaperSync {
     readonly documentId: number,
     private readonly onStatus: (status: SyncStatus) => void,
     /** Độ dài chữ hiện tại — để ước số ký tự thêm / xoá cho thống kê đóng góp (BR-32). */
-    private readonly textLength: () => number
+    private readonly textLength: () => number,
+    /** Giáo viên xem trực tiếp: chỉ nhận, không bao giờ gửi update (server cũng không cho giáo viên gửi). */
+    private readonly receiveOnly = false
   ) {}
 
   private lastLength = 0;
@@ -117,7 +119,7 @@ export class PaperSync {
   }
 
   private onLocalUpdate = (update: Uint8Array, origin: unknown) => {
-    if (origin === REMOTE || this.destroyed) return;
+    if (origin === REMOTE || this.destroyed || this.receiveOnly) return;
     this.pending.push(update);
     this.changedSinceSnapshot = true;
     if (!this.flushTimer) this.flushTimer = setTimeout(() => this.flush(), FLUSH_MS);

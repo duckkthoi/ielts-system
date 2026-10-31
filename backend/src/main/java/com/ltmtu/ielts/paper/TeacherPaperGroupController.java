@@ -1,5 +1,7 @@
 package com.ltmtu.ielts.paper;
 
+import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ltmtu.ielts.common.ApiResponse;
 import com.ltmtu.ielts.paper.dto.PaperGroupDtos.AutoGroupRequest;
 import com.ltmtu.ielts.paper.dto.PaperGroupDtos.GroupRequest;
+import com.ltmtu.ielts.paper.dto.PaperGroupDtos.TeacherDocument;
 import com.ltmtu.ielts.paper.dto.PaperGroupDtos.TeacherGroups;
 import com.ltmtu.ielts.security.AuthPrincipal;
 
@@ -32,6 +35,12 @@ public class TeacherPaperGroupController {
 	@GetMapping
 	public ApiResponse<TeacherGroups> groups(@AuthenticationPrincipal AuthPrincipal me, @PathVariable Long id) {
 		return ApiResponse.ok(service.groups(me.id(), id));
+	}
+
+	@GetMapping("/documents")
+	public ApiResponse<List<TeacherDocument>> documents(@AuthenticationPrincipal AuthPrincipal me,
+			@PathVariable Long id) {
+		return ApiResponse.ok(service.documents(me.id(), id));
 	}
 
 	@PostMapping

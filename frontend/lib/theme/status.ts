@@ -65,6 +65,40 @@ export const ASSIGNMENT_STATUS_META: Record<AssignmentStatus, ColorSet & { label
   CLOSED: { label: 'Đã đóng', text: '#334155', bg: '#E2E8F0', border: '#CBD5E1' }
 };
 
+// ─── Phiên đăng nhập (UC-08) ──────────────────────────────────────────────────
+
+export type SessionStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+
+export const SESSION_STATUS_META: Record<SessionStatus, ColorSet & { label: string }> = {
+  ACTIVE: { label: 'Đang hoạt động', text: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
+  EXPIRED: { label: 'Đã hết hạn', text: '#475569', bg: '#F1F5F9', border: '#E2E8F0' },
+  REVOKED: { label: 'Đã thu hồi', text: '#DC2626', bg: '#FEF2F2', border: '#FECACA' }
+};
+
+/** Lý do thu hồi phiên (`revoke_reason`, docs/04 mục 4.1). */
+export const REVOKE_REASON_LABEL: Record<string, string> = {
+  LOGOUT: 'Tự đăng xuất',
+  NEW_LOGIN: 'Đăng nhập nơi khác',
+  PASSWORD_CHANGED: 'Đổi mật khẩu',
+  ADMIN_FORCED: 'Quản trị viên thu hồi',
+  TOKEN_REUSE: 'Nghi lộ token',
+  ACCOUNT_LOCKED: 'Khoá tài khoản'
+};
+
+// ─── Nhận xét trực tiếp trên Paper (H4) ──────────────────────────────────────
+// Phản hồi hướng dẫn trong lúc viết, không phải mã lỗi chấm chính thức.
+
+export type LiveCommentKind = 'COMMENT' | 'GRAMMAR' | 'VOCABULARY' | 'COHERENCE' | 'CITATION' | 'FORMAT';
+
+export const LIVE_COMMENT_KIND_META: Record<LiveCommentKind, { label: string; tagColor: string }> = {
+  COMMENT: { label: 'Nhận xét', tagColor: 'default' },
+  GRAMMAR: { label: 'Lỗi ngữ pháp', tagColor: 'blue' },
+  VOCABULARY: { label: 'Từ vựng', tagColor: 'purple' },
+  COHERENCE: { label: 'Mạch lạc', tagColor: 'cyan' },
+  CITATION: { label: 'Trích dẫn', tagColor: 'orange' },
+  FORMAT: { label: 'Định dạng', tagColor: 'default' }
+};
+
 // ─── Band IELTS ───────────────────────────────────────────────────────────────
 
 export interface BandLevel {

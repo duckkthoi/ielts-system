@@ -1,6 +1,7 @@
 package com.ltmtu.ielts.paper;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -37,4 +38,43 @@ public interface PaperDocumentRepository extends JpaRepository<PaperDocument, Lo
 	/** Trạng thái bài làm của nhóm cho giai đoạn này (chỉ đọc bảng của module bài nộp); chưa có → rỗng. */
 	@Query(nativeQuery = true, value = "SELECT status FROM submissions WHERE part_id = :partId AND group_id = :groupId")
 	Optional<String> submissionStatus(@Param("partId") Long partId, @Param("groupId") Long groupId);
+
+	/** Một dòng "tài liệu của nhóm" cho giáo viên (H4). */
+	interface TeacherDocRow {
+		Long getDocumentId();
+
+		Long getPartId();
+
+		String getPartTitle();
+
+		Long getGroupId();
+
+		String getGroupName();
+
+		String getMembers();
+
+		Long getLastSeq();
+
+		Instant getUpdatedAt();
+
+		Long getOpenComments();
+
+		Long getTotalComments();
+	}
+
+	/** Mọi tài liệu nhóm đã mở của một bài, sửa gần nhất trước; thành viên hiện tại ghép thành chuỗi theo tên. */
+	@Query(nativeQuery = true, value = """
+			SELECT d.id AS documentId, d.part_id AS partId, p.title AS partTitle, g.id AS groupId, g.name AS groupName,
+			       (SELECT string_agg(u.full_name, ', ' ORDER BY u.full_name)
+			        FROM paper_group_members m JOIN users u ON u.id = m.student_id WHERE m.group_id = g.id) AS members,
+			       d.last_seq AS lastSeq, d.updated_at AS updatedAt,
+			       (SELECT count(*) FROM paper_live_comments c
+			        WHERE c.document_id = d.id AND c.resolved_at IS NULL) AS openComments,
+			       (SELECT count(*) FROM paper_live_comments c WHERE c.document_id = d.id) AS totalComments
+			FROM paper_documents d
+			JOIN paper_groups g ON g.id = d.group_id
+			JOIN assignment_parts p ON p.id = d.part_id
+			WHERE g.assignment_id = :assignmentId
+			ORDER BY d.updated_at DESC, d.id""")
+	List<TeacherDocRow> teacherDocuments(@Param("assignmentId") Long assignmentId);
 }

@@ -6,12 +6,11 @@ import { App, Button, Card, Empty, Result, Select, Skeleton, Tag, Tooltip } from
 import { Pencil, Plus, Shuffle, Trash2, UsersRound } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
-import { PageHeader } from '@/components/PageHeader';
 import { paperApi } from '@/lib/api/paper';
 import type { PaperGroup, TeacherGroups } from '@/lib/types/paper';
 import { formatDateTime } from '@/lib/utils/date';
 
-import { AssignmentHeaderFallback, AssignmentSubNav, useAssignmentHeader } from '../AssignmentSubNav';
+import { AssignmentHeader, AssignmentHeaderFallback, useAssignmentHeader } from '../AssignmentSubNav';
 import { GroupEditModal } from './GroupEditModal';
 
 // ─── Giáo viên: chia nhóm bài Paper (UC-34, BR-27) ────────────────────────────
@@ -68,7 +67,7 @@ export default function GroupsPage() {
   if (assignment.kind !== 'PAPER' || loadError) {
     return (
       <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-        <AssignmentSubNav id={id} view="nhom" />
+        <AssignmentHeader id={id} view="nhom" title={assignment.title} />
         <Result status="info" title="Bài này không làm theo nhóm" subTitle="Chỉ bài loại Paper mới có nhóm." />
       </div>
     );
@@ -106,9 +105,11 @@ export default function GroupsPage() {
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <AssignmentSubNav id={id} view="nhom" paper />
-      <PageHeader
-        title={`Nhóm — ${assignment.title}`}
+      <AssignmentHeader
+        id={id}
+        view="nhom"
+        paper
+        title={assignment.title}
         description={
           view ? (
             <span className="inline-flex flex-wrap items-center gap-2">

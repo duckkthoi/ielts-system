@@ -1,10 +1,14 @@
 package com.ltmtu.ielts.paper;
 
+import java.time.Instant;
+
 import com.ltmtu.ielts.common.BaseEntity;
 import com.ltmtu.ielts.user.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -40,6 +44,30 @@ public class PaperLiveComment extends BaseEntity {
 
 	@Column(nullable = false, columnDefinition = "text")
 	private String comment;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private Kind kind = Kind.COMMENT;
+
+	/** Cách sửa giáo viên gợi ý (nút "Gợi ý sửa"); null nếu không có. */
+	@Column(columnDefinition = "text")
+	private String suggestion;
+
+	/** Mục của paper chứa đoạn được chọn, để lọc / hiển thị; null nếu không xác định. */
+	@Column(name = "section_key", length = 100)
+	private String sectionKey;
+
+	@Column(name = "resolved_at")
+	private Instant resolvedAt;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "resolved_by")
+	private User resolvedBy;
+
+	/** Loại phản hồi hướng dẫn (không phải mã lỗi chấm chính thức). */
+	public enum Kind {
+		COMMENT, GRAMMAR, VOCABULARY, COHERENCE, CITATION, FORMAT
+	}
 
 	public PaperLiveComment(PaperDocument document, User author, int startOffset, int endOffset, String quote,
 			String comment) {

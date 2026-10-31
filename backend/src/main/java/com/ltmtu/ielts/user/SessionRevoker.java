@@ -33,4 +33,17 @@ public class SessionRevoker {
 		events.publishEvent(new UserEvents.SessionsRevoked(user.getId(), user.getUsername(), ids, reason));
 		return ids.size();
 	}
+
+	/** Thu hồi một phiên (admin buộc đăng xuất). Phiên đã thu hồi thì bỏ qua và trả {@code false}. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public boolean revokeOne(UserSession session, RevokeReason reason, Instant now) {
+		if (session.getRevokedAt() != null) {
+			return false;
+		}
+		session.revoke(reason, now);
+		User user = session.getUser();
+		events.publishEvent(
+				new UserEvents.SessionsRevoked(user.getId(), user.getUsername(), List.of(session.getId()), reason));
+		return true;
+	}
 }

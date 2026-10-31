@@ -14,11 +14,14 @@ import type { CslItem, ReferenceDto } from '@/lib/types/paper';
 import { bibliographyEntries, citationLabels } from '@/lib/utils/citation';
 import { citationSequence, type DocNode } from '@/lib/utils/paperDoc';
 
+import { AnnotationDecorations } from './annotationDecorations';
 import { CitationPicker, type PickerTarget } from './CitationPicker';
 import { paperExtensions, type MathClick } from './extensions';
 import { MathModal, type MathTarget } from './MathModal';
 import { PaperBibliography } from './PaperBibliography';
 import { PaperToolbar } from './PaperToolbar';
+import { SelectionToolbar } from './SelectionToolbar';
+import { useCommentLayer, type PaperCommentLayer } from './useCommentLayer';
 
 // ─── Trình soạn paper (docs/07 mục 7.2, docs/12 mục 5.1) ──────────────────────
 // Nội dung nằm trong Y.Doc do `PaperSync` đồng bộ với server; trình soạn chỉ hiển thị và sửa nó (Collaboration).
@@ -39,7 +42,9 @@ export function PaperEditor({
   editable,
   footer,
   citations,
-  onChange
+  onChange,
+  onSectionChange,
+  comments
 }: {
   doc: Y.Doc;
   editable: boolean;
@@ -47,14 +52,24 @@ export function PaperEditor({
   citations?: PaperCitations;
   /** Gọi sau mỗi thay đổi (của mình hoặc của thành viên khác) với JSON của tài liệu. */
   onChange?: (json: JSONContent) => void;
+  /** Con trỏ chuyển sang mục khác → `sectionKey` của mục (để báo "đang soạn mục…" cho nhóm / giáo viên). */
+  onSectionChange?: (sectionKey: string | null) => void;
+  /** Nhận xét trực tiếp của giáo viên (H4): tô đoạn, bấm để chọn, giáo viên bôi đen để thêm. */
+  comments?: PaperCommentLayer;
 }) {
   const [math, setMath] = useState<MathTarget | null>(null);
   const [picker, setPicker] = useState<PickerTarget | null>(null);
   const [sequence, setSequence] = useState<number[][]>([]);
+  // Tăng sau mỗi thay đổi tài liệu, để lớp nhận xét tô lại theo nội dung mới.
+  const [docVersion, setDocVersion] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const clickRef = useRef<(pos: number) => boolean>(() => false);
   const onChangeRef = useRef(onChange);
+  const onSectionRef = useRef(onSectionChange);
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onSectionRef.current = onSectionChange;
+  }, [onChange, onSectionChange]);
 
   // Bấm vào công thức → mở hộp sửa; chỉ đọc thì hộp không hiện (xem `target` của MathModal bên dưới).
   const onMathClick = useCallback<MathClick>((kind, node, pos) => {
@@ -63,23 +78,44 @@ export function PaperEditor({
 
   const editor = useEditor(
     {
-      extensions: paperExtensions(doc, onMathClick),
+      extensions: [...paperExtensions(doc, onMathClick), AnnotationDecorations],
       editable,
       immediatelyRender: false,
       shouldRerenderOnTransaction: false,
-      editorProps: { attributes: { class: 'paper-editor', lang: 'en', 'aria-label': 'Nội dung paper' } },
+      editorProps: {
+        attributes: { class: 'paper-editor', lang: 'en', 'aria-label': 'Nội dung paper' },
+        handleClick: (_view, pos) => clickRef.current(pos)
+      },
       onCreate: ({ editor: e }) => handleChange(e.getJSON()),
-      onUpdate: ({ editor: e }) => handleChange(e.getJSON())
+      onUpdate: ({ editor: e }) => handleChange(e.getJSON()),
+      onSelectionUpdate: ({ editor: e }) => {
+        const { $from } = e.state.selection;
+        let key: string | null = null;
+        for (let depth = $from.depth; depth > 0; depth--) {
+          const node = $from.node(depth);
+          if (node.type.name === 'paperSection') {
+            key = String(node.attrs.sectionKey);
+            break;
+          }
+        }
+        onSectionRef.current?.(key);
+      }
     },
     [doc]
   );
 
   function handleChange(json: JSONContent) {
     onChangeRef.current?.(json);
+    setDocVersion((v) => v + 1);
     const next = citationSequence(json as DocNode);
     // Chỉ đổi state khi chuỗi trích dẫn đổi — gõ chữ thường không làm vẽ lại danh mục.
     setSequence((cur) => (JSON.stringify(cur) === JSON.stringify(next) ? cur : next));
   }
+
+  const layer = useCommentLayer(editor, comments, docVersion);
+  useEffect(() => {
+    clickRef.current = layer.handleClick;
+  }, [layer.handleClick]);
 
   const style = citations?.style ?? 'IEEE';
   const known = useMemo(
@@ -156,13 +192,16 @@ export function PaperEditor({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-240 flex-col rounded-lg border border-neutral-100 bg-neutral-0 shadow-sm">
+    <div
+      ref={wrapperRef}
+      className="relative mx-auto flex w-full max-w-240 flex-col rounded-lg border border-neutral-100 bg-neutral-0 shadow-sm"
+    >
       {editor && editable && (
         <div className="sticky top-16 z-10 rounded-t-lg bg-neutral-0">
           <PaperToolbar editor={editor} onMath={setMath} onCite={citations ? openPicker : undefined} />
         </div>
       )}
-      <div className="px-5 py-6 sm:px-8 sm:py-8">
+      <div className="px-5 py-6 sm:px-8 sm:py-8" onMouseUp={() => layer.handleMouseUp(wrapperRef.current)}>
         {editor ? <EditorContent editor={editor} /> : <Skeleton active paragraph={{ rows: 8 }} />}
         {citations && <PaperBibliography entries={bibliography} style={style} />}
       </div>
@@ -170,6 +209,17 @@ export function PaperEditor({
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 px-5 py-2 sm:px-8">
           {footer}
         </div>
+      )}
+      {layer.selection && comments?.actions && (
+        <SelectionToolbar
+          selection={layer.selection}
+          actions={comments.actions}
+          onAction={(key) => {
+            if (layer.selection) comments.onAction?.(key, layer.selection);
+            layer.clearSelection();
+          }}
+          onCancel={layer.clearSelection}
+        />
       )}
       <MathModal
         target={editable ? math : null}

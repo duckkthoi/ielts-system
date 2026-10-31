@@ -7,7 +7,6 @@ import type { TableColumnsType } from 'antd';
 import { AlertCircle, Bell, CheckCircle2, Clock, Download, Search, Wifi } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { PageHeader } from '@/components/PageHeader';
 import { PresenceDot } from '@/components/PresenceDot';
 import { StatCard } from '@/components/StatCard';
 import { StatusTag } from '@/components/StatusTag';
@@ -21,7 +20,7 @@ import { applyPresenceEvent, applyProgressEvent, cellKey, submittedPerPart } fro
 import type { PresenceEvent, ProgressEvent } from '@/lib/utils/progress';
 import { useRealtimeStore } from '@/stores/useRealtimeStore';
 
-import { AssignmentHeaderFallback, AssignmentSubNav, useAssignmentHeader } from '../AssignmentSubNav';
+import { AssignmentHeader, AssignmentHeaderFallback, useAssignmentHeader } from '../AssignmentSubNav';
 import { ProgressCell } from './ProgressCell';
 import { RemindModal } from './RemindModal';
 
@@ -219,9 +218,11 @@ export default function ProgressPage() {
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <AssignmentSubNav id={id} view="tien-do" paper={assignment.kind === 'PAPER'} />
-      <PageHeader
-        title={`Tiến độ — ${assignment.title}`}
+      <AssignmentHeader
+        id={id}
+        view="tien-do"
+        paper={assignment.kind === 'PAPER'}
+        title={assignment.title}
         description="Theo dõi tình trạng làm bài theo thời gian thực. Bấm vào ô đã nộp để mở bài chấm."
         extra={
           <span

@@ -7,48 +7,36 @@ import type { TableColumnsType } from 'antd';
 import { Search } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
-import { PageHeader } from '@/components/PageHeader';
 import { PresenceDot } from '@/components/PresenceDot';
 import { examApi } from '@/lib/api/exam';
 import { statsApi } from '@/lib/api/stats';
 import { subscribeRealtime } from '@/lib/realtime';
-import type { ExamMonitor, ExamPush, MonitorRow } from '@/lib/types/exam';
+import type { ExamMonitor, ExamPush } from '@/lib/types/exam';
 import type { ProgressMatrix, ProgressRow } from '@/lib/types/stats';
-import { applyExamPush, examCellKey, mergeFeed, monitorSummary, prependFeed } from '@/lib/utils/examMonitor';
+import { applyExamPush, examCellKey, isWorking, mergeFeed, monitorSummary, prependFeed } from '@/lib/utils/examMonitor';
 import { applyPresenceEvent, applyProgressEvent } from '@/lib/utils/progress';
 import type { PresenceEvent, ProgressEvent } from '@/lib/utils/progress';
 import { serverNow } from '@/lib/utils/serverClock';
 import { useRealtimeStore } from '@/stores/useRealtimeStore';
 
-import { AssignmentHeaderFallback, AssignmentSubNav, useAssignmentHeader } from '../AssignmentSubNav';
+import { AssignmentHeader, AssignmentHeaderFallback, useAssignmentHeader } from '../AssignmentSubNav';
 import { EventFeed } from './EventFeed';
 import { LiveDrawer } from './LiveDrawer';
 import type { LiveTarget } from './LiveDrawer';
 import { MonitorCell } from './MonitorCell';
 import { MonitorStats } from './MonitorStats';
+import { PaperDocsCard } from './PaperDocsCard';
 
 // ─── Giáo viên: giám sát làm bài theo lớp (UC-21, BR-25, BR-26) ───────────────
 // Hàng = người nhận bài (ma trận tiến độ), mỗi ô ghép thêm phiên thi nếu phần ở chế độ thi.
 // Ban đầu lấy từ REST, sau đó nghe `/topic/assignments/{id}/progress|presence|exam`; sự kiện của phiên chưa có
-// trong bảng (vừa bắt đầu) hoặc kết nối lại → tải lại REST. Bảng tin nạp sẵn 50 sự kiện gần nhất rồi nhận thêm. Bấm "Xem" → xem trực tiếp + góp ý (LiveDrawer).
+// trong bảng (vừa bắt đầu) hoặc kết nối lại → tải lại REST. Bảng tin nạp sẵn 50 sự kiện gần nhất. "Xem" → LiveDrawer;
+// bài Paper có thêm khung tài liệu nhóm → xem trực tiếp + nhận xét trên tài liệu (PaperDocsCard, H4).
 
 const REFRESH_DELAY_MS = 1_000;
 /** Giá trị "tất cả" của ô chọn lớp (antd không hiện nhãn cho `undefined`). */
 const ALL = 0;
 type Scope = 'working' | 'all';
-
-/** Đang làm bài: online, hoặc có phần đang soạn / phiên thi chưa nộp. */
-function isWorking(row: ProgressRow, exams: Map<string, MonitorRow>): boolean {
-  return (
-    row.online ||
-    row.cells.some(
-      (c) =>
-        c.status === 'DRAFT' ||
-        c.status === 'REVISION_REQUESTED' ||
-        exams.get(examCellKey(row.student.id, c.partId))?.finishedAt === null
-    )
-  );
-}
 
 export default function MonitorPage() {
   const id = Number(useParams<{ id: string }>().id);
@@ -225,9 +213,11 @@ export default function MonitorPage() {
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <AssignmentSubNav id={id} view="giam-sat" paper={assignment.kind === 'PAPER'} />
-      <PageHeader
-        title={`Giám sát — ${assignment.title}`}
+      <AssignmentHeader
+        id={id}
+        view="giam-sat"
+        paper={assignment.kind === 'PAPER'}
+        title={assignment.title}
         description="Theo dõi sinh viên đang làm bài: xem trực tiếp bài đang viết, góp ý ngay, cảnh báo rời trang / dán văn bản khi thi."
         extra={
           <span
@@ -245,6 +235,7 @@ export default function MonitorPage() {
       />
 
       <MonitorStats online={onlineCount} hasExam={examParts.length > 0} summary={summary} />
+      {assignment.kind === 'PAPER' && <PaperDocsCard assignmentId={id} parts={assignment.parts} />}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card styles={{ body: { padding: 0 } }}>
