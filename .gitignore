@@ -23,3 +23,4 @@ Thumbs.db
 
 # Chứng chỉ tự ký của nginx, file tài khoản do admin-cli xuất
 deploy/nginx/certs/
+cloudflared.exe
