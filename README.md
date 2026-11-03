@@ -42,7 +42,7 @@ admin-cli ──TCP 9090──────────────────�
 
 ---
 
-## Chạy nhanh bằng Docker (khuyên dùng khi demo)
+## Chạy nhanh bằng Docker 
 
 Cần Docker Desktop. Chạy ở thư mục gốc (Git Bash trên Windows):
 
