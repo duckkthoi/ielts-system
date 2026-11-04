@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { Badge, Button, Card, Empty, Skeleton, Tabs } from 'antd';
+import { Badge, Button, Card, Empty, Input, Skeleton, Tabs } from 'antd';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { PageHeader } from '@/components/PageHeader';
@@ -19,7 +19,9 @@ import { DEFAULT_TAB, isStudentTab, TABS } from './const';
 export default function StudentAssignmentsPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const tabParam = useSearchParams().get('tab');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const keyword = searchParams.get('tim') ?? '';
   const tab: StudentTab = isStudentTab(tabParam) ? tabParam : DEFAULT_TAB;
 
   const [version, setVersion] = useState(0);
@@ -45,13 +47,41 @@ export default function StudentAssignmentsPage() {
 
   const data = result?.data ?? null;
   const current = TABS.find((t) => t.key === tab) ?? TABS[0];
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase('vi-VN');
+  const visibleItems = data?.items.filter((item) => {
+    if (!normalizedKeyword) return true;
+    return [item.title, item.teacherName, ...item.parts.map((part) => part.title)].some((value) =>
+      value.toLocaleLowerCase('vi-VN').includes(normalizedKeyword)
+    );
+  });
 
-  const changeTab = (next: string) =>
-    router.replace(next === DEFAULT_TAB ? pathname : `${pathname}?tab=${next}`, { scroll: false });
+  const changeTab = (next: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === DEFAULT_TAB) params.delete('tab');
+    else params.set('tab', next);
+    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname, { scroll: false });
+  };
+
+  const changeKeyword = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value.trim()) params.set('tim', value);
+    else params.delete('tim');
+    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname, { scroll: false });
+  };
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
       <PageHeader title="Bài được giao" description="Theo dõi bài cần làm, hạn nộp và kết quả." />
+
+      <div className="mb-4 max-w-xl">
+        <Input.Search
+          allowClear
+          value={keyword}
+          onChange={(event) => changeKeyword(event.target.value)}
+          placeholder="Tìm theo tên bài, giáo viên hoặc phần bài"
+          aria-label="Tìm bài được giao"
+        />
+      </div>
 
       <Tabs
         activeKey={tab}
@@ -93,9 +123,13 @@ export default function StudentAssignmentsPage() {
         <Card>
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={current.empty} />
         </Card>
+      ) : visibleItems?.length === 0 ? (
+        <Card>
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không tìm thấy bài phù hợp." />
+        </Card>
       ) : (
         <div className={`grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${loading ? 'opacity-60' : ''}`}>
-          {data.items.map((item) => (
+          {visibleItems?.map((item) => (
             <AssignmentCard key={item.id} item={item} />
           ))}
         </div>

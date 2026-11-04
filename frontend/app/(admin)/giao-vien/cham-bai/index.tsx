@@ -10,16 +10,22 @@ import { assignmentApi } from '@/lib/api/assignment';
 import { classroomApi } from '@/lib/api/classroom';
 import { gradingApi } from '@/lib/api/grading';
 import { queueQueryString } from '@/lib/constants';
-import type { QueueParams } from '@/lib/types/grading';
+import type { QueueParams, QueueSort } from '@/lib/types/grading';
 import { useServerList } from '@/lib/utils/hooks';
 
 import { buildColumns, isQueueStatus, PAGE_SIZE, STATUS_OPTIONS } from './const';
 
 // ─── Giáo viên: hàng đợi chấm (UC-17, Prompt 6 A) ─────────────────────────────
-// Bộ lọc nằm trên URL (?status&assignmentId&partId&classId&keyword&page): quay lại từ màn chấm vẫn đúng bộ lọc,
-// và màn chấm đọc cùng bộ lọc để đi "Trước / Sau". Bài nộp trước xếp trước (server sắp).
+// Bộ lọc nằm trên URL (?status&assignmentId&partId&classId&keyword&sort&page): quay lại từ màn chấm vẫn đúng bộ lọc,
+// và màn chấm đọc cùng bộ lọc để đi "Trước / Sau". Mặc định bài nộp mới nhất xếp trước.
 
 type Option = { value: number; label: string };
+const SORT_OPTIONS: { value: QueueSort; label: string }[] = [
+  { value: 'SUBMITTED_DESC', label: 'Nộp mới nhất' },
+  { value: 'SUBMITTED_ASC', label: 'Nộp cũ nhất' },
+  { value: 'WORD_DESC', label: 'Số từ giảm dần' },
+  { value: 'WORD_ASC', label: 'Số từ tăng dần' }
+];
 
 const toNumber = (v: string | null) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
 
@@ -33,7 +39,10 @@ export default function GradingQueuePage() {
       assignmentId: toNumber(sp.get('assignmentId')),
       partId: toNumber(sp.get('partId')),
       classId: toNumber(sp.get('classId')),
-      keyword: sp.get('keyword') ?? undefined
+      keyword: sp.get('keyword') ?? undefined,
+      sort: SORT_OPTIONS.some((o) => o.value === sp.get('sort'))
+        ? (sp.get('sort') as QueueSort)
+        : 'SUBMITTED_DESC'
     }),
     [sp]
   );
@@ -94,10 +103,10 @@ export default function GradingQueuePage() {
 
   return (
     <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6">
-      <PageHeader title="Chấm bài" description="Bài nộp trước xếp trước. Chọn bài tập, phần hoặc lớp để lọc." />
+      <PageHeader title="Chấm bài" description="Bài nộp mới nhất xếp trước. Chọn bộ lọc hoặc cách sắp xếp." />
       <Card styles={{ body: { padding: 0 } }}>
         <div className="flex flex-col gap-3 border-b border-neutral-100 p-4">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <Select
               allowClear
               showSearch={{ optionFilterProp: 'label' }}
@@ -127,6 +136,12 @@ export default function GradingQueuePage() {
               defaultValue={filter.keyword}
               placeholder="Mã SV, họ tên hoặc tên nhóm"
               onSearch={(v) => update({ keyword: v.trim() || undefined })}
+            />
+            <Select
+              value={filter.sort}
+              options={SORT_OPTIONS}
+              onChange={(v: QueueSort) => update({ sort: v })}
+              aria-label="Sắp xếp bài nộp"
             />
           </div>
           <Segmented

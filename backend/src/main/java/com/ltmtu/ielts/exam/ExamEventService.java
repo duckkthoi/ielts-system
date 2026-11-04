@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
  * Ghi sự kiện của phiên thi (UC-27, UC-21): sự kiện client báo (rời / quay lại tab, dán), sự kiện server tự ghi (bắt
  * đầu, nộp, mất / có lại kết nối, hết giờ). Mỗi sự kiện được lưu rồi <b>sau commit</b> đẩy tới
  * {@code /topic/assignments/{id}/exam} của giáo viên chủ bài ({@link ExamPushListener}); rời tab / dán còn tạo thông
- * báo cho giáo viên (BR-25), hết giờ báo cả giáo viên lẫn sinh viên (BR-24).
+ * báo cho giáo viên (BR-25), hết giờ tự nộp và báo cả giáo viên lẫn sinh viên (BR-24).
  */
 @Slf4j
 @Service
@@ -124,7 +124,8 @@ public class ExamEventService {
 				what + ". Hết giờ lúc " + timeFormat.format(s.getEndsAt()) + " mà chưa nộp.", monitorLink(a)));
 		notifications.notify(List.of(s.getStudent().getId()), new NewNotification(NotificationType.EXAM_OVERTIME,
 				"Đã hết thời gian làm bài: " + what,
-				"Bạn vẫn nộp được, nhưng bài sẽ được đánh dấu quá thời gian.", "/sinh-vien/lam-bai/" + a.getId()));
+				"Hệ thống đã tự động nộp bản nháp cuối cùng và đánh dấu bài quá thời gian.",
+				"/sinh-vien/lam-bai/" + a.getId()));
 		log.info("Phiên thi {} (sinh viên {}) quá giờ", s.getId(), s.getStudent().getId());
 	}
 

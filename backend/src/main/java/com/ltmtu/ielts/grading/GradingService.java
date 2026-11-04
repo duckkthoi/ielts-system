@@ -72,15 +72,15 @@ public class GradingService {
 	private final AuditService audit;
 	private final ObjectMapper json;
 
-	/** Hàng đợi chấm, mặc định các bài "Đã nộp – chờ chấm", bài nộp trước xếp trước. */
+	/** Hàng đợi chấm, mặc định các bài "Đã nộp – chờ chấm", bài nộp mới nhất xếp trước. */
 	@Transactional(readOnly = true)
 	public Page<QueueRow> queue(Long teacherId, SubmissionStatus status, Long assignmentId, Long partId, Long classId,
-			String keyword, Pageable pageable) {
+			String keyword, String sort, Pageable pageable) {
 		if (classId != null) {
 			classroomService.requireOwnedClassrooms(teacherId, List.of(classId));
 		}
 		Page<QueueItem> page = submissions.queue(teacherId, status == null ? SubmissionStatus.SUBMITTED : status,
-				assignmentId, partId, classId, keyword, pageable);
+				assignmentId, partId, classId, keyword, sort, pageable);
 		Map<Long, Grade> grades = gradesByVersionId(page.map(QueueItem::versionId).getContent());
 		return page.map(i -> {
 			Grade g = grades.get(i.versionId());

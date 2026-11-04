@@ -99,7 +99,12 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 			  AND (:keyword IS NULL OR lower(u.studentCode) LIKE :keyword ESCAPE '!'
 			       OR lower(u.fullName) LIKE :keyword ESCAPE '!'
 			       OR EXISTS (SELECT 1 FROM PaperGroup g WHERE g.id = s.groupId AND lower(g.name) LIKE :keyword ESCAPE '!'))
-			ORDER BY v.submittedAt ASC, s.id""",
+			ORDER BY
+				CASE WHEN :sort = 'SUBMITTED_ASC' THEN v.submittedAt END ASC,
+				CASE WHEN :sort = 'SUBMITTED_DESC' THEN v.submittedAt END DESC,
+				CASE WHEN :sort = 'WORD_ASC' THEN v.wordCount END ASC,
+				CASE WHEN :sort = 'WORD_DESC' THEN v.wordCount END DESC,
+				v.submittedAt DESC, s.id DESC""",
 			countQuery = """
 					SELECT count(s) FROM Submission s JOIN s.part p JOIN p.assignment a JOIN s.student u
 					WHERE s.currentVersion > 0 AND a.teacher.id = :teacherId AND s.status = :status
@@ -113,5 +118,5 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 					           WHERE g.id = s.groupId AND lower(g.name) LIKE :keyword ESCAPE '!'))""")
 	Page<QueueItem> gradingQueue(@Param("teacherId") Long teacherId, @Param("status") SubmissionStatus status,
 			@Param("assignmentId") Long assignmentId, @Param("partId") Long partId, @Param("classId") Long classId,
-			@Param("keyword") String keyword, Pageable pageable);
+			@Param("keyword") String keyword, @Param("sort") String sort, Pageable pageable);
 }

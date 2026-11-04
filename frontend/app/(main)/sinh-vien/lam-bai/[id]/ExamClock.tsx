@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import clsx from 'clsx';
 import { Timer, TimerOff } from 'lucide-react';
@@ -9,11 +9,11 @@ import { formatExamClock } from '@/lib/utils/exam';
 import { serverNow } from '@/lib/utils/serverClock';
 
 // ─── Đồng hồ chế độ thi (BR-23, BR-24) ────────────────────────────────────────
-// Đếm ngược tới `endsAt` theo giờ server, cập nhật mỗi giây. Hết giờ không khoá ô soạn (server không tự nộp),
-// chỉ chuyển sang "Quá thời gian +mm:ss" màu đỏ.
+// Đếm ngược tới `endsAt` theo giờ server, cập nhật mỗi giây. Hết giờ gọi tự nộp một lần.
 
-export function ExamClock({ endsAt }: { endsAt: string }) {
+export function ExamClock({ endsAt, onExpired }: { endsAt: string; onExpired: () => void }) {
   const [now, setNow] = useState(serverNow);
+  const expiredRef = useRef(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(serverNow()), 1_000);
@@ -21,6 +21,13 @@ export function ExamClock({ endsAt }: { endsAt: string }) {
   }, []);
 
   const { text, overtime, urgent } = formatExamClock(endsAt, now);
+
+  useEffect(() => {
+    if (overtime && !expiredRef.current) {
+      expiredRef.current = true;
+      onExpired();
+    }
+  }, [onExpired, overtime]);
   return (
     <span
       role="timer"

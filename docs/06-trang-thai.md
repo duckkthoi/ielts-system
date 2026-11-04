@@ -198,7 +198,7 @@ stateDiagram-v2
 
 - Trạng thái **không lưu DB**, tính từ `ends_at`, `finished_at` và giờ server (`exam/ExamRules`). Chưa có dòng `exam_sessions` = chưa bắt đầu.
 - **Bắt đầu**: `ends_at = now + thời lượng`, cố định (BR-23). Chuyển tab, dán, mất kết nối được ghi thành sự kiện, trạng thái không đổi.
-- **Hết giờ** (BR-24): **không tự nộp**. Job ghi sự kiện `OVERTIME`, đặt `overtime_notified_at` và báo giáo viên + sinh viên; sinh viên vẫn soạn và nộp được.
+- **Hết giờ** (BR-24): job ghi sự kiện `OVERTIME`, đặt `overtime_notified_at`, tự nộp bản nháp cuối cùng và báo giáo viên + sinh viên.
 - **Nộp**: lần nộp đầu tiên đặt `finished_at`. Nộp đúng `ends_at` vẫn là trong giờ; sau đó là `FINISHED_OVERTIME`. Nộp lại bản sửa (yêu cầu sửa) không đổi phiên.
 
 Phiên thi tách riêng với trạng thái bài nộp: bài nộp vẫn đi theo mục 2 (`DRAFT` → `SUBMITTED` …).

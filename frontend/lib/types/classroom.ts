@@ -11,6 +11,16 @@ export interface ClassroomSummary {
   createdAt: string;
 }
 
+export interface StudentClassroomSummary {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  teacherName: string;
+  openAssignmentCount: number;
+  joinedAt: string;
+}
+
 export interface ClassroomFormValues {
   code: string;
   name: string;

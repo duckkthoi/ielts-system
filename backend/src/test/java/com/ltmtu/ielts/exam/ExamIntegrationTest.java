@@ -144,8 +144,8 @@ class ExamIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
-	@DisplayName("BR-24: hết giờ không tự nộp — job báo giáo viên + sinh viên đúng một lần; nộp sau đó vẫn được, bị gắn quá thời gian")
-	void overtimeIsFlaggedNotSubmitted() throws Exception {
+	@DisplayName("BR-24: hết giờ tự nộp bản nháp — job báo giáo viên + sinh viên đúng một lần")
+	void overtimeAutoSubmitsDraft() throws Exception {
 		long sessionId = data(call(post("/api/student/parts/" + examPartId + "/exam/start"), studentToken))
 				.get("sessionId").asLong();
 		saveDraft(examPartId, "Viết dở").andExpect(apiStatus(200));
@@ -166,11 +166,9 @@ class ExamIntegrationTest extends IntegrationTest {
 		assertThat(mine).hasSize(1);
 		assertThat(mine.get(0).get("link").asString()).isEqualTo("/sinh-vien/lam-bai/" + assignmentId);
 		assertThat(data(call(get("/api/student/parts/" + examPartId + "/exam"), studentToken)).get("status").asString())
-				.isEqualTo("OVERTIME");
+				.isEqualTo("FINISHED_OVERTIME");
 
-		saveDraft(examPartId, "Viết tiếp sau giờ").andExpect(apiStatus(200));
-		call(postJson("/api/student/parts/" + examPartId + "/submit", Map.of("content", ESSAY, "expectedVersion", 0)),
-				studentToken).andExpect(apiStatus(200));
+		call(get("/api/student/parts/" + examPartId + "/exam"), studentToken).andExpect(apiStatus(200));
 
 		JsonNode timeline = data(call(get("/api/teacher/exam-sessions/" + sessionId + "/events"), teacher));
 		assertThat(timeline.get("session").get("status").asString()).isEqualTo("FINISHED_OVERTIME");

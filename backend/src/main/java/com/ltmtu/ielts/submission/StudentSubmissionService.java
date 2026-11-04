@@ -106,6 +106,19 @@ public class StudentSubmissionService {
 	 */
 	@Transactional
 	public SubmitResponse submit(Long studentId, Long partId, String content, int expectedVersion) {
+		return submit(studentId, partId, content, expectedVersion, false, false);
+	}
+
+	/** Hết giờ thi: server tự nộp bản nháp cuối cùng, kể cả khi sinh viên đã đóng trình duyệt. */
+	@Transactional
+	public SubmitResponse autoSubmitExam(Long studentId, Long partId) {
+		Submission s = submissionRepository.findMine(studentId, partId).orElse(null);
+		return submit(studentId, partId, s == null ? "" : s.getDraftContent(), s == null ? 0 : s.getCurrentVersion(),
+				true, true);
+	}
+
+	private SubmitResponse submit(Long studentId, Long partId, String content, int expectedVersion, boolean automatic,
+			boolean allowBlank) {
 		Instant now = clock.instant();
 		AssignmentPart part = access.requireVisiblePart(partId, studentId, now);
 		Long groupId = requireGroup(part, studentId);
@@ -115,13 +128,13 @@ public class StudentSubmissionService {
 			throw ApiException.conflict("VERSION_CONFLICT",
 					"Phần này vừa được nộp ở tab hoặc thiết bị khác (version " + current + "). Hãy tải lại trang");
 		}
-		requireWritable(part, s, now);
+		requireWritable(part, s, now, automatic);
 		requireExamStarted(part, studentId);
 		PaperContentSource.PaperContent paper = groupId == null ? null : paperContent.capture(partId, groupId);
-		if (paper == null && (content == null || content.isBlank())) {
+		if (!allowBlank && paper == null && (content == null || content.isBlank())) {
 			throw ApiException.badRequest("VALIDATION_ERROR", "Nội dung không được để trống");
 		}
-		boolean late = DeadlineRules.isPastDue(DeadlineRules.effectiveDue(part, s), now);
+		boolean late = automatic || DeadlineRules.isPastDue(DeadlineRules.effectiveDue(part, s), now);
 
 		if (s == null) {
 			s = Submission.start(part, userQueryService.requireUser(studentId));
@@ -142,19 +155,24 @@ public class StudentSubmissionService {
 		events.publishEvent(new SubmissionEvents.Submitted(s.getId(), part.getAssignment().getId(), partId, studentId,
 				part.getAssignment().getTeacher().getId(), versionNo, late, part.getAssignment().getTitle(),
 				part.getTitle(), s.getStudent().getFullName()));
-		log.info("Sinh viên {} nộp phần {} version {}{}", studentId, partId, versionNo, late ? " (muộn)" : "");
+		log.info("Sinh viên {} {} phần {} version {}{}", studentId, automatic ? "tự động nộp" : "nộp", partId,
+				versionNo, late ? " (muộn)" : "");
 		return new SubmitResponse(versionNo, now, late, v.getWordCount());
 	}
 
 	/** Điều kiện để soạn / nộp: bài chưa đóng, phần còn mở với sinh viên, chưa quá hạn (hoặc cho nộp muộn). */
 	private static void requireWritable(AssignmentPart part, Submission s, Instant now) {
+		requireWritable(part, s, now, false);
+	}
+
+	private static void requireWritable(AssignmentPart part, Submission s, Instant now, boolean automatic) {
 		if (part.getAssignment().getStatus() == AssignmentStatus.CLOSED) {
 			throw ApiException.conflict("INVALID_STATE", "Bài tập đã đóng, không nộp được nữa");
 		}
 		if (s != null && !s.getStatus().isOpenForStudent()) {
 			throw ApiException.conflict("ALREADY_SUBMITTED", "Phần này đã được nộp");
 		}
-		if (!DeadlineRules.canStillSubmit(part, s, now)) {
+		if (!automatic && !DeadlineRules.canStillSubmit(part, s, now)) {
 			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "DEADLINE_PASSED",
 					"Đã quá hạn nộp. Liên hệ giáo viên nếu cần gia hạn");
 		}

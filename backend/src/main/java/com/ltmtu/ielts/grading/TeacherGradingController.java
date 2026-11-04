@@ -43,8 +43,9 @@ public class TeacherGradingController {
 	public ApiResponse<List<QueueRow>> queue(@AuthenticationPrincipal AuthPrincipal me,
 			@RequestParam(required = false) SubmissionStatus status, @RequestParam(required = false) Long assignmentId,
 			@RequestParam(required = false) Long partId, @RequestParam(required = false) Long classId,
-			@RequestParam(required = false) String keyword, Pageable pageable) {
-		return ApiResponse.page(gradingService.queue(me.id(), status, assignmentId, partId, classId, keyword, pageable));
+			@RequestParam(required = false) String keyword, @RequestParam(required = false) String sort, Pageable pageable) {
+		return ApiResponse.page(
+				gradingService.queue(me.id(), status, assignmentId, partId, classId, keyword, sort, pageable));
 	}
 
 	@GetMapping("/{id}")

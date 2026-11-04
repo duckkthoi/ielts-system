@@ -34,7 +34,7 @@ public final class ExamEnums {
 	public enum ExamStatus {
 		/** Đang làm, còn giờ. */
 		IN_PROGRESS,
-		/** Đã hết giờ mà chưa nộp — vẫn làm tiếp được (BR-24). */
+		/** Đã hết giờ và hệ thống đang / đã tự động nộp (BR-24). */
 		OVERTIME,
 		/** Đã nộp trong giờ. */
 		FINISHED,

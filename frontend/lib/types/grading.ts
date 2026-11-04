@@ -26,6 +26,7 @@ export type Resolution = 'FIXED' | 'NOT_FIXED' | 'CHANGED';
 export type CriterionGroup = 'TASK' | 'CC' | 'LR' | 'GRA';
 /** Trạng thái lọc hàng đợi (NOT_STARTED / DRAFT không có trong hàng đợi). */
 export type QueueStatus = 'SUBMITTED' | 'GRADED' | 'RETURNED' | 'REVISION_REQUESTED';
+export type QueueSort = 'SUBMITTED_DESC' | 'SUBMITTED_ASC' | 'WORD_DESC' | 'WORD_ASC';
 
 export interface StudentInfo {
   id: number;
@@ -61,6 +62,7 @@ export interface QueueParams {
   partId?: number;
   classId?: number;
   keyword?: string;
+  sort?: QueueSort;
   page?: number;
   size?: number;
 }

@@ -9,7 +9,8 @@ import type {
   ClassroomSummary,
   ImportReport,
   ListParams,
-  MemberDto
+  MemberDto,
+  StudentClassroomSummary
 } from '@/lib/types/classroom';
 import { filenameFromDisposition, saveBlob } from '@/lib/utils/download';
 
@@ -20,6 +21,13 @@ export async function listClasses(params: ListParams): Promise<ApiResponse<Class
     params,
     controlLoading: true
   })) as unknown as ApiResponse<ClassroomSummary[]>;
+}
+
+export async function listStudentClasses(): Promise<StudentClassroomSummary[]> {
+  const res = (await axiosClient.get('/api/student/classes', { controlLoading: true })) as unknown as ApiResponse<
+    StudentClassroomSummary[]
+  >;
+  return res.data;
 }
 
 export async function getClass(id: number): Promise<ClassroomSummary> {
@@ -106,6 +114,7 @@ export async function downloadTemplate(format: 'xlsx' | 'csv'): Promise<void> {
 
 export const classroomApi = {
   listClasses,
+  listStudentClasses,
   getClass,
   createClass,
   updateClass,

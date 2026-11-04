@@ -167,6 +167,12 @@
 | GET | `/api/teacher/import-template?format=xlsx\|csv` | Tải file mẫu |
 | GET | `/api/teacher/students/search?keyword` | Tìm sinh viên theo mã hoặc tên, để giao bài cho từng cá nhân (tối đa 20 kết quả) → `[{id, studentCode, fullName}]` |
 
+### A.4b Sinh viên — lớp học của tôi — `/api/student/classes`
+
+| Method | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `/api/student/classes` | Danh sách lớp sinh viên đang tham gia, giáo viên phụ trách và số bài đang mở |
+
 **Ghi chú:**
 - **Mã lớp** 2–30 ký tự, chỉ gồm chữ không dấu, số và `. _ -`. Server **lưu viết hoa**, nên trùng mã không phân biệt hoa thường → `409 DUPLICATE`.
 - `ClassroomSummary` = `{id, code, name, description, memberCount, createdAt}`. Danh sách lớp sắp xếp được theo `name` (mặc định), `code`, `createdAt`.
@@ -423,7 +429,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 
 | Method | Đường dẫn | Mô tả |
 |---|---|---|
-| GET | `/api/teacher/submissions?assignmentId&partId&classId&status&keyword&page&size` | Hàng đợi chấm → danh sách `QueueRow`. Mặc định `status=SUBMITTED`, bài nộp trước xếp trước |
+| GET | `/api/teacher/submissions?assignmentId&partId&classId&status&keyword&sort&page&size` | Hàng đợi chấm → danh sách `QueueRow`. Mặc định `status=SUBMITTED`, `sort=SUBMITTED_DESC` (bài nộp mới nhất trước). `sort` nhận `SUBMITTED_DESC`, `SUBMITTED_ASC`, `WORD_DESC`, `WORD_ASC` |
 | GET | `/api/teacher/submissions/{id}?versionNo` | Dữ liệu màn hình chấm (mặc định version mới nhất) |
 | GET | `/api/teacher/submissions/{id}/versions` | Danh sách version (mới nhất trước), kèm trạng thái và band của từng version |
 | PUT | `/api/teacher/submissions/{id}/grade` | Lưu nháp chấm → `GradeDto` (SD-08). Bài PAPER: `scores[].levelId`, `memberAdjustments` (B25b, xem dưới) |
@@ -461,7 +467,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 
 **Chấm bài, trả bài, yêu cầu sửa (đã cài ở B6b; UC-17, UC-18, SD-08):**
 - Chỉ giáo viên tạo bài tập mới thấy và chấm được bài nộp (BR-15). Bài nộp của người khác → `404`.
-- Hàng đợi: `status` là `SUBMITTED` (mặc định) / `GRADED` / `RETURNED` / `REVISION_REQUESTED`; `NOT_STARTED`, `DRAFT` → `400`. `classId` phải là lớp của mình, nếu không → `400`. `keyword` tìm theo mã SV hoặc họ tên. Luôn sắp theo thời điểm nộp, bỏ qua `sort`.
+- Hàng đợi: `status` là `SUBMITTED` (mặc định) / `GRADED` / `RETURNED` / `REVISION_REQUESTED`; `NOT_STARTED`, `DRAFT` → `400`. `classId` phải là lớp của mình, nếu không → `400`. `keyword` tìm theo mã SV hoặc họ tên. `sort` cho phép sắp theo thời điểm nộp hoặc số từ, mặc định mới nhất trước.
 - `QueueRow` = `{submissionId, status, currentVersion, student{id, studentCode, fullName}, assignmentId, assignmentTitle, partId, partTitle, partOrderNo, taskType, submittedAt, late, wordCount, gradeStatus, band, kind, groupName}` (thông tin của version mới nhất; `band` đã làm tròn, null nếu chưa chấm đủ).
 - **Lưu chấm** (`PUT …/grade`) là **thay toàn bộ** kết quả chấm của version:
   - chỉ chấm được **version mới nhất** (`versionNo` khác → `409 INVALID_STATE`) và khi bài ở `SUBMITTED` / `GRADED` (đã trả → `409`);
@@ -584,7 +590,7 @@ nạp vào bài tập, nên sửa ngân hàng không làm đổi bài đã tạo
 - `ExamSessionDto` = `{sessionId, partId, startedAt, endsAt, finishedAt, status, serverTime}`; `status` như `MonitorRow` (A.6). Đồng hồ đếm ngược = `endsAt` − giờ server.
 - `POST …/exam/start`: phần không bật chế độ thi → `409 INVALID_STATE`; bài đã đóng → `409 INVALID_STATE`; phần đã nộp → `409 ALREADY_SUBMITTED`; quá hạn không cho nộp muộn → `422 DEADLINE_PASSED`. Đã có phiên thì trả **đúng phiên cũ** (không đặt lại đồng hồ); 2 lần bấm đồng thời chỉ tạo một phiên (`INSERT … ON CONFLICT DO NOTHING`, có test).
 - Phần ở chế độ thi: `PUT …/draft` và `POST …/submit` khi chưa bắt đầu → `409 EXAM_NOT_STARTED`. Lần nộp đầu tiên kết thúc phiên (`finishedAt`).
-- **Hết giờ không tự nộp** (BR-24): sinh viên vẫn lưu nháp / nộp được (vẫn theo hạn nộp của bài như thường). Job mỗi 15 giây (`app.exam.overtime-check`) tìm phiên hết giờ chưa nộp, báo giáo viên + sinh viên `EXAM_OVERTIME` đúng một lần.
+- **Hết giờ tự nộp** (BR-24): job mỗi 15 giây (`app.exam.overtime-check`) tìm phiên hết giờ chưa nộp, ghi sự kiện `OVERTIME`, tự nộp bản nháp cuối cùng (kể cả bản rỗng), đánh dấu nộp quá thời gian và báo giáo viên + sinh viên `EXAM_OVERTIME` đúng một lần. Trình duyệt còn mở cũng tự gửi nộp ngay khi đồng hồ về 0.
 
 **Lịch sử nộp và kết quả chấm (đã cài ở B6c; BR-13, BR-21, docs/08 mục 4.5):**
 - `GET …/versions` → `[{versionNo, submittedAt, wordCount, late, returned, band, returnedAt}]`, mới nhất trước. `band`, `returnedAt` chỉ có khi version đó đã được trả bài.

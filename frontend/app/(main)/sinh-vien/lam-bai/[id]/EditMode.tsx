@@ -28,7 +28,7 @@ import { useExamSignals, useLiveContent } from './useLiveSignals';
 import { WordCounter } from './WordCounter';
 
 // ─── Đang soạn: tự lưu + nộp; gửi bản đang gõ cho giáo viên xem trực tiếp (BR-26) ─
-// Chế độ thi: đồng hồ tới `endsAt` (hết giờ vẫn soạn / nộp được — BR-24) và báo rời trang / dán (BR-25).
+// Chế độ thi: đồng hồ tới `endsAt`, hết giờ tự nộp bản đang soạn và báo rời trang / dán (BR-25).
 
 export function EditMode({
   part,
@@ -65,6 +65,22 @@ export function EditMode({
       onChanged();
     } catch (err) {
       // axiosClient đã toast lý do; trạng thái cũ thì tải lại
+      if (err instanceof ApiError && err.code && RELOAD_CODES.has(err.code)) onChanged();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const autoSubmit = async () => {
+    if (submitting || draft.conflict) return;
+    setSubmitting(true);
+    await draft.pause();
+    try {
+      const res = await studentApi.submit(part.partId, draft.content, part.currentVersion);
+      draft.stop();
+      message.success(`Hết giờ — hệ thống đã tự động nộp ${part.title} lúc ${formatDateTime(res.submittedAt)}`);
+      onChanged();
+    } catch (err) {
       if (err instanceof ApiError && err.code && RELOAD_CODES.has(err.code)) onChanged();
     } finally {
       setSubmitting(false);
@@ -129,8 +145,8 @@ export function EditMode({
       )}
       <div className="mx-auto flex w-full max-w-180 flex-wrap items-center justify-between gap-3">
         <span className="flex flex-wrap items-center gap-3">
-          {exam && <ExamClock endsAt={exam.endsAt} />}
-          {part.effectiveDueAt && <CountdownTimer dueAt={part.effectiveDueAt} />}
+          {exam && <ExamClock endsAt={exam.endsAt} onExpired={() => void autoSubmit()} />}
+          {!exam && part.effectiveDueAt && <CountdownTimer dueAt={part.effectiveDueAt} />}
           {indicator}
         </span>
         <span className="hidden lg:inline-flex">{submitButton(false)}</span>

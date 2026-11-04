@@ -28,15 +28,19 @@ public class TeacherSubmissionAccess {
 	private final SubmissionRepository submissionRepository;
 	private final SubmissionVersionRepository versionRepository;
 
-	/** Hàng đợi chấm. Chỉ các trạng thái đã có bài nộp; sắp theo thời điểm nộp nên bỏ qua {@code sort} của client. */
+	/** Hàng đợi chấm. Chỉ các trạng thái đã có bài nộp; mặc định sắp bài nộp mới nhất trước. */
 	@Transactional(readOnly = true)
 	public Page<QueueItem> queue(Long teacherId, SubmissionStatus status, Long assignmentId, Long partId, Long classId,
-			String keyword, Pageable pageable) {
+			String keyword, String sort, Pageable pageable) {
 		if (status == SubmissionStatus.NOT_STARTED || status == SubmissionStatus.DRAFT) {
 			throw ApiException.badRequest("VALIDATION_ERROR", "Hàng đợi chấm chỉ gồm các bài đã nộp");
 		}
+		String safeSort = switch (sort == null ? "" : sort) {
+		case "SUBMITTED_ASC", "WORD_ASC", "WORD_DESC" -> sort;
+		default -> "SUBMITTED_DESC";
+		};
 		return submissionRepository.gradingQueue(teacherId, status, assignmentId, partId, classId,
-				Pageables.likePattern(keyword), PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+				Pageables.likePattern(keyword), safeSort, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
 	}
 
 	/** Bài nộp (kèm phần, bài tập, sinh viên) của giáo viên. */

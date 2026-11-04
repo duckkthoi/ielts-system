@@ -7,7 +7,6 @@ import { RefreshCw } from 'lucide-react';
 
 import { AppDrawer } from '@/components/AppDrawer';
 import { ChatPanel } from '@/components/ChatPanel';
-import { PresenceDot } from '@/components/PresenceDot';
 import { StatusTag } from '@/components/StatusTag';
 import { examApi } from '@/lib/api/exam';
 import { subscribeRealtime } from '@/lib/realtime';
@@ -67,9 +66,14 @@ function LiveEssay({ target }: { target: LiveTarget }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-3 text-small text-neutral-500">
-        <PresenceDot online={snap.online}>
-          <span className="pl-1">{snap.online ? 'Đang trực tuyến' : 'Ngoại tuyến'}</span>
-        </PresenceDot>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className={`size-2 rounded-full ${snap.online ? 'bg-presence-online' : 'bg-presence-offline'}`}
+            title={snap.online ? 'Đang trực tuyến' : 'Ngoại tuyến'}
+            aria-label={snap.online ? 'Đang trực tuyến' : 'Ngoại tuyến'}
+          />
+          <span>{snap.online ? 'Đang trực tuyến' : 'Ngoại tuyến'}</span>
+        </span>
         <span className="tabular-nums">{snap.wordCount} từ</span>
         {snap.updatedAt && (
           <span>

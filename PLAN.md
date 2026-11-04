@@ -113,7 +113,7 @@ Phần backend của Mức 2 làm được trước khi có Figma; phần giao d
 | **14** Load test ✅ | k6: 200 sinh viên nộp trong 5 phút cuối + 500 kết nối WebSocket | p95 < 500 ms, lỗi < 1%; kết quả ghi vào `docs/` — đã đạt: p95 9,9 ms, 0% lỗi; 500 / 500 kết nối, thông báo p95 228 ms ([docs/09](docs/09-kiem-thu-tai.md)) |
 
 ### Mức 3 — Mở rộng (mỗi mục độc lập, migration từ V13)
-15. Chế độ thi tính giờ: `exam_sessions`, hết giờ **không tự nộp** mà gắn "Quá thời gian" + báo GV / SV (người dùng chốt 28/10), ghi sự kiện chuyển tab / dán / mất kết nối lên màn giám sát theo lớp + thông báo GV; giáo viên xem trực tiếp bài đang gõ và bình luận trực tiếp. Tách B15a (backend thi) → B15b (backend xem / bình luận trực tiếp) → B15c (FE sinh viên) → B15d (FE màn giám sát).
+15. Chế độ thi tính giờ: `exam_sessions`, hết giờ **tự động nộp bản nháp cuối cùng**, gắn "Quá thời gian" + báo GV / SV, ghi sự kiện chuyển tab / dán / mất kết nối lên màn giám sát theo lớp + thông báo GV; giáo viên xem trực tiếp bài đang gõ và bình luận trực tiếp. Tách B15a (backend thi) → B15b (backend xem / bình luận trực tiếp) → B15c (FE sinh viên) → B15d (FE màn giám sát).
 16. Kiểm tra đạo văn nội bộ (n-gram + Jaccard), cảnh báo cho giáo viên.
 17. Ngân hàng đề + tag dạng đề. **B17a backend ✅** (V13, CRUD/tìm kiếm/lọc, rubric riêng, phân quyền theo giáo viên) · **B17b trình soạn ✅** (lưu/nạp đề + rubric, giữ hạn riêng/trọng số) · còn B17c giao diện `/giao-vien/ngan-hang-de`.
 18. Gợi ý chấm bằng AI (Claude API, chỉ khi có `ANTHROPIC_API_KEY`; chỉ gợi ý, giáo viên quyết định).

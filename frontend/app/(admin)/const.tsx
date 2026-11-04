@@ -43,6 +43,7 @@ export const MENU_BY_ROLE: Record<Role, MenuItem[]> = {
   ],
   [ROLE.STUDENT]: [
     { key: '/sinh-vien/tong-quan', icon: <BookOpen size={ICON_SIZE} />, label: 'Bài được giao' },
+    { key: '/sinh-vien/lop-hoc', icon: <Users size={ICON_SIZE} />, label: 'Lớp học' },
     { key: '/sinh-vien/ket-qua', icon: <Trophy size={ICON_SIZE} />, label: 'Kết quả học tập' },
     { key: '/chat', icon: <MessageSquare size={ICON_SIZE} />, label: 'Trao đổi' }
   ]

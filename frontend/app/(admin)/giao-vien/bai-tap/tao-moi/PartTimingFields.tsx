@@ -51,7 +51,7 @@ export function PartTimingFields({
             name={[fieldName, 'examMode']}
             label="Chế độ thi"
             valuePropName="checked"
-            tooltip="Sinh viên bấm Bắt đầu thì đồng hồ chạy; hết giờ vẫn nộp được nhưng bị đánh dấu quá thời gian. Rời trang, dán văn bản được ghi lại và báo bạn."
+            tooltip="Sinh viên bấm Bắt đầu thì đồng hồ chạy; hết giờ hệ thống tự động nộp bản nháp cuối cùng và đánh dấu quá thời gian. Rời trang, dán văn bản được ghi lại và báo bạn."
           >
             <Switch />
           </Form.Item>

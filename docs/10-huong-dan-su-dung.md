@@ -232,7 +232,7 @@ Mở từ tab **Tiến độ** của bài (bài đã phát hành). Hàng tab **C
 
 ### 6.5b. Giám sát làm bài và chế độ thi
 
-**Bật chế độ thi**: ở bước **Các phần** của trình soạn, bật **Chế độ thi** cho phần cần thi và nhập **thời gian thi** (để trống = lấy thời gian gợi ý). Trang chi tiết bài ghi "Chế độ thi · N phút". Sinh viên phải bấm **Bắt đầu làm bài** mới viết được; hết giờ **không tự nộp** — sinh viên vẫn nộp được nhưng bị đánh dấu **quá thời gian**, bạn và sinh viên nhận thông báo "Quá thời gian thi".
+**Bật chế độ thi**: ở bước **Các phần** của trình soạn, bật **Chế độ thi** cho phần cần thi và nhập **thời gian thi** (để trống = lấy thời gian gợi ý). Trang chi tiết bài ghi "Chế độ thi · N phút". Sinh viên phải bấm **Bắt đầu làm bài** mới viết được; hết giờ hệ thống **tự động nộp bản nháp cuối cùng**, đánh dấu **quá thời gian**, bạn và sinh viên nhận thông báo "Quá thời gian thi".
 
 Mở tab **Giám sát** của bài:
 

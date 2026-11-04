@@ -9,8 +9,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.ltmtu.ielts.submission.StudentSubmissionService;
+
 /**
- * UC-31 (đổi theo yêu cầu: <b>không tự nộp</b>): phiên thi hết giờ mà chưa nộp thì ghi sự kiện {@code OVERTIME} và
+ * UC-31: phiên thi hết giờ mà chưa nộp thì tự nộp bản nháp cuối cùng, ghi sự kiện {@code OVERTIME} và
  * báo giáo viên + sinh viên đúng một lần (BR-24). Mỗi phiên một transaction; nhận việc bằng
  * {@code UPDATE … WHERE overtime_notified_at IS NULL} nên các lượt job chạy chồng nhau không báo trùng.
  */
@@ -21,6 +23,7 @@ public class ExamOvertimeJob {
 
 	private final ExamSessionRepository sessionRepository;
 	private final ExamEventService eventService;
+	private final StudentSubmissionService submissionService;
 	private final TransactionTemplate tx;
 	private final Clock clock;
 
@@ -33,7 +36,9 @@ public class ExamOvertimeJob {
 				if (sessionRepository.claimOvertime(id, now) != 1) {
 					return false;
 				}
-				eventService.overtime(sessionRepository.findFull(id).orElseThrow(), now);
+				ExamSession session = sessionRepository.findFull(id).orElseThrow();
+				eventService.overtime(session, now);
+				submissionService.autoSubmitExam(session.getStudent().getId(), session.getPart().getId());
 				return true;
 			});
 			if (Boolean.TRUE.equals(done)) {

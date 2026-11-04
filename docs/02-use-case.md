@@ -603,7 +603,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 | Mục | Nội dung |
 |---|---|
 | Tác nhân | Sinh viên; Bộ lập lịch (báo quá giờ) |
-| Mô tả | Phần bài được bật "Chế độ thi" thì có thời gian làm bài tính từ lúc bấm Bắt đầu (BR-23). Hết giờ không tự nộp mà gắn "Quá thời gian" (BR-24). |
+| Mô tả | Phần bài được bật "Chế độ thi" thì có thời gian làm bài tính từ lúc bấm Bắt đầu (BR-23). Hết giờ hệ thống tự nộp bản nháp cuối cùng và gắn "Quá thời gian" (BR-24). |
 | Tiền điều kiện | Như UC-23: phần còn soạn được (bài chưa đóng, phần chưa nộp, chưa quá hạn hoặc cho nộp muộn). |
 | Hậu điều kiện | Bài được sinh viên nộp, trong giờ hoặc quá giờ. Nhật ký sự kiện được lưu để giáo viên xem (UC-21). |
 
@@ -612,7 +612,7 @@ Các use case quản lý đơn giản (thêm, sửa, xoá, xem danh sách) chỉ
 2. Sinh viên làm bài như UC-23. Đồng hồ chạy theo giờ server.
 3. Trong lúc làm, client gửi qua WebSocket: rời tab, quay lại tab, dán văn bản (kèm số ký tự). Server tự ghi mất kết nối / kết nối lại. Mỗi sự kiện hiện ngay trên màn giám sát của giáo viên; rời tab và dán còn tạo thông báo cho giáo viên (BR-25).
 4. Sinh viên nộp → như UC-24; phiên thi kết thúc ở lần nộp đầu tiên.
-5. Hết giờ mà chưa nộp → bộ lập lịch ghi sự kiện "Quá thời gian", báo giáo viên và sinh viên **một lần** (UC-31). Sinh viên vẫn viết tiếp và nộp được; phiên hiện "Nộp quá thời gian".
+5. Hết giờ mà chưa nộp → bộ lập lịch tự nộp bản nháp cuối cùng, ghi sự kiện "Quá thời gian" và báo giáo viên, sinh viên **một lần** (UC-31). Phiên hiện "Nộp quá thời gian".
 
 **Ngoại lệ**
 - E1. Tải lại trang hoặc mất mạng → phiên vẫn chạy theo giờ server; bấm "Bắt đầu" lại trả về đúng phiên cũ với thời gian còn lại.

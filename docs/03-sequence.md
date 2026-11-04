@@ -567,7 +567,7 @@ sequenceDiagram
         SCH->>E: Mỗi 15 giây: phiên quá ends_at, chưa nộp, chưa báo
         E->>DB: UPDATE … SET overtime_notified_at WHERE … IS NULL (nhận việc)
         E->>DB: INSERT exam_events OVERTIME + thông báo EXAM_OVERTIME cho GV và SV
-        Note over SV,FE: Không tự nộp — SV vẫn viết tiếp được (BR-24)
+        Note over SV,FE: Hệ thống tự nộp bản nháp cuối cùng, gắn quá thời gian và báo hai bên (BR-24)
     end
     FE->>E: Nộp như SD-07 (trong transaction nộp: finished_at = now, sự kiện SUBMITTED)
 ```

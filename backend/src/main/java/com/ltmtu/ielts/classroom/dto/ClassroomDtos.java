@@ -28,6 +28,11 @@ public final class ClassroomDtos {
 			long openAssignmentCount, Instant createdAt) {
 	}
 
+	/** Lớp mà sinh viên đang là thành viên — không lộ danh sách thành viên của lớp. */
+	public record StudentClassroomSummary(Long id, String code, String name, String description,
+			String teacherName, long openAssignmentCount, Instant joinedAt) {
+	}
+
 	public record AddMembersRequest(
 			@NotEmpty(message = "Chưa chọn sinh viên nào")
 			@Size(max = 500, message = "Tối đa 500 sinh viên mỗi lần")

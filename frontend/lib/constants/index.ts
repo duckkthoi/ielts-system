@@ -84,7 +84,7 @@ export const writingPath = (assignmentId: number, partId?: number | null) =>
 // ─── Đường dẫn chấm bài ───────────────────────────────────────────────────────
 // Bộ lọc hàng đợi đi theo URL sang màn chấm để nút "Trước / Sau" đi đúng thứ tự hàng đợi.
 
-const QUEUE_KEYS = ['status', 'assignmentId', 'partId', 'classId', 'keyword'] as const;
+const QUEUE_KEYS = ['status', 'assignmentId', 'partId', 'classId', 'keyword', 'sort'] as const;
 type QueueFilter = Partial<Record<(typeof QUEUE_KEYS)[number], string | number>>;
 
 export function queueQueryString(filter: QueueFilter): string {

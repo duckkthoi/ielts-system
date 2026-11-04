@@ -14,7 +14,7 @@ import type { StudentPartDetail } from '@/lib/types/student';
 
 const RULES = [
   { icon: Timer, text: 'Đồng hồ chạy ngay khi bấm Bắt đầu và không dừng khi tải lại trang hay mở tab khác.' },
-  { icon: TimerOff, text: 'Hết giờ bạn vẫn nộp được, nhưng bài sẽ bị đánh dấu "Quá thời gian".' },
+  { icon: TimerOff, text: 'Hết giờ hệ thống tự động nộp bản nháp cuối cùng và đánh dấu "Quá thời gian".' },
   {
     icon: ShieldAlert,
     text: 'Rời khỏi trang làm bài, dán văn bản, mất kết nối đều được ghi lại và báo cho giáo viên.'

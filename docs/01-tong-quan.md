@@ -100,7 +100,7 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | FR-23 | **Giao bài** cho một hoặc nhiều lớp và/hoặc từng sinh viên | Giáo viên | 1 |
 | FR-24 | Phát hành (publish), đóng bài, nhân bản bài | Giáo viên | 1 |
 | FR-25 | Ngân hàng đề: lưu đề và rubric để dùng lại, gắn tag dạng đề | Giáo viên | 3 |
-| FR-26 | Chế độ thi tính giờ: hết giờ thì gắn **quá thời gian** và báo giáo viên + sinh viên (không tự nộp); ghi nhận chuyển tab, dán văn bản, mất kết nối, hiện ngay trên màn giám sát và báo giáo viên | Giáo viên / Hệ thống | 3 |
+| FR-26 | Chế độ thi tính giờ: hết giờ thì tự nộp bản nháp cuối cùng, gắn **quá thời gian** và báo giáo viên + sinh viên; ghi nhận chuyển tab, dán văn bản, mất kết nối, hiện ngay trên màn giám sát và báo giáo viên | Giáo viên / Hệ thống | 3 |
 
 ### 4.4 Làm bài và nộp bài
 | Mã | Chức năng | Tác nhân | Mức |
@@ -208,7 +208,7 @@ Cột **Mức** khớp với thứ tự triển khai trong [PLAN.md](../PLAN.md)
 | BR-21 | Nhận xét inline cần ít nhất một trong: mã lỗi, lời nhận xét, gợi ý sửa. Gợi ý sửa mặc định ẩn với sinh viên khi bài đang "Cần sửa", để sinh viên tự sửa theo mã lỗi. |
 | BR-22 | Mỗi giáo viên có ngân hàng nhận xét và mã lỗi riêng; bộ mã lỗi của hệ thống không sửa được. |
 | BR-23 | (Mức 3) Phần bật **chế độ thi** chỉ soạn / nộp được sau khi bấm "Bắt đầu". Mỗi sinh viên thi một phần đúng một lần: giờ kết thúc = lúc bắt đầu + thời lượng, cố định theo giờ server; tải lại trang, mở tab khác không đặt lại đồng hồ. |
-| BR-24 | (Mức 3) Hết giờ thi **không tự nộp**: sinh viên vẫn viết và nộp được, nhưng phiên bị gắn "Quá thời gian". Lúc hết giờ mà chưa nộp, hệ thống báo giáo viên và sinh viên đúng một lần. |
+| BR-24 | (Mức 3) Hết giờ thi hệ thống **tự nộp bản nháp cuối cùng**, gắn phiên "Quá thời gian" và báo giáo viên + sinh viên đúng một lần. |
 | BR-26 | (Mức 3) Giáo viên chủ bài **xem trực tiếp** nội dung sinh viên đang gõ (kể cả nháp chưa nộp) khi phần còn đang làm, và **bình luận trực tiếp** qua kênh chat của bài nộp. Nội dung đang gõ chỉ giữ trong bộ nhớ server, không lưu thêm; đã nộp thì dừng xem trực tiếp. Đây là ngoại lệ có chủ đích của quy tắc "giáo viên chỉ đọc bài đã nộp". |
 | BR-27 | (Mức 4) Bài PAPER làm theo nhóm. Mỗi sinh viên thuộc **tối đa một nhóm** trong một bài (UNIQUE trong DB); nhóm không vượt cỡ tối đa (1–10, mặc định 4). Trước **hạn chốt nhóm** (không đặt = hạn nộp) sinh viên tự lập / vào / rời nhóm; sau đó chỉ giáo viên đổi được. Giáo viên xếp một sinh viên vào nhóm thì người đó tự rời nhóm cũ; nhóm sinh viên tự lập không còn ai thì tự xoá. |
 | BR-28 | (Mức 4) Bài làm của bài PAPER thuộc **nhóm**: một bài làm cho mỗi (giai đoạn, nhóm). Mọi thành viên hiện tại cùng thấy và sửa một bản nháp (khoá lạc quan chung), bất kỳ ai cũng nộp được (ghi người nộp gần nhất); kết quả chấm, yêu cầu sửa, thông báo, nhắc hạn, kênh chat bài nộp áp dụng cho cả nhóm. Chưa có nhóm thì chưa soạn / nộp được. Nhóm đã có bài làm thì sinh viên không tự rời và giáo viên không xoá nhóm. |
